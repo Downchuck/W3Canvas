@@ -1,0 +1,120 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="fvlogger/logger.css" />
+<script type="text/javascript" src="fvlogger/logger.js"></script>
+
+<script type="text/javascript">$=function(a){return document.getElementById(a);};</script>
+
+<script type="text/javascript" src="font/base2-p.js"></script>
+<script type="text/javascript" src="font/path.js"></script>
+<script type="text/javascript" src="font/font.js"></script>
+
+<script type="text/javascript" src="textbox/boxmodel.js"></script>
+<script type="text/javascript" src="textbox/factory.js"></script>
+
+	<script src="lang_util.js" ></script>
+	<script src="canvas_lib.js" ></script> <!-- canvas_lib -->
+	<!-- script src="font/arial_font.js" ></script -->
+	<script src="domhtml/dom_core.js" ></script>
+	<script src="domhtml/dom_html_basic.js" ></script>
+
+	<script src="cssbox/box_basic.js" ></script>
+	<script src="cssbox/box_model.js" ></script>
+	<script src="cssbox/css_style.js" ></script>
+	<!-- script src="cssbox/box_paint.js" ></script -->
+	<!-- script src="cssbox/viewport.js" ></script -->
+
+	<script src="domhtml/dom_html_option.js" ></script>
+	<script src="domhtml/dom_html_select.js" ></script>
+	<script src="domhtml/dom_html_doc.js" ></script><!-- Unfortunately too many dependencies when trying to integrate with the HTMLDocument -->
+
+<script type="text/javascript" src="textbox/basic_model.js"></script>
+<script type="text/javascript" src="textbox/cursor.js"></script>
+<script type="text/javascript" src="textbox/keyboard.js"></script>
+<script type="text/javascript" src="textbox/keyboard_edit.js"></script>
+<script type="text/javascript" src="textbox/keyboard_nav.js"></script>
+<script type="text/javascript" src="textbox/linebreak.js"></script>
+<script type="text/javascript" src="textbox/mouse.js"></script>
+<script type="text/javascript" src="textbox/scrolling.js"></script>
+<script type="text/javascript" src="textbox/textbox_comp.js"></script>
+<script type="text/javascript" src="textbox/textmodel_copypaste.js"></script>
+<script type="text/javascript" src="textbox/textmodel.js"></script>
+<script type="text/javascript" src="textbox/visual_selection.js"></script>
+<script type="text/javascript" src="textbox/visual_textbox.js"></script>
+
+<script type="text/javascript" src="control/image_control.js"></script>
+
+<script type="text/javascript" src="control/control_factory.js"></script> <!-- Unfortunately, too many dependencies with CanvasHTMLFactory -->
+
+</head>
+<body bgcolor="#ffffff">
+
+<img src="marilyn_th.jpg" />
+<img src="marilyn2_th.jpg" />
+
+<hr />
+<canvas width="600" height="200" id="cBox_image1"></canvas>
+<canvas width="600" height="200" id="cBox_image1b"></canvas>
+<hr />
+<canvas width="300" height="100" id="cBox_image2"></canvas>
+<hr />
+
+    <h2> Debugging </h2>
+
+	<div id="fvlogger">
+		<dl>
+			<dt>fvlogger</dt>
+			<dd class="all"><a href="#fvlogger" onclick="showAll();" title="show all" id="abcdef">all</a></dd>
+			<dd class="debug"><a href="#fvlogger" onclick="showDebug();" title="show debug" id="showDebug">debug</a></dd>
+			<dd class="info"><a href="#fvlogger"  title="show info" id="showInfo">info</a></dd>
+			<dd class="warn"><a href="#fvlogger" onclick="showWarn();" title="show warnings" id="showWarn">warn</a></dd>
+			<dd class="error"><a href="#fvlogger" onclick="showError();" title="show errors" id="showError">error</a></dd>
+			<dd class="fatal"><a href="#fvlogger" onclick="showFatal();" title="show fatals" id="showFatal">fatal</a></dd>
+			<dd><a href="#fvlogger" onclick="eraseLog(true);" title="erase">erase</a></dd>
+		</dl>
+	</div>
+
+
+<script type="text/javascript">
+
+	var image = ControlFactory.create('Image', 'cBox_image1');
+
+	image.setSize(120, 200);
+	//alert("Width: " + image.width + "," + image.contentArea.width);
+
+	// Experiment with these APIs.
+	//image.setMargin(30);
+	//image.setBorderColor("#cc0a0a");
+	image.setBorderSize(25);
+	image.setBorderColor("red");
+	image.setSource("marilyn_th.jpg");
+
+	var imageb = ControlFactory.create('Image', 'cBox_image1b');
+	//imageb.setSize(120, 200);
+	//alert("Width: " + imageb.width + "," + imageb.contentArea.width);
+
+	// Experiment with these APIs.
+	imageb.setMargin(30);
+	imageb.setPadding(15);
+	imageb.setBorderSize(25);
+	imageb.setBorderColor("purple");
+	imageb.setSource("marilyn_th.jpg");
+
+	var image2 = ControlFactory.create('Image', 'cBox_image2');
+
+	// Experiment with these APIs.
+
+	image2.setSize(320, 400);
+	//alert("Width: " + image2.width + "," + image2.contentArea.width);
+
+	image2.setMargin(30);
+	image2.setBorderSize(15);
+	//image2.setBorderColor("#cc0a0a");
+	image2.setBorderColor("blue");
+	image2.setSource("marilyn2_th.jpg");
+
+
+</script>
+
+</body>
+</html>

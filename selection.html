@@ -1,0 +1,241 @@
+<html>
+<head>
+	<title> Selection </title>
+<!--
+	<link rel="stylesheet" type="text/css" href="examples/fvlogger/logger.css" />
+	<script type="text/javascript" src="examples/fvlogger/logger.js"></script>
+-->
+<!--  somehow, this breaks in Firefox when in the escaped block -->
+<script>
+(function(){if(!/*@cc_on!@*/0)return;var e = "abbr,article,aside,audio,bb,canvas,datagrid,datalist,details,dialog,eventsource,figure,footer,header,mark,menu,meter,nav,output,progress,section,time,video".split(','),i=e.length;while (i--){document.createElement(e[i])}})();
+</script>
+<!--[if lte IE 8]>
+<OBJECT ID="canvasFactory"  CLASSID="clsid:785740C4-DD04-4B91-8AD7-44CC9FFB4984" CODEBASE="http://vnmeta.com/IECanvas/IECanvas118.cab#version=1,1,8,0"></OBJECT>
+<style>
+canvas { behavior: url(#canvasFactory); -filter:progid:DXImageTransform.IECanvas.CanvasTransform; display: block; width: 300px; height: 150px; background: transparent!important; }
+</style>
+<canvas id="CanvasRenderingContext2D" style="display: none" />
+<script>
+// FIXME: c.__proto__ = p.prototype = c.constructor.prototype
+// Lets tie this .prototype into canvasFactory, and rename canvasFactory to CanvasRenderingContext2D
+CanvasRenderingContext2D.prototype = CanvasRenderingContext2D.getContext('2d').prototype;
+// Allows: var x = document.createElement('canvas').getContext('2d');
+document._createElement = document.createElement;
+document.createElement = function(tagName) {
+ var tag = document._createElement(tagName);
+ if(tagName.toUpperCase() == 'CANVAS') tag.addBehavior("#canvasFactory");
+ return tag;
+};
+// Crash: alert("canvasFactory"+CanvasRenderingContext2D.prototype.fillStyle);
+</script>
+<![endif]-->
+
+
+<!--
+	helpers: mixin, clone, others.
+-->
+	<script src="lang_util.js" ></script>
+	<script src="canvas_lib.js" ></script>
+
+<!--
+	fillText, strokeText, measureText
+		FIXME: We have a new library, and many browsers have these built-in.
+-->
+	<script src="font/base2-p.js" ></script>
+	<script src="font/font.js" ></script>
+	<script src="font/path.js" ></script>
+	<script src="font/arial_font.js" ></script>
+
+<!--
+	createElement, element.style
+-->
+	<script src="css/box_basic.js" ></script>
+	<script src="css/box_model.js" ></script>
+	<script src="css/css_style.js" ></script>
+	<script src="css/box_paint.js" ></script>
+	<script src="css/scrollbar.js" ></script>
+	<script src="css/viewport.js" ></script>
+
+	<script src="css/line_basic.js" ></script>
+	<script src="css/text_wrap.js" ></script>
+	<script src="css/line_model.js" ></script>
+	<script src="css/line_paint.js" ></script>
+	<!-- // css3-content is insanely cool
+	     // css/content_model.js [ this is the goal ]
+	-->
+
+<!-- overflow: scroll; overflow-style: move; overflow-y: hidden; -->
+	<script src="css/overflow.js" ></script>
+
+<!--
+	DOM API
+-->
+	<script src="html/dom_core.js" ></script>
+	<script src="html/dom_html_basic.js" ></script>
+	<script src="html/dom_html_option.js" ></script>
+	<script src="html/dom_html_select.js" ></script>
+<!-- document.createElement -->
+	<script src="html/dom_html_doc.js" ></script>
+
+<!--
+	HTML Painters and Event Listeners
+-->
+	<script src="html/select_control.js" ></script>
+	<script src="html/combobox_control.js" ></script>
+	<script src="html/image_control.js" ></script>
+        <script src="html/button_control.js" ></script>
+	<script src="html/control_factory.js" ></script>
+<!-- text -->
+	<script src="html/textbox/factory.js" ></script>
+	<script src="html/textbox/basic_model.js" ></script>
+<!-- css3-ui module has removed ::selection recently, css3-selectors has as well -->
+<!-- strongly related: Range, Selection -->
+	<script src="html/textbox/cursor.js" ></script>
+	<script src="html/textbox/selection.js" ></script>
+
+<!--
+	<select>
+		FIXME: Use webkit CSS APIs for gradient, rounded rectangles,
+		custom scroller styling and arrow url
+-->
+	<script src="style/combo_blue.js" ></script>
+	<script src="style/combo_mike.js" ></script>
+	<script src="style/select_main.js" ></script>
+
+<!--
+	<img>
+		FIXME: Finish css parser for border, margin, padding and so on.
+-->
+	<script src="style/image_main.js" ></script>
+
+<!--
+	<input type="[checkbox|radio]">
+		FIXME: Uses XForms setLabel to set associated text.
+		Investigate this. Wouldn't :after css selector work the same way?
+-->
+	<script src="style/button_main.js" ></script>
+
+<!--
+	<textarea> <input type="text">
+		TODO: setStyle is great, keep working on it
+		FIXME: Allow inlined styles [ <div><span></span></div> ]
+-->
+
+<!-- ui-events -->
+	<script src="html/textbox/keyboard.js" ></script>
+	<script src="html/textbox/mouse.js" ></script>
+
+<!-- css3-content: move-to -->	
+	<script src="html/textbox/keyboard_edit.js" ></script>
+<!-- css3-ui: keyboard -->
+	<script src="html/textbox/keyboard_nav.js" ></script>
+
+<!-- textarea / clipboard -->
+	<script src="html/textbox/textbox_comp.js" ></script>
+	<script src="html/textbox/textmodel_copypaste.js" ></script>
+	<script src="html/textbox/textmodel.js" ></script>
+
+	<script src="style/input_main.js" ></script>
+
+	<script>
+
+		function setupCombos() {
+			setupComboBoxFruits();
+			setupComboBoxOther(); // <select><option /></select>
+			setupImageTest(); // <img>
+			setupButtons(); // <input type="checkbox" /><input type="radio" />
+			drawBoxes(); // <input type="text" /><textarea />
+		}
+
+		loadFont(setupCombos);
+
+	</script>
+
+</head>
+
+<body bgColor="black" text="white">
+
+	<br />
+	<br />
+
+<form>
+<table>
+	  <tr>
+		<td>Selection Label:</td>
+		<td><input type="text" value="Hello" id="selectionInputBox" /></td>
+	  </tr>
+	  <tr>
+		<td>Hover Label:</td>
+		<td><input type="text" value="Hello" id="hoverInputBox" /></td>
+	  </tr>
+	  <tr>
+		<td>Up</td>
+		<td><input type="submit" value="Up" onclick="up();return false;"/></td>
+	  </tr>
+	  <tr>
+		<td>Down</td>
+		<td><input type="submit" value="Down" onclick="down();return false;"/></td>
+	  </tr>
+</table>
+</form>
+<!-- select menus -->
+<canvas id="chordComboBox" width="500" height="50" ></canvas>
+<canvas id="scalesComboBox" width="500" height="50" ></canvas>
+<br />
+<canvas id="fruitComboBox" width="1000" height="60"> </canvas>
+<br />
+<canvas id="composerComboBox" width="1000" height="60" > </canvas>
+<br />
+<hr />
+<!-- image elements -->
+<img src="examples/marilyn_th.jpg" style="display: none" />
+<canvas width="600" height="200" id="cBox_image1"></canvas>
+<img src="examples/marilyn2_th.jpg" style="display: none" />
+<canvas width="600" height="200" id="cBox_image1b"></canvas>
+<hr />
+<canvas width="300" height="100" id="cBox_image2"></canvas>
+<hr />
+<!-- Radio Buttons -->
+<br />
+<canvas id="radio1" width="600" height="100" ></canvas>
+        <canvas id="radio2" width="600" height="100" ></canvas>
+        <canvas id="radio3" width="600" height="100" ></canvas>
+<br />
+<canvas id="radio4" width="600" height="100" ></canvas>
+        <canvas id="radio5" width="600" height="100" ></canvas>
+        <canvas id="radio6" width="600" height="100" ></canvas>
+<br />
+<canvas id="checkbox1" width="600" height="150" ></canvas>
+        <canvas id="checkbox2" width="600" height="150" ></canvas>
+        <canvas id="checkbox3" width="600" height="150" ></canvas>
+<br />
+<hr />
+<!-- text input -->
+<div style="margin:25px;padding:10px;border:5px solid black;background:#333">
+<canvas width="800" height="220" id="cBox_top" style="background:black"></canvas>
+</div>
+<hr />
+
+<div style="margin:25px;padding:10px;border:5px solid black;background:black">
+<canvas width="800" height="500" id="cBox_bottom"></canvas>
+</div>
+<hr />
+
+    <h2> Debugging </h2>
+
+	<div id="fvlogger">
+		<dl>
+			<dt>fvlogger</dt>
+			<dd class="all"><a href="#fvlogger" onclick="showAll();" title="show all" id="abcdef">all</a></dd>
+			<dd class="debug"><a href="#fvlogger" onclick="showDebug();" title="show debug" id="showDebug">debug</a></dd>
+			<dd class="info"><a href="#fvlogger"  title="show info" id="showInfo">info</a></dd>
+			<dd class="warn"><a href="#fvlogger" onclick="showWarn();" title="show warnings" id="showWarn">warn</a></dd>
+			<dd class="error"><a href="#fvlogger" onclick="showError();" title="show errors" id="showError">error</a></dd>
+			<dd class="fatal"><a href="#fvlogger" onclick="showFatal();" title="show fatals" id="showFatal">fatal</a></dd>
+			<dd><a href="#fvlogger" onclick="eraseLog(true);" title="erase">erase</a></dd>
+		</dl>
+	</div>
+
+
+</body>
+</html>
