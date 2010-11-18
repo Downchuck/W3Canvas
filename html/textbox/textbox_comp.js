@@ -7,10 +7,11 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 	if (canvasBox === undefined || canvasBox === null) {
 		colorjack.debug.programmerPanic("Invalid TextBox() constructor. Missing canvasBox parameter!");
 	}
+	
 	var basicModel		= new colorjack.textbox.model.BasicModel();
 	var cursor			= new colorjack.textbox.ui.cursor.Cursor();
 	var cursorPosition	= new colorjack.textbox.ui.cursor.CursorPosition();
-	var font			= new colorjack.css.Font();
+	//var font			= new colorjack.textbox.Font();
 	var inputScrolling	= new colorjack.textbox.ui.InputScrolling();
 	var keyboard		= new colorjack.keyboard.Keyboard();
 	var mouse			= new colorjack.textbox.mouse.Mouse();
@@ -20,6 +21,8 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 	
 	var textBoxId		= uniqueId;
 	
+	
+	
 	if (!textDomElement) {	// For standalone TextBox without an HTMLElement (input/textarea), needed for automated testing
 		textDomElement = new colorjack.css.BoxModel();
 		textDomElement.value = "";
@@ -28,13 +31,15 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 	}
 	
 	var init = function() {
-		if (!initialized) {
+		if (!initialized) {			
 			initialized = true;
 			
+			/*
 			if (font === undefined || font === null) {
 				colorjack.debug.programmerPanic("Need to call TextBox.setFont() before colorjack.component.TextBox.init()!");
 				return;
 			}
+			*/
 			
 			if (testing) {
 				colorjack.graphicsLib.setTestingMode(true);
@@ -44,14 +49,15 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 			}			
 			var ctx = canvasBox.getContext('2d');
 			
+			
 			var vars = {
 				'basicModel'		: basicModel,
 				'canvasBox' 		: canvasBox,
 				'context'   		: ctx,
 				'cursor'    		: cursor,
 				'cursorPosition'	: cursorPosition,
-				'drawString'		: font.drawString,
-				'font'				: font,
+				//'drawString'		: font.drawString,
+				//'font'				: font,
 				'inputScrolling'	: inputScrolling,
 				'textBoxId'			: textBoxId,
 				'textDomElement'	: textDomElement,
@@ -61,8 +67,8 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 			};
 
 			// First opportunity to change the size of the canvasBox acc. to # visible of lines
-			vars.boxModel = visualTextBox.init(vars);
 			
+			vars.boxModel = visualTextBox.init(vars);			
 			basicModel.init(vars);
 			cursor.init(vars);
 			cursorPosition.init(vars);
@@ -74,17 +80,30 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 		}
 	};
 	
+	
 	init();
+	
 	
 	//----------------------------------------------------------------------
 	var getValue = function()	{ return textModel.getTextContent(); };
-	var setValue = function(v) {
+	var setValue = function(v, cssHack) {
+		//alert('textbox setvalue');
+		
+		//FIXME: restore this!	
+		//console.log('FIXME: input scrolling = ' + inputScrolling.isEnabled());	
+		
+		/*
 		if (inputScrolling.isEnabled()) {
 			v = v.replace(/\n/g, ""); // Filter out the newlines
 		}
+		*/
 		textModel.setTextContent(v); 
+		if (cssHack!=null)
+			textModel.setCssHack(cssHack);
 		visualTextBox.drawBox();
 	};
+	
+	
 
 	// HTML/Javascript TextArea
 	var focus = function() {
@@ -96,7 +115,6 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 	var blur = function() {
 		visualSelection.clearMarkedSelection(true);
 		cursor.stopBlink();
-    var showCursorAfterLosingFocus = false; // this needs to be a global setting somehow? -@DRE
 		if (showCursorAfterLosingFocus) {
 			cursor.showCursor(true);
 		}
@@ -112,7 +130,9 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 		visualSelection.showRange();
 	};
 
-	var setFont = function(f) {
+	
+	var setFont = function(f) 
+	{
 		visualTextBox.setFont(f);
 	};
 	
@@ -130,7 +150,7 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 	// --------------------------------------------------
 		// HTML TextArea: public methods
 		'setValue'	: setValue,
-		'getValue'	: getValue,
+		'getValue'	: getValue,		
 		'select'	: select,
 		'focus'		: focus,
 		'blur'		: blur,

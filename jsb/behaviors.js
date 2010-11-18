@@ -65,7 +65,8 @@ var select = control.extend({
 
   setAttributes: function(element, canvas, control) {
 
-		var smallFont = new ArialFont(0.06);
+		var smallFont = new ArialFont(arialFontLib);
+		smallFont.setScaleFactor(0.06);
 		control.setFont(smallFont);
 		
 		overrideMikePainters(control); // huh?
@@ -106,7 +107,8 @@ input.text = input.extend({
   		'selectionColor': "rgba(216,216,255,0.6)"
   	};
   	control.setStyle(boxStyle);
-  	var smallFont = new ArialFont(0.06);
+  	var smallFont = new ArialFont(arialFontLib);
+  	smallFont.setScaleFactor(0.06);
   	//textbox.setFont(smallFont);
 
   	control.setValue(textContent);

@@ -5,7 +5,7 @@
 function mixin(obj1, prop, prop2, prop3) {
 	var result = {};
 	result.prototype = obj1.prototype;	// Should we just use the Object.prototype?
-
+	
 	for (var x in obj1) {
 		result[x] = obj1[x];
 	}

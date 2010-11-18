@@ -69,6 +69,7 @@ colorjack.textbox.ui.cursor.Cursor = function() {
 		prevOverlapCursorPos = tmp;
 		prevOverlapCursorImage = graphicsLib.createBufferImage(x, y, w, h, ctx.canvas);
 
+		//console.log('drawCursor: ' + x + ',' + y + ' ' + w + 'x' + h);
 		ctx.fillRect(x, y, w, h);
 
 		ctx.restore();
@@ -155,6 +156,7 @@ colorjack.textbox.ui.cursor.CursorPosition = function() {
 	var inputScrolling = null;	
 	var visualTextBox = null;
 	var visualSelection = null;
+	var context; //haipt: add this to measure text!
 	
 	var init = function(vars) {
 		try {
@@ -162,8 +164,9 @@ colorjack.textbox.ui.cursor.CursorPosition = function() {
 			inputScrolling	= vars.inputScrolling;
 			visualTextBox	= vars.visualTextBox;
 			visualSelection = vars.visualSelection;
+			context = vars.context;
 			
-			colorjack.debug.checkNull("CursorPosition", [basicModel, inputScrolling, visualTextBox, visualSelection]);
+			colorjack.debug.checkNull("CursorPosition", [basicModel, inputScrolling, visualTextBox, visualSelection, context]);
 		}
 		catch (e) {
 			colorjack.debug.programmerPanic("CursorPosition. Initialization error: " + e.name + " = " + e.message);
@@ -175,47 +178,78 @@ colorjack.textbox.ui.cursor.CursorPosition = function() {
 		return visualTextBox.getBoxStyle().cursorWidth;
 	};
 	
-	var getWidth = function(str) {
-		return visualTextBox.getWidth(str);
+	
+	var getWidth = function(str, fontStyle) {		
+		var saveFont = context.font;
+		context.font = fontStyle;
+		var width= context.measureText(str).width;				
+		//restore
+		context.font = saveFont;
+		return width;
 	};
 	
-	var getCursor = function(x,i) {	// [x, line i]
-		var container = parseInt(i, 10);
-		var offset = -1;
-
-		var lines = basicModel.getLines();		
-
-		if(!(container in lines)) {
-			container = (container > lines.length) ? lines.length-1 : 0;
-		}
-		var line = lines[container];
-		var text = line.content;
-
+	
+	
+	//convert from x-coordinate to the character position
+	var getCursor = function(x,li) {	// [x, line li]		
+		var lines = basicModel.getLines(); 
+		var line = lines[li]; //type: LineBox
 		var beforeLen = visualTextBox.getBox().x + inputScrolling.getOffset();
+		//search for the inline box that contains this x-pos
+		var charsCount = 0;
+		var offset = -1;
 		
-		for (var ch = 0; ch < text.length; ch++) {
-			var currentChar = text.charAt(ch);			
-			var currentCharWidth = getWidth(currentChar);
-			var currentCharHalfWidth = currentCharWidth / 2;
+		for (var j = 0; j < line.getBoxes().length; j++) {
+			var box  = line.getBoxes()[j];
+			if (box.x + box.width < x)  { //not the inline box that cover the position yet
+				//charsCount+=box.contentFragment.content.length;
+				charsCount+=box.contentFragment.getCharsCount();
+				if (box.contentFragment.hasLinefeed()) charsCount--; //do not count linefeed!
+			}			
+			else {
+				//this is the box that contains the cursor
+				var saveFont = context.font;
+				
+				var text = box.contentFragment.content;
+				context.font = box.contentFragment.style;
+				
+				beforeLen+=box.x;				
+				
+				//find the character inside this fragment
+				for (var ch = 0; ch < text.length; ch++) {
+					var currentChar = text.charAt(ch);			
+					var currentCharWidth = context.measureText(currentChar).width;
+					
+					if (x < beforeLen + currentCharWidth / 2) {
+						offset = ch;
+						break;
+					}
+					beforeLen += currentCharWidth;
+				}
+				
+				
+				//restore the font
+				context.font = saveFont;
 
-			if (x < beforeLen + currentCharHalfWidth) {
-				offset = ch;
+				
+				
+				
+				//console.log('text fragment: ' + text + "@offset: " + offset);
 				break;
-			}
-			beforeLen += currentCharWidth;
+			}						
+		}	
+		//console.log('charsCount: ' + charsCount + ' mouse offset: ' + offset);
+		if (offset==-1) { //the position is beyond all existing inline boxes
+			//offset = 0;
+			offset = 0; //we'll add it to charsCount later
 		}
-
-		if (offset == -1) { // Not assigned yet: end of line
-			offset = text.length;
-			var hasNewLine = (text.substr(text.length-1, 1) == "\n");
-			if (hasNewLine) {
-				offset--;	// We don't want to include newlines in the result
-			}
-		}
-		return [container, offset];
+		
+		return [li, charsCount + offset];
 	};
 
+	//convert from character offset position to x-coordinate
 	var getCursorXY = function(li,off) {
+	
 		var pos			= visualSelection.getEnd();
 		var container	= (li === undefined)? pos[0] : li;
 		var offset		= (off === undefined)? pos[1] : off;
@@ -225,14 +259,50 @@ colorjack.textbox.ui.cursor.CursorPosition = function() {
 		if (!line) {
 			line = lines[0];
 		}
-		var x = line.x;
-		if (offset) {
-			x += getWidth(line.content.substr(0,offset)) + inputScrolling.getOffset();
+	
+		var x = 0;
+		var	y = 0;
+		var	height = 0;
+		//go to the linebox that contains character @offset
+		var charsCount = 0;
+		for (var i = 0; i < line.getBoxes().length; i++) {
+			var box = line.getBoxes()[i];			
+			
+			var fragmentLength = box.contentFragment.getCharsCount(false);
+			/*
+			var fragmentLength = box.contentFragment.content.length;
+			
+			//some special cases
+			if (box.contentFragment.hasLinefeed) fragmentLength++;
+			if (box.contentFragment.isImage) fragmentLength = 1;
+			*/
+			
+			//console.log('charsCount: ' + charsCount + ' fragmentLength: ' + fragmentLength + ' offset: ' + offset);
+			
+			//if (charsCount + box.contentFragment.content.length + (box.contentFragment.hasLinefeed? 1: 0) >=offset) {
+			if (charsCount + fragmentLength >= offset) {
+				//var offset = off-charsCount; //offset inside the fragment												
+				
+				offset-=charsCount;
+				x = box.x + inputScrolling.getOffset();
+				
+				if (offset) {
+					if (box.contentFragment.isImage)
+						x+=box.width;
+					else
+						x+=getWidth(box.contentFragment.content.substr(0, offset), box.contentFragment.style);					
+				}
+				y = box.y;
+				height = box.height;
+				break;				
+			}
+			//charsCount+=box.contentFragment.content.length;
+			charsCount+=fragmentLength;
 		}
-		var y = line.y - line.height; y++;
-		x = Math.round(x);
-		y = Math.round(y);
-		return [x,y,line.height];
+		
+		
+		return [x, y, height];
+		
 	};
 	
 	var verticalCursorX = -1; // Buffer last X position for Arrow Up/Down movement
@@ -315,7 +385,9 @@ colorjack.textbox.ui.cursor.CursorPosition = function() {
 	};
 	
 	var setPosition = function(c,o) {
-		visualSelection.clearMarkedSelection(true); // Do this before resetting the values of the visualSelection
+		// Following line has been commented out because calling clearMarkedSelection(true) here could corrupt the visual model, 
+		// because in a deletion operation, clearMarkedSelection might restore cached glyphs that has been already deleted.
+		//visualSelection.clearMarkedSelection(true); // Do this before resetting the values of the visualSelection
 	
 		moveToVisiblePosition(c,o);
 		visualSelection.setStart(c,o);

@@ -9,7 +9,9 @@
 // arabic fonts: http://www.arabeyes.org/project.php
 
 var CanvasRenderingContext2DFont = {
-  'defaultFontStyle': {
+// Default font is 12pt sans-sarif
+	'mozTextStyle': '12pt Arial',
+	'defaultFontStyle': {
 		'fontSize': '12pt', 'fontFamily': 'Arial', 'font': '12pt Arial',
 		'lineHeight': '1em', 'strokeWidth':'3', 'lineWidth': null,
 		'color': '#000000', 'borderColor': '',
@@ -26,16 +28,10 @@ var CanvasRenderingContext2DFont = {
 		'unicodeRange': 'U+0000-00FF', 'fontStyle': 'normal',
 		'src': 'local("Arial"), url("arial.t1a") format("type-1")',
 		'src': 'local("Arial"), url("Arial.svg") format("svg")'
-	}
-};
-
-CanvasRenderingContext2DFont = {
-// Default font is 12pt sans-sarif
-	'mozTextStyle': '12pt Arial',
-	'defaultFontStyle': CanvasRenderingContext2DFont.defaultFontStyle,
+	},
 
 	'font': {
-		'style': CanvasRenderingContext2DFont.defaultFontStyle, 'value': '',
+		'style': this.defaultFontStyle, 'value': '',
 		'cursor': { 'x':0, 'y': 0 },
 		'x':0, 'y': 0
 	},
@@ -55,12 +51,10 @@ CanvasRenderingContext2DFont = {
 		this.fontFaces[family] = { readyState: 1, paths: {}, queue: {} };
 		var request = {};
 
-		if(this.style.format == 'type-1') {
-  		var reqProperties = {};
-  		var req = {};
+		if(1 || this.style.format == 'type-1') {
 			request.args = { 'url':'inc/'+family+'.t1a', 'family': family };
 			request.onsuccess = function(){this.load(reqProperties.args.family, req.responseText);};
-			//ajax('inc/'+family+'.t1a',request);
+			ajax('inc/'+family+'.t1a',request);
 		}
 		else if (this.style.format == 'svg') {
 		}
@@ -123,7 +117,7 @@ CanvasRenderingContext2DFont = {
 			if(isLoaded) { this.font.style = a[1]; this._mozDrawText(this.font.value=a[0]); }
 			else if( this.fontLoadTimeout > (a[2]+=this.fontLoadWait) )  this.fontQueue.push( [ a[0], a[1], a[2] ] );
 		}
-		if(this.fontQueue.length) this.fontQueueTimer = window.setTimeout(this.mozDrawText, this.fontLoadWait);
+		if(this.fontQueue.length) this.fontQueueTimer = setTimeout(this.mozDrawText, this.fontLoadWait);
 	},
 	'_mozDrawText': function(textToDraw) { this.drawString(textToDraw); },
 

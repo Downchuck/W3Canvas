@@ -29,29 +29,31 @@ colorjack.keyboard.KeyEditor = function() {
 		visualTextBox.drawBox();
 	};
 
-	var insertChar = function(letter) {
+	// Insert one letter or replace selection if there was one
+	var insertChar = function(letter) {		
 		if (visualSelection.doesRangeExist()) { // Delete selection
 			cursor.hideCursor();
-			textModel.cut();
+			textModel.deleteRange();
 			visualSelection.clearMarkedSelection(false);
 		}
 		var prevOffset = textModel.getOffsetFromModel();
 		
-		textModel.insertChar(letter);
-		refreshBox();
-		
+		textModel.insertChar(prevOffset, letter);
+		refreshBox();		
 		textModel.setNextPosition(prevOffset + 1, (letter == '\n'));
 		cursor.startBlink();
 	};
 
+	// Delete selection or delete one character
 	var deleteChar = function(offset) {
 		if (visualSelection.doesRangeExist()) { // Delete selection
 			cursor.hideCursor();
-			textModel.cut();
+			textModel.deleteRange();
 			visualSelection.clearMarkedSelection(false);
 		}
 		else { // Single char deletion (without anything selected)
-			var textLen = textModel.getTextContent().length;			
+			//var textLen = textModel.getTextContent().length;			
+			var textLen = textModel.getExtendedContent().length;
 			var withinRange = (0 <= offset && offset < textLen);
 			if (withinRange && textLen > 0) {
 				textModel.deleteChar(offset);
@@ -63,12 +65,15 @@ colorjack.keyboard.KeyEditor = function() {
 
 	//----------------------------------------------------------------------------------------------
 
+	// Insert a newline
 	var enterKey = function(k) {
 		if (!inputScrolling.isEnabled()) {
 			insertChar("\n");
 		}
 	};
 	
+	// handles Shift-Insert which is paste in the Common User Access standard
+	// Shift-Insert (Paste in CUA) does not appear to be handled
 	var insertKey = function(k) {
 		if (k.shiftKey) { // Shift+Insert: Paste
 			cursor.stopBlink(); 
@@ -79,6 +84,8 @@ colorjack.keyboard.KeyEditor = function() {
 		}
 	};
 	
+	// handles Delete (delete character) and Ctrl-Delete (delete word)
+	// Shift-Delete (Cut in CUA) does not appear to be handled
 	var deleteKey = function(k) {
 		var offset = textModel.getOffsetFromModel();
 
@@ -100,9 +107,8 @@ colorjack.keyboard.KeyEditor = function() {
 		cursor.startBlink();
 	};
 	
+	// handles Backspace and Ctrl-Backspace (backspace word)
 	var backspaceKey = function(k) {
-		// info("backspace");
-
 		var normal = !k.ctrlKey;
 
 		if (normal) {

@@ -51,8 +51,10 @@ colorjack.boxmodel.Range = function() {
 };
 
 colorjack.boxmodel.DocumentFragment = function(content, range) { // interface for copy/paste/cut and perhaps undo ops!
-	this.content = content;
+	this.content = content;	
 	this.range = range;
+	
+	this.cssHack = '';	
 };
 
 // A DocumentTree gets parsed into a BoxTree

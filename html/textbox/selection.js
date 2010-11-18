@@ -16,6 +16,7 @@ colorjack.textbox.ui.VisualSelection = function() {
 	var textModel		= null;
 	var visualTextBox	= null;
 	var testingMode		= false;
+	var visualLineModel = null;
 	
 	var box				= null;
 	
@@ -27,7 +28,9 @@ colorjack.textbox.ui.VisualSelection = function() {
 			cursorPosition	= vars.cursorPosition;
 			inputScrolling	= vars.inputScrolling;
 			textModel		= vars.textModel;
-			visualTextBox	= vars.visualTextBox;
+			visualTextBox	= vars.visualTextBox;			
+			visualLineModel =  textModel.getVisualLineModel();			
+			
 			
 			box = visualTextBox.getBox();
 			
@@ -44,15 +47,19 @@ colorjack.textbox.ui.VisualSelection = function() {
 	var range = colorjack.boxModelFactory.createRange();
 	
 	var setStart = function(i,x) {
+		
 		if (i < 0 || i >= basicModel.getLines().length) {
 			colorjack.debug.programmerPanic("Invalid cursor pos: " + i);
 		}
+		
 		range.setStart(i,x);
 	};
 	
 	var setEnd = function(i,x) {
 		range.setEnd(i,x);
 	};
+	
+	
 		
 	var getStart = function() {
 		return [range.startContainer, range.startOffset];
@@ -62,7 +69,20 @@ colorjack.textbox.ui.VisualSelection = function() {
 		return [range.endContainer, range.endOffset];
 	};
 	
+	//get the left of the range
+	var getLeft = function() {
+		if (range.endContainer > range.startContainer || (range.endContainer == range.startContainer && range.endOffset > range.startOffset))
+			return getStart();		
+		else 		return getEnd();
+	};
 	//---------------------------------------------------------------------------------------------------
+	
+/*DBG*/
+	var displayRange = function() {
+		var r = range;
+		info("[" + r.startContainer + "," + r.startOffset + "," + r.endContainer + "," + r.endOffset + "]");
+	};
+/*END DBG*/
 	
 	var doesRangeExist = function() {
 		var r = range;
@@ -124,7 +144,7 @@ colorjack.textbox.ui.VisualSelection = function() {
 
 				var startLen = visualTextBox.getWidth(fullStr.substring(0, startOffset)) + offset;
 				var endLen = visualTextBox.getWidth(fullStr.substring(0, endOffset)) + offset;
-//				throw new Error("Len: " + startLen + "," + endLen + " offset: " + offset + " - diff: " + (endLen-startLen) );
+//				alert("Len: " + startLen + "," + endLen + " offset: " + offset + " - diff: " + (endLen-startLen) );
 
 				if (startLen < 0) {
 					var lostWidth = 0 - startLen;
@@ -148,7 +168,7 @@ colorjack.textbox.ui.VisualSelection = function() {
 			}
 			else {
 				// Actually, empty lines create "null" buffers
-				// throw new Error("markSelection.createBufferImage(): Buffer is empty!");
+				// alert("markSelection.createBufferImage(): Buffer is empty!");
 			}
 		}
 	};
@@ -167,7 +187,7 @@ colorjack.textbox.ui.VisualSelection = function() {
 				var h = r[4];
 
 				if (!graphicsLib.restoreBufferImage(ctx, image, x, y, w, h)) {
-					throw new Error("Couldn't restoreBufferImage");
+					alert("Couldn't restoreBufferImage");
 				}
 			}
 		}
@@ -187,21 +207,23 @@ colorjack.textbox.ui.VisualSelection = function() {
 		var x = rng.startOffset;
 		var ii = rng.endContainer;
 		var xx = rng.endOffset;
+		
+		//mark selection on a single line
+		var markSelected = function(li, off1, off2) {			
+			var line = basicModel.getLines()[li];
 			
-		var markSelected = function(box, str) {
-			//debug(">>>> Marked selected: " + box[0] + "," + box[1] + " Str width: " + width);
+			if (off2 == null)
+				off2 = visualLineModel.getLineLength(li);
 			
-			// Limit the VisualSelection acc. to the BoxModel
-			var bm = visualTextBox.getBoxModel();
-			var left = bm.getLeftLength();
-			var x = Math.max(left, box[0]);
-			var y = box[1];
-			var height = box[2]-2;
 
-			var width = visualTextBox.getWidth(str);
+			var box1 = cursorPosition.getCursorXY(li, off1);
+			var box2 = cursorPosition.getCursorXY(li, off2);
 			
-			markSelection(x, y, width, height);
-		};
+			var w = box2[0] - box1[0];
+			
+						
+			markSelection(box1[0], line.getTop(), w, line.getHeight());
+		}
 
 		var ctx = getContext();
 		
@@ -211,24 +233,21 @@ colorjack.textbox.ui.VisualSelection = function() {
 		var lines = basicModel.getLines();
 
 		var sameLine = (i == ii);
+		//info('showRange ' + i + ' ' + x + ' ' + ii + ' ' + xx);
+		
 		if (sameLine && x != xx) {			// Same line, but not same position (start, end)
-			var line = lines[ii];
-			var str = line.content.substring(x, xx);
-			var startSelection = cursorPosition.getCursorXY(i, x);			
-			markSelected(startSelection, str);
+			markSelected(i, x, xx);
+			
 		}
 		else if (!sameLine && i < ii) {		// Multi-line selection
-			var box = cursorPosition.getCursorXY(i, x);
-			var firstLine = lines[i].content.substring(x);
-			markSelected(box, firstLine);
+			//first line
+			markSelected(i, x);
 
 			for (var j = i+1; j < ii; j++) {
-				box = cursorPosition.getCursorXY(j, 0);
-				markSelected(box, lines[j].content);
-			}			
-			box = cursorPosition.getCursorXY(ii, 0);
-			var lastLine = lines[ii].content.substring(0, xx);			
-			markSelected(box, lastLine);
+				markSelected(j, 0);
+			}						
+			//last line!
+			markSelected(ii, 0, xx);
 		}
 		ctx.restore();
 
@@ -248,10 +267,12 @@ colorjack.textbox.ui.VisualSelection = function() {
 		//-------------------------------------------------------
 		'setStart'				: setStart,
 		'getStart'				: getStart,
+		'getLeft'				: getLeft,
 		'setEnd'				: setEnd,
 		'getEnd'				: getEnd,
 		'doesRangeExist'		: doesRangeExist,
 		'getSelection'			: getSelection,
+/*DBG*/	'displayRange'			: displayRange,
 		//-------------------------------------------------------
 		'clearMarkedSelection'	: clearMarkedSelection,
 		'showRange'				: showRange,

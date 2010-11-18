@@ -9,8 +9,11 @@ colorjack.controlFactory = {
     }
     
     var Control = this[type];
+	
     if (typeof Control == "function") {
-      return new Control(canvas);
+	   var control = new Control(canvas);	   
+	   return control;
+      //return new Control(canvas);	  
     } else {
       throw new ReferenceError("colorjack.controlFactory.create(): control type not recognized: " + type);
     }
@@ -77,12 +80,12 @@ colorjack.controlFactory.TextArea = function(layer, textarea) {
 // Note: Radio/CheckBox are also of "input" type... we need to specify the "type"
 // type="text", or something else... type="radio" / type="checkbox"
 
-colorjack.controlFactory.InputText = function(layer,input) {
+colorjack.controlFactory.InputText = function(layer,input) {  
   if (colorjack && colorjack.textBoxFactory && colorjack.textBoxFactory.createTextBox) {
     if (typeof input == 'undefined') {
       input = colorjack.currentDocument.createElement("input");
       input.setType("text");
-    }
+    }	
     return colorjack.textBoxFactory.createTextBox(layer, input);
   } else {
     throw new ReferenceError("colorjack.controlFactory.InputText. Undefined: colorjack.textBoxFactory.createTextBox");

@@ -1,3 +1,4 @@
+
 colorjack.currentWindow = {
 	getWindowView: function() {
     return colorjack.document.defaultView.window;
@@ -31,7 +32,7 @@ colorjack.currentWindow = {
 		try {
 			bg = colorjack.document.body.bgColor;
 		}	catch (ignore) {}
-		return bg || "white";
+		return bg || white;
 	},
 
   /* GraphicsLib */

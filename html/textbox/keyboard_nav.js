@@ -1,4 +1,10 @@
+/*
+This file handles keyboard navigation. 
+File contains two interfaces: KeyNavigatorImpl and KeyNavigator. 
+KeyNavigator simply translates keystrokes to cursor movement concepts implemented in KeyNavigatorImpl. 
+*/
 
+// Abstract navigation concept interface, e.g. "move to home" "move to next word"
 colorjack.keyboard.KeyNavigatorImpl = function() {
 	//----------------------------------------------------------------------
 	var basicModel = null;
@@ -55,9 +61,12 @@ colorjack.keyboard.KeyNavigatorImpl = function() {
 			visualSelection.showRange();
 			cursor.startBlink();
 		}
-		else { // just move cursor to new position			
+		else { // just move cursor to new position		
+			//info('moveTo ' + safeContainer + ' ' + safeOffset);
 			//cursorPosition.moveToVisiblePosition(safeContainer, safeOffset);
-			cursorPosition.setPosition(safeContainer, safeOffset);
+			cursorPosition.setPosition(safeContainer, safeOffset);			
+			// since we are not in selection mode, any cursor movement should lead to text deselection. 
+			visualSelection.clearMarkedSelection();
 		}
 	};
 
@@ -126,7 +135,7 @@ colorjack.keyboard.KeyNavigatorImpl = function() {
 			var linenum = pos[0] + ((arrowDown)? 1:-1);
 			
 			var canMove = (0 <= linenum && linenum < getLineCount());	
-			if (canMove) {
+			if (canMove) {				
 				pos = cursorPosition.getVerticalArrowCursorPos(linenum);
 				var offset = pos[1];
 				moveOrSelectTo(linenum, offset, k.shiftKey);
@@ -149,11 +158,13 @@ colorjack.keyboard.KeyNavigatorImpl = function() {
 	// FIXME: Abstract to css text module
 
 	var getNextWordPos = function(text, linenum, offset, step) {
-		var p = visualLineModel.convertPositionFromViewToEdit(linenum, offset, true);		
+		//var p = visualLineModel.convertPositionFromViewToEdit(linenum, offset, true);		
+		var p = [linenum, offset];
+		
 		if (step > 0 && p[0] > basicModel.getLineCount()) {
 			return [0,0,false]; // invalid... cannot move further than what's available
 		}		
-		var start = editLineModel.getTextOffset(p[0], p[1]);
+		var start = editLineModel.getExtendedOffset(p[0], p[1]);
 		
 		offset = start;
 		
@@ -163,7 +174,7 @@ colorjack.keyboard.KeyNavigatorImpl = function() {
 			var previous = text.charAt(i-1);
 			var current = text.charAt(i);
 
-			var startToken = (colorjack.util.isWordSeparator(previous) && !colorjack.util.isWordSeparator(current));
+			var startToken = (colorjack.util.isWordSeparator(previous) && !colorjack.util.isWordSeparator(current));			
 			if (startToken) {
 				offset = i;
 				break;
@@ -190,7 +201,8 @@ colorjack.keyboard.KeyNavigatorImpl = function() {
 				linenum = 0;
 				offset = 0;
 			}
-			else if (i >= basicModel.getVisibleLength()) { // end of document
+			//else if (i >= basicModel.getVisibleLength()) { // end of document
+			else if (i>=text.length) {
 				var last = visualLineModel.getLastPosition();
 				linenum = last[0];
 				offset = last[1];
@@ -215,7 +227,8 @@ colorjack.keyboard.KeyNavigatorImpl = function() {
 
 		var wordMovement = k.ctrlKey;
 		if (wordMovement) {
-			var wordPos = getNextWordPos(basicModel.getTextContent(), linenum, offset, step);
+			//var wordPos = getNextWordPos(basicModel.getTextContent(), linenum, offset, step);
+			var wordPos = getNextWordPos(basicModel.getExtendedContent(), linenum, offset, step);
 			linenum = wordPos[0];
 			offset = wordPos[1];
 			canMove = wordPos[2];
@@ -223,6 +236,8 @@ colorjack.keyboard.KeyNavigatorImpl = function() {
 		else { // single char movement
 			var lastOffset = visualLineModel.getLastOffset(linenum);
 			offset += step;		// could go to different lines!
+			
+			//console.log('new offset: ' + offset);
 
 			if (arrowRight) {
 				if (offset > lastOffset) {
@@ -233,7 +248,7 @@ colorjack.keyboard.KeyNavigatorImpl = function() {
 			else if (offset < 0) {
 				linenum--;
 				if (linenum >= 0) {
-					offset += editLineModel.getLineLength(linenum); // want to count the newlines!
+					offset += editLineModel.getLineLength(linenum, true); // want to count the newlines!, so that it can move to the right of the last character on the previous line. And also include the generated image in the count
 				}
 			}
 			var withinLines = (linenum >= 0 && linenum < visualLineModel.getLineCount());

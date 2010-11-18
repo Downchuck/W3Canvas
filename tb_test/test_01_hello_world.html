@@ -1,0 +1,380 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+
+<title>Colorjack Text on Canvas: Test suite #1: Hello World </title>
+
+<link rel="stylesheet" type="text/css" href="../examples/fvlogger/logger.css" />
+<script type="text/javascript" src="../examples/fvlogger/logger.js"></script>
+
+<link rel="stylesheet" type="text/css" href="jsspec/JSSpec.css" />
+<script type="text/javascript" src="jsspec/diff_match_patch.js"></script>
+<script type="text/javascript" src="jsspec/JSSpec.js"></script>
+
+<link rel="stylesheet" type="text/css" href="../fvlogger/logger.css" />
+<script type="text/javascript" src="../fvlogger/logger.js"></script>
+<script type="text/javascript">$=function(a){return document.getElementById(a);};</script>
+
+<script src="../base2-jsb-fp.js"></script>
+
+<!--
+	helpers: mixin, clone, others.
+-->
+<script src="../lang_util.js" ></script>
+<script src="../lang_debug.js" ></script>
+<script src="../canvas_lib.js" ></script>
+
+<!--
+	createElement, element.style
+-->
+	<script src="../css/box_basic.js" ></script>
+	<script src="../css/box_model.js" ></script>
+	<script src="../css/css_style.js" ></script>
+	<script src="../css/box_paint.js" ></script>
+	<script src="../css/scrollbar.js" ></script>
+	<script src="../css/viewport.js" ></script>
+
+	<script src="../css/line_basic.js" ></script>
+	<script src="../css/text_wrap.js" ></script>
+	<script src="../css/line_model.js" ></script>
+	<script src="../css/line_paint.js" ></script>
+	
+	
+<!-- overflow: scroll; overflow-style: move; overflow-y: hidden; -->
+	<script src="../css/overflow.js" ></script>
+
+<!--
+	DOM API
+-->
+	<script src="../html/dom_core.js" ></script>
+	<script src="../html/dom_html_basic.js" ></script>
+	<script src="../html/dom_html_option.js" ></script>
+	<script src="../html/dom_html_select.js" ></script>
+<!-- document.createElement -->
+	<script src="../html/dom_html_doc.js" ></script>
+
+<!--
+	SVG/HTML Painters, Event Listeners
+	CSS Layout
+-->
+	<script src="../html/control_factory.js" ></script>
+	<script src="../html/select_control.js" ></script>
+	<script src="../html/combobox_control.js" ></script>
+	<script src="../html/image_control.js" ></script>
+	<script src="../html/button_control.js" ></script>
+	<script src="../html/slider_control.js" ></script>
+	<script src="../svg/dom_svg_rect.js" ></script>
+
+<!-- text -->
+	<script src="../html/textbox/factory.js" ></script>
+	<script src="../html/textbox/basic_model.js" ></script>
+<!-- css3-ui module has removed ::selection recently, css3-selectors has as well -->
+<!-- strongly related: Range, Selection -->
+	<script src="../html/textbox/cursor.js" ></script>
+	<script src="../html/textbox/selection.js" ></script>
+
+<!--
+	<select>
+		FIXME: Use webkit CSS APIs for gradient, rounded rectangles,
+		custom scroller styling and arrow url
+-->
+	<script src="../style/combo_blue.js" ></script>
+	<script src="../style/combo_mike.js" ></script>
+	<script src="../style/select_main.js" ></script>
+
+<!--
+	<img>
+		FIXME: Finish css parser for border, margin, padding and so on.
+-->
+	<script src="../style/image_main.js" ></script>
+
+<!--
+	<input type="[checkbox|radio]">
+		FIXME: Uses XForms setLabel to set associated text.
+		Investigate this. Wouldn't :after css selector work the same way?
+-->
+	<script src="../style/button_main.js" ></script>
+
+<!--
+	<textarea> <input type="text">
+		TODO: setStyle is great, keep working on it
+		FIXME: Allow inlined styles [ <div><span></span></div> ]
+-->
+
+<!-- ui-events -->
+	<script src="../html/textbox/keyboard.js" ></script>
+	<script src="../html/textbox/mouse.js" ></script>
+
+<!-- css3-content: move-to -->
+	<script src="../html/textbox/keyboard_edit.js" ></script>
+<!-- css3-ui: keyboard -->
+	<script src="../html/textbox/keyboard_nav.js" ></script>
+
+<!-- textarea / clipboard -->
+	<script src="../html/textbox/textbox_comp.js" ></script>
+	<script src="../html/textbox/textmodel_copypaste.js" ></script>
+	<script src="../html/textbox/textmodel.js" ></script>
+
+	<script src="../style/input_main.js" ></script>
+
+	<script src="../jsb/behaviors.js" ></script>
+	
+	
+
+<script type="text/javascript" src="testing_setup.js"></script>
+
+<script>
+//overwrite the info function!
+/*
+	var info = function(msg) {
+		console.log(msg);
+	}
+	*/
+</script>
+
+
+</head>
+
+<body>
+
+<hr />
+<canvas width="600" height="348" id="cBox_top"></canvas>
+<hr />
+
+<div style="display:none;">
+</div>
+
+
+<h2> Debugging </h2>
+
+<div id="fvlogger">
+	<dl>
+		<dt>fvlogger</dt>
+		<dd class="all"><a href="#fvlogger" onclick="showAll();" title="show all" id="abcdef">all</a></dd>
+		<dd class="debug"><a href="#fvlogger" onclick="showDebug();" title="show debug" id="showDebug">debug</a></dd>
+		<dd class="info"><a href="#fvlogger"  title="show info" id="showInfo">info</a></dd>
+		<dd class="warn"><a href="#fvlogger" onclick="showWarn();" title="show warnings" id="showWarn">warn</a></dd>
+		<dd class="error"><a href="#fvlogger" onclick="showError();" title="show errors" id="showError">error</a></dd>
+		<dd class="fatal"><a href="#fvlogger" onclick="showFatal();" title="show fatals" id="showFatal">fatal</a></dd>
+		<dd><a href="#fvlogger" onclick="eraseLog(true);" title="erase">erase</a></dd>
+	</dl>
+</div>
+
+<script type="text/javascript">
+
+loadAndDraw();
+
+function showStep(name) {
+	//alert("Step: " + name);
+}
+
+</script>
+
+
+<script type="text/javascript">
+
+// <![CDATA[
+describe('Hello World: editing single line of text', {
+	'setup: textBox.setValue()': function() {
+		showStep('Hello World example');
+
+	},
+	'textBox.setValue()/getValue() = "Hello World"': function() {
+		textBox.setValue("Hello World");
+		var t = textBox.getValue();
+		value_of(t).should_be("Hello World");
+	},
+	'insertChar: Prepend "I wanted to say:"': function() {
+		insertChar('I');
+		insertChar(' ');
+		insertChar('w');
+		insertChar('a');
+		insertChar('n');
+		insertChar('t');
+		insertChar('e');
+		insertChar('d');
+		insertChar(' ');
+		insertChar('t');
+		insertChar('o');
+		insertChar(' ');
+		insertChar('s');
+		insertChar('a');
+		insertChar('y');
+		insertChar(':');
+		insertChar(' ');
+		var t = textBox.getValue();
+		value_of(t).should_be("I wanted to say: Hello World");
+	},
+	'deleteChar: Replace "I" with "We"': function() {
+		deleteChar(0);
+		insertChar("W");
+		insertChar("e");
+		var t = textBox.getValue();
+		value_of(t).should_be("We wanted to say: Hello World");
+	}
+})
+
+describe('Hello World: cursor navigation', {
+	'setup': function() {
+		showStep('Hello World');
+		var text = 'Hello World';
+		textBox.setValue(text);
+	},
+	'Move cursor to the end of the line': function() {
+		keyNavig.end(eke);
+		var pos = getCursorPos();
+		value_of(pos[0]).should_be(0);
+		value_of(pos[1]).should_be(11); // 11 letters in "Hello World"
+	},
+	'Move cursor to the start of the line': function() {
+		keyNavig.home(eke);
+		var pos = getCursorPos();
+		value_of(pos[0]).should_be(0);
+		value_of(pos[1]).should_be(0);
+	},
+	'Move cursor arrow left from [0,0]: dont move!': function() {
+		keyNavig.arrowLeft(eke);
+		var pos = getCursorPos();
+		value_of(pos[0]).should_be(0);
+		value_of(pos[1]).should_be(0);
+	},
+	'Move cursor arrow right from [0,0]: move one!': function() {
+		keyNavig.arrowRight(eke);
+		var pos = getCursorPos();
+		value_of(pos[0]).should_be(0);
+		value_of(pos[1]).should_be(1);
+	},
+	'Move cursor to the start of the document': function() {
+		keyNavig.home(cke);
+		var pos = getCursorPos();
+		value_of(pos[0]).should_be(0);
+		value_of(pos[1]).should_be(0);
+	},
+	'Move cursor to the end of the document': function() {
+		keyNavig.end(cke);
+		var pos = getCursorPos();
+		value_of(pos[0]).should_be(0);
+		value_of(pos[1]).should_be(11);
+	}
+})
+
+describe('Hello World: cursor selection', {
+	'setup': function() {
+		showStep('Hello World: cursor selection');
+		var text = 'Hello World';
+		textBox.setValue(text);
+	},
+	'setSelection': function() {
+		setSelectionRange(0, 2, 0, 8);
+
+		var r = getSelectionRange();
+		value_of(r.startContainer).should_be(0);
+		value_of(r.startOffset).should_be(2);
+		value_of(r.endContainer).should_be(0);
+		value_of(r.endOffset).should_be(8);
+	},
+	'Word selection from middle to start: moveTo(0,2), Ctrl+Shift+ArrowLeft': function() {
+		setCursorPos(0, 2);
+
+		keyNavig.arrowLeft(scke);
+		var pos = getCursorPos();
+		var selection = getSelectionRange();
+
+		value_of(pos[0]).should_be(0);
+		value_of(pos[1]).should_be(0);
+
+		value_of(selection.startContainer).should_be(0);
+		value_of(selection.startOffset).should_be(2);
+		value_of(selection.endContainer).should_be(0);
+		value_of(selection.endOffset).should_be(0);
+	},
+	'Reverse Selection': function() {
+		setSelectionRange(0, 7, 0, 3);
+		var t = getCursorPos();
+
+		value_of(t).should_be([0, 3]);
+	}
+})
+
+describe('Hello World: cut/copy/paste', {
+	'setup': function() {
+		info('copy/paste setup');
+		showStep('Hello World');
+		var text = 'Hello World';
+		textBox.setValue(text);
+	},
+	'Cut': function() {
+		setSelectionRange(0, 4, 0, 5);
+		textBox.cut();
+
+		var t = textBox.getValue();
+		value_of(t).should_be("Hell World");
+	},
+	
+	'Paste': function() {
+		setCursorPos(0, 1);
+		textBox.paste();
+		var t = textBox.getValue();
+		value_of(t).should_be("Hoell World");
+	},
+	'Copy/Paste': function() {
+		setSelectionRange(0, 6, 0, 11);
+		textBox.copy();
+		textBox.paste();
+
+		var t = textBox.getValue();
+		value_of(t).should_be("Hoell World");
+
+		var t2 = getCursorPos();
+		value_of(t2).should_be([0, 11]);
+	},
+	'Copy/Paste/Paste': function() {
+		setSelectionRange(0, 6, 0, 11);
+		textBox.copy();
+		setCursorPos(0, 11);
+		textBox.paste();
+		textBox.paste();
+
+		var t = textBox.getValue();
+		value_of(t).should_be("Hoell WorldWorldWorld");
+
+		var t2 = getCursorPos();
+		value_of(t2).should_be([0, 21]);
+	},
+	
+	'Paste Cursor Position': function() {
+		setSelectionRange(0, 6, 0, 4);
+		textBox.copy();
+		textBox.paste();
+
+		var t = getCursorPos();
+		value_of(t).should_be([0, 6]);
+	},
+
+	'Paste Range Position': function() {
+		setSelectionRange(0, 4, 0, 6);
+		textBox.copy();
+		textBox.paste();
+
+		var t = getSelectionRange();
+		value_of(t.startContainer).should_be(0);
+		value_of(t.startOffset).should_be(6);
+		value_of(t.endContainer).should_be(0);
+		value_of(t.endOffset).should_be(6);
+	}
+	
+})
+
+// ]]>
+
+
+</script>
+
+
+<div style="display:none;">
+</div>
+
+	
+</body>
+</html>

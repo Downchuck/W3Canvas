@@ -54,6 +54,7 @@ colorjack.textbox.mouse.Mouse = function() {
 		if (!withinBox) {
 			colorjack.debug.programmerPanic("getCursorFromMouse(): Out of the box!!!");
 			visualSelection.clearMarkedSelection();
+			divBox.mousemove = false;
 			mouseDown = false;
 			return null;
 		}
@@ -62,12 +63,12 @@ colorjack.textbox.mouse.Mouse = function() {
 			x = x - box.getLeftLength(); // x is fine
 		
 			var lines = basicModel.getLines();
-			for (var i in lines) {
-				if (y <= lines[i].y) {
+			//for (var i in lines) {
+			for (var i = 0; i < lines.length; i++) {
+				if (y <= lines[i].getBottom()) {
 					return cursorPosition.getCursor(x,i);
 				}
 			}
-
 			// Special case at the bottom of the text
 			if (basicModel.isEmptyDocument()) {
 				return [0,0];
@@ -80,7 +81,7 @@ colorjack.textbox.mouse.Mouse = function() {
 						var endOfDocumentPos = [lastLine, line.content.length-1];
 						return endOfDocumentPos;
 					}
-					else if (y > line.y) {
+					else if (y > line.getTop()) {
 						return cursorPosition.getCursor(x, lastLine);
 					}
 				}
@@ -134,6 +135,9 @@ colorjack.textbox.mouse.Mouse = function() {
 					visualSelection.showRange(e.ctrlKey);
 				}
 			}
+		}
+		else {
+			divBox.onmousemove = null;
 		}
 	};
 		

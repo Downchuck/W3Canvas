@@ -2555,7 +2555,7 @@ var Element = Node.extend({
           // assume it's an unsupported selector
         }
       }
-      return new Selector(selector).test(element);
+      return _matchesSelector(element, selector);
     }
   },
 

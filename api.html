@@ -45,7 +45,6 @@ for (var i in window) {
 	-->
 
 <!-- overflow: scroll; overflow-style: move; overflow-y: hidden; -->
-
 	<script src="css/overflow.js" ></script>
 
 <!--
@@ -55,7 +54,6 @@ for (var i in window) {
 	<script src="html/dom_html_basic.js" ></script>
 	<script src="html/dom_html_option.js" ></script>
 	<script src="html/dom_html_select.js" ></script>
-
 <!-- document.createElement -->
 	<script src="html/dom_html_doc.js" ></script>
 
@@ -66,16 +64,15 @@ for (var i in window) {
 	<script src="html/select_control.js" ></script>
 	<script src="html/combobox_control.js" ></script>
 	<script src="html/image_control.js" ></script>
-
   <script src="html/button_control.js" ></script>
   <script src="html/slider_control.js" ></script>
+  <script src="svg/dom_svg_rect.js" ></script>
 <!-- text -->
 	<script src="html/textbox/factory.js" ></script>
 	<script src="html/textbox/basic_model.js" ></script>
 <!-- css3-ui module has removed ::selection recently, css3-selectors has as well -->
 <!-- strongly related: Range, Selection -->
 	<script src="html/textbox/cursor.js" ></script>
-
 	<script src="html/textbox/selection.js" ></script>
 
 <!-- ui-events -->
@@ -85,7 +82,6 @@ for (var i in window) {
 <!-- css3-content: move-to -->
 	<script src="html/textbox/keyboard_edit.js" ></script>
 <!-- css3-ui: keyboard -->
-
 	<script src="html/textbox/keyboard_nav.js" ></script>
 
 <!-- textarea / clipboard -->
@@ -113,8 +109,7 @@ function reflect(ref, refName) {
   ref.IS_DONE = true;
   document.write('<ul>');
   for (var name in ref) {
-    if(name == "window" || name == "document") document.write("<li>"+refName + "." + name+"</li>");
-    if (name != "window" && name != "document" && name != "reflect" && name != "IS_DONE" && name != "tags" && name != "_firebug" && name != "body" && name != "prototype" && name != "constructor" && !/^CanvasRenderingContext2D/.test(name)) {
+    if (name != "reflect" && name != "IS_DONE" && name != "tags" && name != "_firebug" && name != "body" && name != "prototype" && name != "constructor" && !/^CanvasRenderingContext2D/.test(name)) {
       var object = ref[name];
       var type = typeof object;
       if (type == "function" && /^[A-Z]/.test(name)) {

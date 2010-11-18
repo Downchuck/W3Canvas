@@ -11,40 +11,49 @@ var arialFontLib = null;
 
 function loadFont(callback) {
 	try {
-		//throw new Error("loading font....");
+		//alert("loading font....");
 		var r = new XMLHttpRequest();
 
 		var loadArial = function(_) {
-			if(r.readyState != 4) return;
-			arialFontLib = {
-				name: "svgfont",
-				version: "0.91",
-				exports: "load,drawText,measureText"
-			};
-			colorjack.util.extend(arialFontLib, CanvasRenderingContext2DPath);
-			colorjack.util.extend(arialFontLib, CanvasRenderingContext2DFont);
-			colorjack.util.extend(arialFontLib, CanvasRenderingContext2DFont_svg);
+			if(r.readyState != 4) { return; }
+
+			//new function(_) {
+				arialFontLib = new base2.Package({
+					name: "svgfont",
+					version: "0.91",
+					exports: "load,drawText,measureText"
+					});
+				//eval(this.imports);
+				arialFontLib.extend(CanvasRenderingContext2DPath);
+				arialFontLib.extend(CanvasRenderingContext2DFont);
+				arialFontLib.extend(CanvasRenderingContext2DFont_svg);
+				//eval(this.exports);
+			//}
+			arialFontLib = base2.svgfont;
 			arialFontLib.load('Arial',r.responseText);
-			if (callback) callback();
+			//alert("Finished loading font...." + arialFontLib);
+			if (callback) {
+				callback();
+			}
 		};
 		r.open("GET", 'Arial.svg', true);
 		r.onreadystatechange = loadArial; r.send(null);
 		
-		//throw new Error("Finished the call to loadFont");
+		//alert("Finished the call to loadFont");
 	}
 	catch (e) {
-		throw new Error("Error Loading Font: " + e.message);
+		alert("Error Loading Font: " + e.message);
 	}
 }
 
 
-var ArialFont = function(scaleFactor) {
+var ArialFont = function() {
 	if (!arialFontLib) {
-		throw new Error("Cannot use ArialFont... lib is null");
+		alert("Cannot use ArialFont... lib is null");
 	}
 	var fontLetters = arialFontLib.font.letters; // Funny dependency for the keyboard
 
-	if (!scaleFactor) scaleFactor	= 0.2;
+	var scaleFactor	= 0.2;
 	var textColor = FONT_COLOR;
 	
 	var getTextColor = function() {
@@ -75,7 +84,7 @@ var ArialFont = function(scaleFactor) {
 			ctx.globalCompositeOperation = 'source-over'; // back to default painting.			
 		}
 		catch (e) {
-			throw new Error("Error: " + e.message);
+			debug("Error: " + e.message);
 		}
 	};
 	
@@ -103,7 +112,7 @@ var ArialFont = function(scaleFactor) {
 	
 	var measureText = function(ctx, str) {
 		if (str === undefined) {
-			throw new Error("Missing string");
+			alert("Missing string");
 		}
 		
 		if (str === "") {

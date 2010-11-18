@@ -107,7 +107,13 @@ colorjack.textbox.model.TextModel = function() {
 	};
 	
 	var setTextContent = function(t) { basicModel.setTextContent(t); };
+	
+	//haipt
+	var setCssHack = function(css) { basicModel.setCssHack(css); }; 
+	
 	var getTextContent = function() { return basicModel.getTextContent(); };
+	
+	var getExtendedContent = function() { return basicModel.getExtendedContent(); };
 
 	//---------------------------------------------------------------------------------------------------
 	
@@ -115,7 +121,8 @@ colorjack.textbox.model.TextModel = function() {
 		var result = null;	
 		if (container === -1) { return result; }
 		
-		var line = basicModel.getLine(container).content;
+		//var line = basicModel.getLine(container).content;
+		var line = basicModel.getLine(container).getContent();
 		
 		if (!colorjack.util.isWordSeparator(line.charAt(offset))) {
 			var start = 0;
@@ -126,31 +133,41 @@ colorjack.textbox.model.TextModel = function() {
 			for (var u = offset; u < line.length; u++) {
 				if (colorjack.util.isWordSeparator(line.charAt(u))) { end = u; break;	}
 			}
+			
+			//account for shift in generated content:
+			//var offset1 = editLineModel.getTextOffset(container, start);
+			//var pos1 = editLineModel.getPosition(offset1);
+			
+			info("===> Word selected: |||" + line.substring(start, end) + "|||");		/*DBG*/			
 			var range = colorjack.boxModelFactory.createRange();
 			range.setStart(container, start);
 			range.setEnd(container, end);			
 			result = range;			
 		}
+		
 		return result;
 	};
 		
 	//---------------------------------------------------------------------------------------------------
-	
+	//get the offset in the extended text from the current model
 	var getOffsetFromModel = function(container, offset) {
 		if (container === undefined) {
 			var pos = cursorPosition.getPosition();
 			container = pos[0];
 			offset = pos[1];
 		}
-		var p = visualLineModel.convertPositionFromViewToEdit(container, offset, true);
-		var editOffset = editLineModel.getTextOffset(p[0], p[1]);
-		return editOffset;
+		//var p = visualLineModel.convertPositionFromViewToEdit(container, offset, true);
+		//var editOffset = editLineModel.getTextOffset(p[0], p[1]);
+		var exOffset = editLineModel.getExtendedOffset(container, offset);
+		return exOffset;
 	};
+	
 	
 	var setNextPosition = function(editOffset, wrap) {		
 		//info("Edit: " + editOffset);
 		var nextPos = editLineModel.getPosition(editOffset);
 		//info("nextPos: " + debuginfo(nextPos));
+		//info('setNextPosition: ' + nextPos[0] + ',' + nextPos[1]);
 
 		var pastEndOfDoc = (nextPos[0] >= basicModel.getLineCount());
 		if (pastEndOfDoc) {
@@ -172,55 +189,132 @@ colorjack.textbox.model.TextModel = function() {
 	//---------------------------------------------------------------------------------------------------
 	
 	var copy = function() {
-		var range = visualSelection.getSelection();
-		copyPasteUndo.copyRange(range);
+		// only performs cut request if selection is not empty
+		if (visualSelection.doesRangeExist())
+		{
+			var range = visualSelection.getSelection();
+			copyPasteUndo.copyRange(range);
+		}
 	};
 	
 	var paste = function() {
-		var pos = cursorPosition.getPosition();
-		copyPasteUndo.pasteFromClipboard(pos[0], pos[1]);
+		// only paste if there is something to paste
+		if (copyPasteUndo.clipboardHasSomething())
+		{
+			// if there is a previous selection, delete it
+			if (visualSelection.doesRangeExist()) {
+				deleteRange();
+				visualSelection.clearMarkedSelection(false);
+				visualSelection.showRange();
+			}
+
+			// cursorPosition is not sufficient, use visualSelection instead
+			// if user had a selection, we need visualSelection to figure out whether to paste before or paste after
+			var range = visualSelection.getSelection();
+			visualSelection.clearMarkedSelection();
+
+			// if the deleted selection was a forward selection, then we can just paste at the start of the selection offset
+			/*
+			if ((range.endContainer >= range.startContainer) && (range.endOffset >= range.startOffset)) {
+				copyPasteUndo.pasteFromClipboard(range.startContainer, range.startOffset);
+			}
+			// if the deleted selection was a reverse selection, then we have to paste at the end of the selection offset
+			else {
+				copyPasteUndo.pasteFromClipboard(range.endContainer, range.endOffset);
+			}
+			*/
+			copyPasteUndo.pasteFromClipboard(visualSelection.getLeft()[0], visualSelection.getLeft()[1]);
+		}
 	};	
 	
 	var cut = function() {
-		var range = visualSelection.getSelection();
-		var nextPos = copyPasteUndo.deleteRange(range);
-		cursorPosition.setPosition(nextPos[0],nextPos[1]);
+		// only performs cut request if selection is not empty
+		if (visualSelection.doesRangeExist())
+		{
+			var range = visualSelection.getSelection();
+
+			// calculate the text position within the text block
+			// we cannot use visual positional data because they might change during a delete operation (e.g. thru reflow)
+			/*
+			if ((range.endContainer >= range.startContainer) && (range.endOffset >= range.startOffset)) {
+				var editpos = getOffsetFromModel(range.startContainer, range.startOffset);
+			}
+			else {
+				var editpos = getOffsetFromModel(range.endContainer, range.endOffset);
+			}
+			*/
+			var editpos = getOffsetFromModel(visualSelection.getLeft()[0], visualSelection.getLeft()[1]);
+
+			// delete range
+			var nextPos = copyPasteUndo.deleteRange(range, true);
+
+			// restore cursor position
+			setNextPosition(editpos, true);
+			//cursorPosition.setPosition(nextPos[0],nextPos[1]);
+		}
 	};
 	
 	var undo = function() {
 		copyPasteUndo.restoreDocumentText();
 	};
+	
+	var deleteRange = function () {
+		// only performs delete request if selection is not empty
+		if (visualSelection.doesRangeExist())
+		{
+			var range = visualSelection.getSelection();
 
-	var insertChar = function(letter) {
-		var cp = cursorPosition.getPosition();	
-		//info("insertChar : " + debuginfo(cp));		
-		var p = visualLineModel.convertPositionFromViewToEdit(cp[0], cp[1], true);		
-		//info("insertChar 2: " + debuginfo(p));
-		var pos = editLineModel.getTextOffset(p[0], p[1]);
+			// calculate the text position within the text block
+			// we cannot use visual positional data because they might change during a delete operation (e.g. thru reflow)		
+			var editpos = getOffsetFromModel(visualSelection.getLeft()[0], visualSelection.getLeft()[1]);
+
+			// delete range
+			var nextPos = copyPasteUndo.deleteRange(range);
+
+			// restore cursor position
+			setNextPosition(editpos, true);
+		}
+	};
+
+	var insertChar = function(offset, letter) {
 		
-		var text = getTextContent();
-		var result = text.substring(0, pos) + letter + text.substring(pos);
-		setTextContent(result);
+		basicModel.insertChar(offset, letter);		
 	};
 	
-	var deleteChar = function(pos) {
-		var text = getTextContent();
-		var canDelete = (0 <= pos && pos < text.length);
-		if (canDelete) {
-			var result = text.substring(0, pos) + text.substring(pos+1);
-			setTextContent(result);
-		}
-		else {
-			colorjack.debug.programmerPanic("Cannot delete char (invalid pos): " + pos);
-		}
+	var deleteChar = function(offset) {		
+		basicModel.deleteChar(offset);	
 	};
 	
 	//---------------------------------------------------------------------------------------------------
+	
+/*DBG*/	var showLines = function() {	// Ctrl+Space to showLines()
+/*DBG*/
+/*DBG*/		info("+++++++++++++++++++++++++++++++++++++++++++++++++");
+/*DBG*/		var lines = basicModel.getLines();		
+/*DBG*/		for (var i = 0; i < lines.length; i++) {
+/*DBG*/			var content = lines[i].content;
+/*DBG*/			var showLine = content.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+/*DBG*/			info(showLine);
+/*DBG*/		}
+/*DBG*/		info("+++++++++++++++++++++++++++++++++++++++++++++++++");
+/*DBG*/		var pos = visualSelection.getStart();
+/*DBG*/		info("Pos Start: " + pos[0] + "," + pos[1]);
+/*DBG*/		pos = visualSelection.getEnd();
+/*DBG*/		info("Pos End: " + pos[0] + "," + pos[1]);
+/*DBG*/		pos = cursorPosition.getPosition();
+/*DBG*/		info("Pos Cursor: " + pos[0] + "," + pos[1]);
+/*DBG*/		info("Full Text: " + basicModel.getTextContent());
+/*DBG*/		info("Clipboard: " + basicModel.getTextContent());
+/*DBG*/		info("+++++++++++++++++++++++++++++++++++++++++++++++++");
+/*DBG*/	};
 
 	return {
 		'init'				: init,
 		'setTextContent'	: setTextContent, // should be accessible from the TextModel
 		'getTextContent'	: getTextContent,
+		'getExtendedContent': getExtendedContent,
+		
+		'setCssHack'		: setCssHack,
 
 		'getEditLineModel'	: function() { return editLineModel; },
 		'getVisualLineModel': function() { return visualLineModel; },
@@ -232,8 +326,10 @@ colorjack.textbox.model.TextModel = function() {
 		'cut'				: cut,
 		'paste'				: paste,
 		'undo'				: undo,
+		'deleteRange'		: deleteRange,
 		'insertChar'		: insertChar,
-		'deleteChar'		: deleteChar
+		'deleteChar'		: deleteChar,
+		'showLines' 		: showLines
 	};
 };
 

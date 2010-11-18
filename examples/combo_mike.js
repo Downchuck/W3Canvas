@@ -15,7 +15,7 @@ menuImgs.menuChkDark.src	= "data:image/png,%89PNG%0D%0A%1A%0A%00%00%00%0DIHDR%00
 
 
 var MikeComboBoxPainter = function() {
-	var painter		= new colorjack.css.BoxModelPainter();
+	var painter		= new BoxModelPainter();
 	var gradient	= "#cc0";
 	var fullBox		= null;
 	var labelBox	= null;
@@ -33,12 +33,12 @@ var MikeComboBoxPainter = function() {
 		iconBox.height = Math.round(labelBox.height);
 		
 		var createGradient = function(w, h) {
-			var canvas = colorjack.currentWindow.createCanvasLayer(w, h);
+			var canvas = WindowsLib.createCanvasLayer(w, h);
 			var ctx = canvas.getContext('2d');
 
 			var x = 0;
 			var y = 0;
-			painter.setupLinearGradient(ctx, x, y, w, h, '#fff', '#888', true);
+			setupLinearGradient(ctx, x, y, w, h, '#fff', '#888', true);			
 			ctx.fillRect(x, y, w, h);
 
 			var pattern = ctx.createPattern(canvas, 'repeat');
@@ -54,21 +54,21 @@ var MikeComboBoxPainter = function() {
 			if (!arrowPainted) {
 				
 				// Center the image within the iconBox
-				painter.paintImage(ctx, menuImgs.menuIcons, iconBox, "center", "center");
+				paintImage(ctx, menuImgs.menuIcons, iconBox, "center", "center");
 
 				arrowPainted = true;
 			}
 		}
 		catch (e41) {
-			throw new Error("Error: " + e41.message);
+			alert("Error: " + e41.message);
 		}
 	};
 
 	var paintComboBox = function(ctx, selectedValue, font) {
-		ctx.fillStyle = colorjack.currentWindow.getBackgroundColor();
+		ctx.fillStyle = WindowsLib.getBackgroundColor();
 		ctx.fillRect(0, 0, fullBox.width, fullBox.height);
 		
-		painter.paintRoundedTextBox(ctx, fullBox, gradient, selectedValue, font, labelBox);
+		painter.paintRoundedBox(ctx, fullBox, gradient, selectedValue, font, labelBox);
 		
 		arrowPainted = false;		// repaint arrow!
 		paintIcon(ctx, "normal");
@@ -82,14 +82,14 @@ var MikeComboBoxPainter = function() {
 };
 
 var MikeSelectPainter = function(color) {
-	var painter = new colorjack.css.BoxModelPainter();
+	var painter = new BoxModelPainter();
 	
 	var topColor = color || "white";
 			
 	var paintSelectBackground = function(ctx, boxModel, style) {
 
 		var box = boxModel.getMarginBox();
-		ctx.fillStyle = colorjack.currentWindow.getBackgroundColor();
+		ctx.fillStyle = WindowsLib.getBackgroundColor();
 		ctx.fillRect(0, 0, box.width, box.height);
 		
 		ctx.save();
@@ -130,7 +130,7 @@ var MikeSelectPainter = function(color) {
 		box.x += 4;
 		
 		if (state.checked) {
-			painter.paintImage(ctx, img, box);
+			paintImage(ctx, img, box);
 		}
 	};
 	
@@ -200,13 +200,13 @@ var overrideMikePainters = function(comboBox) {
 				box.padding.bottom = 4;		
 			};
 			this.getSelectTopOffset = function(top, comboHeight, scrollOffset) {
-				// throw new Error("Scroll: " + window.pageYOffset);
+				// alert("Scroll: " + window.pageYOffset);
 				
 				// return top + comboHeight;
 				// return top;
 				
 				var topOffset = Math.max(window.pageYOffset, top - scrollOffset);
-				// throw new Error("Top offset: " + topOffset);
+				// alert("Top offset: " + topOffset);
 				
 				return topOffset;
 			};

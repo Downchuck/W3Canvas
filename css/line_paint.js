@@ -1,16 +1,4 @@
 
-// Out of date
-colorjack.css.Font = function() {
-	var fontLetters = arialFontLib.font.letters; // Funny dependency for the keyboard
-
-	return {
-		'drawString': function(ctx, str)  { arialFontLib.ctx = ctx; arialFontLib.drawString(ctx, str); },
-		'measureText': function(ctx, str) { return arialFontLib.measureText(str).width; },
-		'getFontLetters': function()      { return fontLetters; },
-		'setFontLetters': function(fl)    { fontLetters = fl; }
-	};
-};
-
 // Debug 
 colorjack.component.BoxStyle = function() {
 	this.color = "rgb(200,0,0)";
@@ -45,18 +33,41 @@ colorjack.textbox.VisualTextBox = function() {
 	var context			= null;
 	var boxModel		= null;
 	var originalBoxModel	= null;
-	var font			= null;
+	
 	var inputScrolling	= null;
-	var testingMode		= false;
+	var testingMode		= false;	
 	var textBoxId		= -1;
+	
+	var images = []; //cache images to be drawn!
 	
 	// Instead of expanding the original box model, we choose to shrink the box model.
 	// And the rest increase the bottom margin area... OR the bottom padding area.
 	// For the width, we shouldn't have problems expanding to the maximum.
 	
 	var getLineHeight = function() {
-		return baseLineExtraSpacing + font.getTextHeight();
+		//return baseLineExtraSpacing + font.getTextHeight();
+		var ctx  = getContext();		
+		var fontHeight = getFontHeight(ctx);		
+		return baseLineExtraSpacing + fontHeight;
 	};
+	
+	//get the current font height of canvas's context by analyzing the font's CSS text
+	var getFontHeight = function(ctx) {
+		
+		var tokens = ctx.font.split(' ');
+		var i;
+		for (i = 0; i < tokens.length; i++)
+		{
+			var l = tokens[i].length;
+			if (l > 2 && tokens[i][l-2]=='p' && tokens[i][l-1]=='x')
+			{
+				var str = tokens[i].substr(0, l-2);
+				return str*1;
+			}
+		}
+		colorjack.debug.programmerPanic("VisualTextBox. Cannot find font height!");
+		//return 0; //cannot find -> return some random value!?
+	}
 
 
 // HTMLTextAreaElement
@@ -112,16 +123,15 @@ colorjack.textbox.VisualTextBox = function() {
 		box = colorjack.boxModelFactory.createBox();
 		var offset = boxModel.getOffset();
 		box.x = offset.x;
-		box.y = offset.y + font.getTextHeight();
+		//box.y = offset.y + font.getTextHeight();		
+		box.y = offset.y + getFontHeight(context);
 		box.width = boxModel.contentArea.width - box.x - 1;
 		box.height = boxModel.contentArea.height;
 		box.writingMode = 'lr-tb';
 	};
 	
 	var setFont = function(f) {
-		font = f;
-		baseLineExtraSpacing = Math.round(font.getTextHeight() / 5); // Make sure to set to an integer value.
-		resetBox();
+		context.font = f;
 	};
 	
 	var init = function(vars) {
@@ -137,15 +147,10 @@ colorjack.textbox.VisualTextBox = function() {
 				textBoxId			= vars.textBoxId;
 				
 				originalBoxModel	= vars.textDomElement;
-
-				if (!font) {
-					font = new ArialFont();			
-				}
 				resetBox();
 
-//				throw new Error("InitAdjusted: " + boxModel.contentArea.width);
-				
-				colorjack.debug.checkNull("VisualTextBox", [basicModel, box, canvasBox, context, font, textBoxId]);
+//				throw new Error("InitAdjusted: " + boxModel.contentArea.width);				
+				colorjack.debug.checkNull("VisualTextBox", [basicModel, box, canvasBox, context, textBoxId]);
 			}
 		}
 		catch (e541) {
@@ -154,110 +159,111 @@ colorjack.textbox.VisualTextBox = function() {
 		return boxModel;
 	};
 	
-	var getContext = function() { return context; };
+	var getContext = function() { return context; };	
+	var painter	= new colorjack.css.BoxModelPainter();
+	var wrapper = new colorjack.css.LineWrapper();
 	
-	// -------------------------------------------------------------------------------
-
-	var drawLine = function(line,drawText,boxStyle) {
+	var drawLine  = function(linebox, boxStyle) { 
 		var ctx = getContext();
-
-		// before is actually an array, ::before == before(1),
-		// ::before::before == before(1)::before
-		// ::before(2) == before(2)
-		if(line.content.substr(0,5) == 'spoon') line.before = function(line,ctx,drawText,boxStyle) {
-			var n = colorjack.util.mixin(line,{content: '!!!', 'after':null, 'before': null});
-			n.maxWidth = n.width = getWidth(n.content);
-			line.x += n.width;
-			line.maxWidth -= n.width;
-			drawLine(n,drawText,boxStyle);
-		}
-
-		if(line.before) line.before(line,ctx,font.drawString,boxStyle);
+		
+		var saveFont = ctx.font;
 		ctx.save();
-		ctx.translate(line.x,line.y);
+		
+		var i = 0;
+		
+		//erase the whole line
+		ctx.save();		
+		ctx.translate(linebox.getLeft(), linebox.getTop()); // text-baseline: bottom
+		ctx.clearRect(0,0,linebox.getMaxWidth(),linebox.getHeight());
+	
 
-		// Paint Boundaries
-
-		ctx.save();
-		ctx.translate(0, -line.maxHeight); // text-baseline: bottom
-		ctx.clearRect(0,0,line.maxWidth,line.maxHeight);
-		ctx.beginPath(); ctx.rect(0,0,line.maxWidth,line.maxHeight); ctx.clip();
 		if (boxStyle.reverseMode) {
 			ctx.fillStyle  = boxStyle.color;
-			ctx.fillRect(0,0,line.maxWidth,line.maxHeight);
+			ctx.fillRect(0,0,line.getMaxWidth(),line.getHeight());
 		}
+		
 		if (boxStyle.showLines) {
 			ctx.strokeStyle = boxStyle.lineColor;
-			ctx.strokeRect(0,0,line.maxWidth,line.maxHeight);
+			ctx.strokeRect(0,0,linebox.getMaxWidth(),linebox.getHeight());
 		}
+		
 		if (debugging.showSingleLineBorder) {
 			ctx.strokeStyle = debugging.singleLineBorderColor;
-			ctx.strokeRect(0,line.maxHeight-line.height,line.width,line.height);
+			//ctx.strokeRect(0,line.maxHeight-line.height,line.getMaxWidth(),line.getHeight());
 		}
+		
 		ctx.restore();
+		
+		//draw the inline boxes
+		for (i = 0; i < linebox.getBoxes().length; i++)
+		{
+			ctx.save();			
+			var box = linebox.getBoxes()[i];
+			
+			if (box.contentFragment.isImage) {
+				//draw the image
 
-		// Paint Content
-
-		ctx.save();
-		//ctx.rect(0,-line.height,line.width,line.height); // FIXME: Cheap baseline
-		//ctx.clip();
-		if (inputScrolling.isEnabled()) {
-			// BoxModel String location: BoxModel.contentArea.width
-			//ctx.beginPath();
-			//ctx.rect(0, 0, boxModel.contentArea.width, line.height);
-			//ctx.clip();
-			var offset = inputScrolling.getOffset();
-			ctx.translate(offset, 0);
-		}
-		var diff =  font.getBaseLine() - font.getTextHeight();
-		ctx.translate(0, diff);
-		ctx.fillStyle = boxStyle.color;
-
-		if(line.content.substr(0,5) == 'spoon') line.after = function(line,ctx,drawText,boxStyle) {
-			var n = colorjack.util.mixin(line,{content: '!!!', 'after':null, 'before': null});
-			n.x += n.width; n.maxWidth = n.width = getWidth(n.content);
-			// delete line.after; delete line.before;
-			drawLine(n,drawText,boxStyle); 
-			var c = document.getElementById("cBox_top");
-			var ievent = false;
-			if(ievent) {
-				ctx.drawImage(c,n.x,n.y-n.maxHeight); // setup events region
-				//ctx.delegate(c,n.x,n.y-n.maxHeight);
-			} else {
-				c.style.position='absolute'; c.style.left = ctx.canvas.offsetLeft + n.x + 'px';
-				c.style.top = ctx.canvas.offsetTop + n.y  -n.maxHeight + 'px';
+				if (images[box.contentFragment.url]== null) { //not in the cache yet!					
+					//load it
+					var img = new Image();
+					//customized properties
+					img.box = box;
+					img.url = box.contentFragment.url; //original url, we remember this to put the image into cache later!
+					
+					img.onload = function() {
+						//info('image loaded: ' + img.src);												
+						images[img.url] = img;	
+						ctx.drawImage(img, img.box.x, img.box.y, img.box.width, img.box.height);
+					}					
+					img.src = box.contentFragment.url;
+				} else {
+					//fill some place-holder rect first
+					/*
+					ctx.save();						
+					ctx.beginPath();
+					ctx.rect(box.x, box.y, box.width, box.height);
+					ctx.fillStyle = "#007f00"; //dark green				
+					ctx.fill();
+					ctx.restore();
+					*/
+					//info('image found in cache');
+					
+					//just draw the image in the cache
+					ctx.drawImage(images[box.contentFragment.url], box.x, box.y, box.width, box.height);	
+				}
 			}
-			if(0) { // TEXT_NODE
-				ctx.save();
-				ctx.translate(line.width+5,0);
-				// drawText(ctx,n.content); // drawText("!!!");
+			else {
+				ctx.textBaseline="bottom"; //put the anchor point at the bottom of the linebox
+				
+				ctx.translate(box.x, box.y + box.height); //temporarily hardcode!
+				ctx.fillStyle = boxStyle.color;
+				
+				if (box.contentFragment.style!="")
+					ctx.font = box.contentFragment.style;
+					
+				//info('fillText: ' + box.contentFragment.content + 'font: ' + ctx.font + " pos: " + box.x + "," + box.y);
+				ctx.fillText(box.contentFragment.content, 0, 0);			
 				ctx.restore();
 			}
-		}
-		ctx.save(); if(line.content && line.content.length) font.drawString(ctx, line.content); ctx.restore();
+		}	
+		
+			
 		ctx.restore();
-		ctx.restore();
-		if(line.after) line.after(line,ctx,font.drawString,boxStyle);
-	};
-
-	var wrapper = new colorjack.css.StringLineWrapper();
-	var m = new colorjack.css.LineMaker();
-	var painter	= new colorjack.css.BoxModelPainter();
+		ctx.font = saveFont; //restore		
+		
+	}
 	
-	function getWidth(str) {
-		return font.measureText(getContext(), str);
-	};
 
 //	adjustLineBox [ reflow lines, re-apply styles]
 	var drawBox = function() {
+		//alert('drawBox');
 		if (!initialized) {
 			colorjack.debug.programmerPanic("need to call TextBox.init() first");
 			return;
 		}
-
-		var outerBox = box;
-		
+		var outerBox = box;		
 		var textContent = basicModel.getTextContent();
+		var fragments = basicModel.getContentFragments();		
 		
 		var lineMaxWidth = outerBox.width;
 		var frameHeight = outerBox.height;
@@ -269,59 +275,19 @@ colorjack.textbox.VisualTextBox = function() {
 			offset.x = boxModel.getLeftLength();
 			offset.y = boxModel.getTopLength();
 		}
-
-		// FIXME: line-stacking-strategy,
-		// allow mixed inline and block elements
-		// allow display: inline (in so much as we can)
-
-		// these take line numbers and return available bounding width, and in the second case, x/y coordinates
-		// getMaxWidth uses line number and offset, to allow:
-		// css3-text: text-align-last
-		// var layout = { getMaxWidth: function(){}, getInlinePosition: function() {} };
-		var textLines = inputScrolling.isEnabled()? [textContent] : wrapper.getWrappedLines(textContent, lineMaxWidth, getWidth);
-		var lineBoxes = m.createLineBoxes(textLines, getWidth, font.getTextHeight(), lineMaxWidth, frameHeight, baseLineExtraSpacing, offset);
-
-//		basicModel.setLines(lineBoxes);
-//	}
-
-//	var drawBox = function() {
-//		var lines = basicModel.getLines();
-//		var lineBoxes = adjustLineBox(lines);
-		var lines = basicModel.getLines();
-		if (inputScrolling.isEnabled()) {
-			if (lineBoxes[0]) {
-				lineBoxes[0].redraw = true;
-			}
-		}
-		else {
-			var i;
-			for (i = 0; i < lineBoxes.length; i++) {
-				var line = lineBoxes[i];
-				var withinCurrentLines = (i < lines.length);
-
-				if (withinCurrentLines && line.content === lines[i].content) {
-					line.redraw = false;
-				}
-				else {
-					line.redraw = true;
-				}
-			}
-		}
-		var oldLines = lines;
-		lines = lineBoxes;
-		basicModel.setLines(lineBoxes); // comment out
-	
+		
+		var lineBoxes = wrapper.createLineBoxes(fragments, context, getLineHeight(), lineMaxWidth, frameHeight, baseLineExtraSpacing, offset);
+		
+		basicModel.setLines(lineBoxes);		
+		
 		if (!testingMode) {
-			var drawText = font.drawString;		
-			var ctx = getContext();
+			//var drawText = font.drawString;		
+			var ctx = getContext();			
+			var drawText = ctx.fillText;
 			
 			ctx.save();
 
-			// Default clipping: whole canvas, clipping again anyway (not needed if using default canvas clipping)
-//			ctx.beginPath();
-//			ctx.rect(0, 0, canvasBox.width, canvasBox.height); // Full canvas
-//			ctx.rect(Math.max(box.x-1, 0), 0, box.width + box.x+1, box.height); // More restricted zone, could reduce more here
-//			ctx.clip();
+
 
 			if (boxModel) {
 				// Just want to paint the border
@@ -340,21 +306,12 @@ colorjack.textbox.VisualTextBox = function() {
 				ctx.beginPath();
 				ctx.rect(left, top, w, h);
 				ctx.clip();
+				
+				ctx.clearRect(left, top, w, h);
 			}
 
 			for (i = 0; i < lineBoxes.length; i++) {
-				if (lineBoxes[i].redraw) {
-					drawLine(lines[i], drawText, boxStyle);
-					// i == lineBoxes.length - 1 ? colorjack.util.mixin(boxStyle,{color:'pink'}) : boxStyle);
-				}
-			}
-
-			// FIXME: Broken and not well thought out.
-			if (oldLines.length > lines.length) { // Erase the oldLines if there were there -> draw empty boxes
-				for (i = lines.length; i < oldLines.length; i++) {
-					oldLines[i].content = "";
-					drawLine(oldLines[i], drawText,boxStyle);
-				}
+				drawLine(lineBoxes[i], boxStyle);
 			}
 			ctx.restore();
 		}
@@ -365,18 +322,17 @@ colorjack.textbox.VisualTextBox = function() {
 		'setTestingMode': function(v) { testingMode = v; },
 		'getId'			: function() { return textBoxId; },
 		'getBox'		: function() { return box; },
-		'getWidth'		: getWidth,
+
 		'getBoxModel'	: function() { return boxModel; },
 		'setBoxModel'	: function(b) { boxModel = b; },
 		
 		'resetBox'		: resetBox,
-
-//		'getBox'		: function() { return box; },
+		
 		'drawBox' 		: drawBox,
 		'setBoxStyle' 	: function(s) { boxStyle = s; },
 		'getBoxStyle' 	: function() { return boxStyle; },
 		'setFont'		: setFont,
-		'getFont' 		: function() { return font; }	
+		'getFont' 		: function() { return context.font; }	
 	};
 };
 

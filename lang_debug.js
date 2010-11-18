@@ -13,7 +13,9 @@ colorjack.debug = {
   },
   
   programmerPanic: function(msg) {
-  	throw new Error("PANIC: " + msg);
+	//alert(msg);
+	console.trace();
+  	throw new Error("PANIC: " + msg);	
   },
   
   checkNull: function(fn, args) {
@@ -26,3 +28,5 @@ colorjack.debug = {
   	}
   }
 };
+
+

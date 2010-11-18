@@ -26,7 +26,9 @@ colorjack.textbox.model.CopyPasteUndo = function() {
 	var saveDocumentText = function() {
 		var doc = colorjack.boxModelFactory.createDocumentFragment();
 		doc.content = basicModel.getTextContent();
-		doc.range = visualSelection.getSelection();
+		
+		doc.cssHack = basicModel.getCssHack();		
+		doc.range = visualSelection.getSelection();		
 		undoDocumentFragment = doc;
 	};
 
@@ -34,6 +36,7 @@ colorjack.textbox.model.CopyPasteUndo = function() {
 		if (undoDocumentFragment) {
 			var doc = undoDocumentFragment;
 			basicModel.setTextContent(doc.content);
+			basicModel.setCssHack(doc.cssHack);
 			visualTextBox.drawBox();
 
 			var r = doc.range;
@@ -45,17 +48,26 @@ colorjack.textbox.model.CopyPasteUndo = function() {
 
 	//---------------------------------------------------------------------------------------------------
 
+	//this will return the offset of the character in the extended text.
 	var getCharOffset = function(container, offset) {	
 		return textModel.getOffsetFromModel(container, offset);
 	};
 	
 	var setClipboardText = function(t) {
-		colorjack.clipboardService.setClipboardText(t);		
+		colorjack.clipboardService.setClipboardText(t);				
 	};
+	
+	var setClipboardStyles = function (s) {
+		colorjack.clipboardService.setClipboardStyles(s);
+	}
 	
 	var getClipboardText = function() {
 		return colorjack.clipboardService.getClipboardText();
 	};
+	
+	var getClipboardStyles = function (s) {
+		return colorjack.clipboardService.getClipboardStyles();
+	}
 	
 	var clipboardHasSomething = function() {
 		var isEmpty = colorjack.clipboardService.isEmpty();
@@ -70,26 +82,44 @@ colorjack.textbox.model.CopyPasteUndo = function() {
 
 		if (backwardSelection) { /* swap */	var tmp = start; start = end; end = tmp; }
 
-		var t = basicModel.getTextContent().substring(start, end);
+		//var t = basicModel.getTextContent().substring(start, end);
+		//var s = basicModel.extractStyles(start, end);
+		
+		var t = basicModel.copyText(start, end);
+		var s = basicModel.copyStyles(start, end);
 		setClipboardText(t);
+		setClipboardStyles(s);
 
 		return [start, end, backwardSelection]; // return only needed for deleteRange()
 	};
 
-	var deleteRange = function(range) {
+	// When the second parameter is set, this function would copy the content to the clipboard.
+	// Regardless, it will store the action for undo
+	var deleteRange = function(range, copyToClipboard) {
 		var result = [0,0];
 
 		if (range !== null && range !== undefined) {
 			saveDocumentText();
 			
-			var offsets = copyRange(range);
-			var start = offsets[0];
-			var end   = offsets[1];
-			var backward = offsets[2];
-			
+			if (copyToClipboard)
+			{
+				var offsets = copyRange(range);
+				var start = offsets[0];
+				var end   = offsets[1];
+				var backward = offsets[2];
+			}
+			else
+			{
+				var start = getCharOffset(range.startContainer, range.startOffset);
+				var end   = getCharOffset(range.endContainer, range.endOffset);
+				var backward = (end < start);
+				if (backward) { /* swap */	var tmp = start; start = end; end = tmp; }
+			}
+
 			if (start != end) {
 				var text = basicModel.getTextContent();
-				basicModel.setTextContent(text.substring(0, start) + text.substring(end));
+				//basicModel.setTextContent(text.substring(0, start) + text.substring(end));
+				basicModel.deleteContent(start, end);
 				visualTextBox.drawBox();
 			}
 			result = (backward)?
@@ -104,13 +134,20 @@ colorjack.textbox.model.CopyPasteUndo = function() {
 			saveDocumentText();
 			
 			var c = getClipboardText();
+			var s = getClipboardStyles();
 
 			var pos = getCharOffset(container, offset);
-			var text = basicModel.getTextContent();
-			basicModel.setTextContent(text.substring(0, pos) + c + text.substring(pos));
+			
+			info('pasteFromClipboard initial pos: ' + pos + ' / ' + basicModel.getExtendedContent().length);
+			//var text = basicModel.getTextContent();
+			//basicModel.setTextContent(text.substring(0, pos) + c + text.substring(pos));
+			//TODO: get the style as well!
+			basicModel.insertContent(pos, c, s);
 			visualTextBox.drawBox();
 
 			var nextCursorPos = pos + c.length; // always larger
+			info('nextcusorPos ' + nextCursorPos);
+			info('extended content ' + basicModel.getExtendedContent().length);
 			
 			var editLineModel = textModel.getEditLineModel();		
 			var start = editLineModel.getPosition(pos);
@@ -119,9 +156,9 @@ colorjack.textbox.model.CopyPasteUndo = function() {
 			var visualLineModel = textModel.getVisualLineModel();
 			var lastPos = visualLineModel.getLastPosition();
 			
-			//info("LastPos: " + lastPos[0] + "," + lastPos[1]);
-			//info("Start: " + start[0] + "," + start[1]);
-			//info("End: " + end[0] + "," + end[1]);
+			info("LastPos: " + lastPos[0] + "," + lastPos[1]);
+			info("Start: " + start[0] + "," + start[1]);
+			info("End: " + end[0] + "," + end[1]);
 			
 			var startOutOfRange = (start[0] > lastPos[0]) ||
 				(start[0] === lastPos[0] && start[1] > lastPos[1]);
@@ -130,12 +167,15 @@ colorjack.textbox.model.CopyPasteUndo = function() {
 				(end[0] === lastPos[0] && end[1] > lastPos[1]);
 
 			if (startOutOfRange || endOutOfRange) {
-				debug("Start/End: out of range");
+				error("Start/End: out of range");
+				start = lastPos;
+				end = lastPos;
 			}
 			else {
 				// Check if past the end of the visible canvas for "end"
 				//info("copyPaste.visualSelection.set");
-				visualSelection.setStart(start[0], start[1]);
+				//visualSelection.setStart(start[0], start[1]);
+				visualSelection.setStart(end[0], end[1]);
 				//info("copyPaste.setEnd");
 				visualSelection.setEnd(end[0], end[1]);
 				//info("end of copyPaste.visualSelection.set");
@@ -149,7 +189,8 @@ colorjack.textbox.model.CopyPasteUndo = function() {
 		'restoreDocumentText'	: restoreDocumentText,
 		'copyRange'				: copyRange,
 		'deleteRange'			: deleteRange,
-		'pasteFromClipboard'	: pasteFromClipboard
+		'pasteFromClipboard'	: pasteFromClipboard,
+		'clipboardHasSomething'	: clipboardHasSomething
 	};
 };
 

@@ -1,15 +1,20 @@
 // ----------------------------------------------------------------------------------------------------------------
 // Global singletons
+//
 
 colorjack.textbox.ui.graphics.GraphicsLib = function() {
-  var DEBUG_GRAPHICS = false;
-
+	var DEBUG_GRAPHICS = false;
+	
 	var testingMode = false;	// It should be at the canvas-level: DummyCanvas (no-op for testing)
 
 	var createBufferImage = function(x,y,w,h,image) {
   	var result = null;
 		try {
   		if (testingMode) {	return {}; }
+
+  		if (DEBUG_GRAPHICS && w > 4) { // Don't show the cursor size
+  			info("createBufferImage(): " + x + "," + y + " - " + w + "," + h);
+  		}
 
   		var canvas = document.createElement('canvas');
   		canvas.width = w;
@@ -42,6 +47,10 @@ colorjack.textbox.ui.graphics.GraphicsLib = function() {
 		var result = false;
 		
 		try {
+  		if (DEBUG_GRAPHICS && w > 4) { // Don't show the cursor size
+  			info("restoreBufferImage(): " + x + "," + y + " - " + w + "," + h);
+  		}
+
   		if (ctx && buffer && x >= 0 && y >= 0 && w > 0 && h > 0) {
   			ctx.save();
   			ctx.globalCompositeOperation = "copy";
@@ -84,8 +93,9 @@ colorjack.component.TextBoxFactory = function() {
 	var textBoxes = [];
 	var uniqueId = 0;
 	
-	var createTextBox = function(canvasBox, domElement) {
-		var t = new colorjack.component.TextBox(canvasBox, domElement, uniqueId, true /* automatedTest (Stop drawing and deactivate blinking activity) */);
+	var createTextBox = function(canvasBox, domElement) {		
+		var t = new colorjack.component.TextBox(canvasBox, domElement, uniqueId, false /* automated Test (Stop drawing and deactivate blinking activity) */);
+		//colorjack.debug.programmerPanic('createTextBox.2');
 		uniqueId++;
 		textBoxes.push(t);
 		return t;
@@ -147,22 +157,36 @@ colorjack.component.TextFocusManager = function(tbf) {
 
 colorjack.component.ClipboardService = function() {
 	var clipboardText = "";	// Last text buffer ("selection copy" or last "selection delete", except for char operations: Del, Backspace)
+	var styles = [];
 	
 	var setClipboardText = function(t) {
-		clipboardText = String(t);
+		clipboardText = t;
 	};
 
 	var getClipboardText = function() {
 		return clipboardText;
 	};
 	
+	
+	//remember the style of the text as well!
+	var setClipboardStyles = function(s) { 	
+		styles = s;
+	}
+	
+	var getClipboardStyles = function() {
+		return styles;
+	}
+	
 	var isEmpty = function() {
-		return !clipboardText;
+		var empty = (clipboardText === null || clipboardText === "");
+		return empty;
 	};
 	
 	return {
 		'setClipboardText' : setClipboardText,
 		'getClipboardText' : getClipboardText,
+		'setClipboardStyles': setClipboardStyles,
+		'getClipboardStyles': getClipboardStyles,
 		'isEmpty' : isEmpty
 	};
 };
@@ -174,3 +198,37 @@ colorjack.clipboardService	= new colorjack.component.ClipboardService();
 colorjack.boxModelFactory	= new colorjack.boxmodel.Factory();
 colorjack.textBoxFactory	= new colorjack.component.TextBoxFactory();
 colorjack.textFocusManager	= new colorjack.component.TextFocusManager(colorjack.textBoxFactory);
+
+//-------------------------------------------------------------------------------------------------------
+/*
+function isWordSeparator(ch) {
+	return (ch == ' ' || ch == '\t' || ch == '\n' || ch == ',' || ch == ';' || ch == '.');
+}
+
+function debuginfo(v) {
+	if (typeof(v) == 'object') {
+		var z='';
+		for (var i = 0; i < v.length; i++) {
+			z+=i+':'+v[i]+', ';
+		}
+		z=z.substr(0,z.length-2);
+		return z;
+	}
+	return "v is not an object";
+}
+
+function programmerPanic(msg) {
+	info("PANIC: " + msg);
+}
+
+
+function checkNull(fn, args) {
+	if (args.length > 0) {
+		for (var j = 0; j < args.length; j++) {
+			if (args[j] === null) {
+				throw new Error("Arg[" + j + "] is null in " + fn + ".init()");
+			}
+		}
+	}
+}
+*/

@@ -82,7 +82,7 @@ if (FVL_LOG_ON) {
 // 
 function FVL_showMessages(level, hideOthers) {
 
-//	throw new Error('showing ' + level);
+//	alert('showing ' + level);
 
 	var showAll = false;
 	// if no level has been specified, use the default
@@ -109,8 +109,8 @@ function FVL_showMessages(level, hideOthers) {
 
 		// get the class name for this <p>
 		var c = getNodeClass(ps[i]);
-//		throw new Error(c);
-//		throw new Error("Node #" + i + "'s class is:" + c);
+//		alert(c);
+//		alert("Node #" + i + "'s class is:" + c);
 		if (c && c.indexOf(lookup) > -1 || showAll) { show(ps[i]); } 
 	}
 }

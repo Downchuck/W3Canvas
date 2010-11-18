@@ -1,4 +1,4 @@
-colorjack.currentWindow = {
+var WindowsLib = {
 	'getWindowView': function() { return document.defaultView.window; },
 	'createCanvasLayer': function(w,h) {
 		var layer = document.createElement('canvas');
@@ -6,7 +6,7 @@ colorjack.currentWindow = {
 		layer.style.position = "absolute";	// containing block
 		layer.style.visibility = "hidden";		
 		if (w && h) {
-			colorjack.currentWindow.setCanvasSize(layer, w, h);
+			WindowsLib.setCanvasSize(layer, w, h);
 		}		
 		return layer;
 	},

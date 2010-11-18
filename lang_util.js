@@ -7,40 +7,51 @@ var colorjack = {
   document: window.document
 };
 
+
 colorjack.util = (function() {
-  function mixin(obj1, prop, prop2, prop3) {
-  	var result = {};
-  	result.prototype = obj1.prototype;	// Should we just use the Object.prototype?
-  	
-    extend(result, obj1);
-    extend(result, prop);
-    extend(result, prop2);
-    extend(result, prop3);
-    
-  	return result;
-  };
-  
-  function extend(object1, object2) {
-    for (var i in object2) {
-      object1[i] = object2[i];
-    }
-    return object1;
-  };
+	function mixin(obj1, prop, prop2, prop3) {
+		var result = {};
+		result.prototype = obj1.prototype;	// Should we just use the Object.prototype?
+		
+		extend(result, obj1);
+		extend(result, prop);
+		extend(result, prop2);
+		extend(result, prop3);
+		
+		return result;
+	  };
+	  
+	function extend(object1, object2) {
+		for (var i in object2) {
+		  object1[i] = object2[i];
+		}
+		return object1;
+	 };
 
-  function clone(obj) { // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
-    if(obj == null || typeof(obj) != 'object') {
-      return obj;
-    }
+	function debuginfo(obj) {
+		var z = '';
+		for (var x in obj) {
+			//if (obj.hasOwnProperty(x)) {
+				z += x + ":" + obj[x] + ",";
+			//}
+		}
+		z = (z.length > 2)? z.substring(0, z.length-3) : '';
+		return z;
+	}
 
-    var temp = new obj.constructor(); // changed (twice)
+	function clone(obj) { // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
+		if(obj == null || typeof(obj) != 'object') {
+			return obj;
+		}
 
-    for (var key in obj) {
-      temp[key] = clone(obj[key]);
-    }
-    return temp;
-  };
+		var temp = new obj.constructor(); // changed (twice)
 
-  function isWordSeparator(ch) {
+		for (var key in obj) {
+			temp[key] = clone(obj[key]);
+		}
+		return temp;
+	}
+	 function isWordSeparator(ch) {
   	return (ch == ' ' || ch == '\t' || ch == '\n' || ch == ',' || ch == ';' || ch == '.');
   };
 
@@ -50,5 +61,5 @@ colorjack.util = (function() {
     clone: clone,
     isWordSeparator: isWordSeparator
   };
-
-})();
+  
+ })();

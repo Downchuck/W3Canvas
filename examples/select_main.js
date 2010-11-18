@@ -16,7 +16,7 @@ var setupComboBoxFruits = function() {
 			{ id : "optionBanana",		label: "BananaBananaBanana" }
 		];
 
-		var arialFont = new ArialFont();
+		var arialFont = new ArialFont(arialFontLib);
 		
 		// Keep experimenting...
 		//arialFont.setScaleFactor(0.07);
@@ -47,7 +47,12 @@ var setupComboBoxFruits = function() {
 		);
 	};
 
-	setupFruitSelection();
+	try {
+		setupFruitSelection();
+	}
+	catch (e3) {
+		debug("Error: " + e3.message);
+	}
 };
 
 var setupComboBoxOther = function() {
@@ -73,7 +78,8 @@ var setupComboBoxOther = function() {
 		
 		chordSelection = ControlFactory.create('ComboBox', 'chordComboBox');
 		
-		var smallFont = new ArialFont(0.06);
+		var smallFont = new ArialFont(arialFontLib);
+		smallFont.setScaleFactor(0.06);
 		chordSelection.setFont(smallFont);
 		chordSelection.setSize(100);
 		
@@ -82,7 +88,7 @@ var setupComboBoxOther = function() {
 		chordSelection.setOptions(options);
 		
 		chordSelection.setSelectionCallback(function(value, label) {
-			// throw new Error("Value: " + value);	
+			// alert("Value: " + value);	
 		});
 	};
 
@@ -97,7 +103,8 @@ var setupComboBoxOther = function() {
 		
 		scalesSelection = ControlFactory.create('ComboBox', 'scalesComboBox'); //new ComboBoxControl(textLayer);
 		
-		var smallFont = new ArialFont(0.06);
+		var smallFont = new ArialFont(arialFontLib);
+		smallFont.setScaleFactor(0.06);
 		scalesSelection.setFont(smallFont);
 		scalesSelection.setSize(100);
 		
@@ -106,7 +113,7 @@ var setupComboBoxOther = function() {
 		scalesSelection.setOptions(options);
 		
 		scalesSelection.setSelectionCallback(function(value, label) {
-			// throw new Error("Value: " + value);	
+			// alert("Value: " + value);	
 		});
 	};
 	
@@ -120,20 +127,26 @@ var setupComboBoxOther = function() {
 		
 		var musicSelection = ControlFactory.create('ComboBox', 'composerComboBox');
 		
-		var largerFont = new ArialFont(0.4);
+		var largerFont = new ArialFont(arialFontLib);
+		largerFont.setScaleFactor(0.4);
 		largerFont.setTextColor("green");
 		musicSelection.setFont(largerFont);
 		
 		musicSelection.setOptions(options2);
 		
 		musicSelection.setSelectionCallback(function(value, label) {
-			// throw new Error("Value: " + value);	
+			// alert("Value: " + value);	
 		});
 	};
 
-	setupChordSelection();
-	setupScalesSelection();
-	setupComposerSelection();
+	try {
+		setupChordSelection();
+		setupScalesSelection();
+		setupComposerSelection();
+	}
+	catch (e3) {
+		debug("Error: " + e3.message);
+	}
 };
 
 // These are just for testing

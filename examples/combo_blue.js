@@ -1,7 +1,7 @@
 var fruitSelection = null;
 
 var BlueComboBoxPainter = function() {
-	var painter		= new colorjack.css.BoxModelPainter();
+	var painter		= new BoxModelPainter();
 	var gradient	= "#cc0";
 	var fullBox		= null;
 	var labelBox	= null;
@@ -16,12 +16,12 @@ var BlueComboBoxPainter = function() {
 		iconBox = icon;
 		
 		var createGradient = function(w, h) {
-			var canvas = colorjack.currentWindow.createCanvasLayer(w, h);
+			var canvas = WindowsLib.createCanvasLayer(w, h);
 			var ctx = canvas.getContext('2d');
 
 			var x = 0;
 			var y = 0;
-			painter.setupLinearGradient(ctx, x, y, w, h, '#ddf', 'blue', true);
+			setupLinearGradient(ctx, x, y, w, h, '#ddf', 'blue', true);
 			ctx.fillRect(x, y, w, h);
 
 			var pattern = ctx.createPattern(canvas, 'repeat');
@@ -54,15 +54,15 @@ var BlueComboBoxPainter = function() {
 			ctx.restore();
 		}
 		catch (e41) {
-			throw new Error("Error: " + e41.message);
+			alert("Error: " + e41.message);
 		}
 	};
 
 	var paintComboBox = function(ctx, selectedValue, font) {
-		ctx.fillStyle = colorjack.currentWindow.getBackgroundColor();
+		ctx.fillStyle = WindowsLib.getBackgroundColor();
 		ctx.fillRect(0, 0, fullBox.width, fullBox.height);
 		
-		painter.paintRoundedTextBox(ctx, fullBox, gradient, selectedValue, font, labelBox);
+		painter.paintRoundedBox(ctx, fullBox, gradient, selectedValue, font, labelBox);
 		paintIcon(ctx, "normal");		
 	};
 
@@ -74,7 +74,7 @@ var BlueComboBoxPainter = function() {
 };
 
 var LightBlueSelectPainter = function() {
-	var painter = new colorjack.css.BoxModelPainter();
+	var painter = new BoxModelPainter();
 			
 	var paintSelectBackground = function(ctx, boxModel, style) {
 		var box = boxModel.getMarginBox();
@@ -86,7 +86,7 @@ var LightBlueSelectPainter = function() {
 		ctx.clip();
 		ctx.fillRect(box.x, box.y, box.width, box.height);
 		
-		//painter.paintRoundedTextBox(ctx, box, "white");
+		//painter.paintRoundedBox(ctx, box, "white");
 	};
 	
 	var paintOption = function(ctx, node, state, width, label) {

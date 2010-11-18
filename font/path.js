@@ -46,7 +46,7 @@ var CanvasRenderingContext2DFont_svg = {
 		for(var ii=0;ii<l.length;ii++) {
 			if(l[ii].substr(0,4)=='id="')
 				fid = l[ii].substr(4);
-			else if(l[ii].substr(0,13)=='horiz-adv-x="')
+			else if(l[ii].substr(0,13)=='horiz-adv-x="');
 				horadv = l[ii].substr(13);
 		}
 
@@ -73,7 +73,7 @@ var CanvasRenderingContext2DFont_svg = {
         while(i < il && 0 < (ie = svg.indexOf(tag,i))) {
 		l = svg.substring(ie,svg.indexOf('>',ie));
 		i = ie + 1;
-		l = l.replace(new RegExp('="\\s', "g"), '="&#x20;');
+		l = l.replace(/=" /g,'="&#x20;');
 		l = l.substr(l.indexOf(' ')+1).split('" ');
 		lk = horadv = d = glyphname = '';
 		for(var ii=0;ii<l.length;ii++) {
@@ -207,11 +207,7 @@ var CanvasRenderingContext2DPath = {
 	path = path.replace(regex,' ').replace(reg_,' $1 ').replace(reg__,'$1 ').replace(reg___,' $1 ').replace(/\ +/g,',');
 	var pathl = path.length;
 
-	var ic = '';
-	var pl = '';
-	var plf = '';
-	var ple = '';
-	var peval='';
+	var ic,pl,plf,ple; var peval='';
 	var i, x, cur, end; i=x=cur=end=0;
 	while(i < pathl) {
 		ic = path.charAt(i); i++;
@@ -241,7 +237,7 @@ var CanvasRenderingContext2DPath = {
 	var x2 = rx + x;
 	var y2 = ry + y;
 	if( x1 == x2 && y1 == y2 ) return;
-	if( rx ==  0.0 || ry == 0.0) { this.lineTo(x2,y2); return; }
+	if( rx ==  0.0 || yx == 0.0) { this.lineTo(x2,y2); return; }
 	var v1 = (x1 - x2) / 2.0;
 	var v2 = (y1 - y2) / 2.0;
 
@@ -314,14 +310,14 @@ var CanvasRenderingContext2DPath = {
 
 	if (sweepFlag == 0 && angle_delta > 0.0) angle_delta -= 2 * Math.PI;
 	else if (sweepFlag == 1 && angle_delta < 0.0) angle_delta += 2 * Math.PI;
-	
-	this.ctx.save();
-	this.ctx.translate(cx,cy);
-	this.ctx.rotate(angle);
-	this.ctx.scale(rx,ry);
-	if (angle_delta > 0.0) this.ctx.arc(0.0, 0.0, 1.0, start_angle, start_angle + angle_delta, 1);
-	else this.ctx.arc(0.0, 0.0, 1.0, start_angle, start_angle + angle_delta);
-	this.ctx.restore();
+
+	c.save();
+	c.translate(cx,cy);
+	c.rotate(angle);
+	c.scale(rx,ry);
+	if (angle_delta > 0.0) c.arc(0.0, 0.0, 1.0, start_angle, start_angle + angle_delta, 1);
+	else c.arc/*_negative*/(0.0, 0.0, 1.0, start_angle, start_angle + angle_delta);
+	c.restore();
 },
 
 'arcRel': function(rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x, y) {
