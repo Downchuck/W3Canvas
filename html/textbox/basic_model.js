@@ -7,7 +7,10 @@
 
 
 //haipt: new type: ContentFragment, which contains a fragment of the text content, with the same text style across the fragments
-//@param editPos is the position in the final text (after generated content has been inserted in). This allows us to handle deletion/insertion content correctly
+
+// @param editPos is the position in the final text (after generated content has been inserted in). This allows us to handle deletion/insertion content correctly
+
+
 colorjack.textbox.model.ContentFragment = function(content, fontStyle, imgUrl, width, height) {		
 	this.content = content;	
 	this.style = fontStyle;		
