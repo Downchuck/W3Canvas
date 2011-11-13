@@ -10,7 +10,7 @@
 
 // @param editPos is the position in the final text (after generated content has been inserted in). This allows us to handle deletion/insertion content correctly
 
-
+var info;
 colorjack.textbox.model.ContentFragment = function(content, fontStyle, imgUrl, width, height) {		
 	this.content = content;	
 	this.style = fontStyle;		
@@ -210,7 +210,7 @@ colorjack.textbox.model.BasicModel = function() {
 	//parse the css string into array of styles
 	//param content is used just to get the content length
 	var parseCss = function(css) { 	
-		info('parse css: ' + css);
+		if(info) info('parse css: ' + css);
 
 		styles = []; //clear the style array (parent's scope)
 			

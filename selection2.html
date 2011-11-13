@@ -16,6 +16,9 @@ canvas { behavior: url(#canvasFactory); -filter:progid:DXImageTransform.IECanvas
 </style>
 <canvas id="CanvasRenderingContext2D" style="display: none" />
 <script>
+var info;
+if(typeof(info) == 'undefined') info = function(a) { console.log(a); };
+
 // FIXME: c.__proto__ = p.prototype = c.constructor.prototype
 // Lets tie this .prototype into canvasFactory, and rename canvasFactory to CanvasRenderingContext2D
 //CanvasRenderingContext2D.prototype = CanvasRenderingContext2D.getContext('2d').prototype;

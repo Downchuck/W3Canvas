@@ -301,7 +301,14 @@ This is the next line.
 <hr />
 
     <h2> Debugging </h2>
+<div 
+ style="opacity: 0; position: absolute; width: 400px; font-size: 3em; height: 200px; top: 0; left: 0; background: lightblue;">
+<div id="editable" tabindex=0 contentEditable onkeydown="this.parentNode.style.left = (parseInt(this.parentNode.style.left) + 15) + 'px';">&nbsp;</div>
+</div>
 
+<script>
+document.execCommand("enableObjectResizing", false, false);
+</script>
 	<div id="fvlogger">
 		<dl>
 			<dt>fvlogger</dt>

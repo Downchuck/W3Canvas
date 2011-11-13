@@ -17,6 +17,14 @@ function loadFont(callback) {
 		var loadArial = function(_) {
 			if(r.readyState != 4) { return; }
 
+/*
+                        if (callback) {
+                                callback();
+                                // setTimeout(callback, 1000);
+                        }
+return;
+*/
+
 			//new function(_) {
 				arialFontLib = new base2.Package({
 					name: "svgfont",
@@ -36,7 +44,7 @@ function loadFont(callback) {
 				callback();
 			}
 		};
-		r.open("GET", 'Arial.svg', true);
+		r.open("GET", 'examples/Arial.svg', true);
 		r.onreadystatechange = loadArial; r.send(null);
 		
 		//alert("Finished the call to loadFont");
@@ -49,7 +57,7 @@ function loadFont(callback) {
 
 var ArialFont = function() {
 	if (!arialFontLib) {
-		alert("Cannot use ArialFont... lib is null");
+		console.log("Cannot use ArialFont... lib is null");
 	}
 	var fontLetters = arialFontLib.font.letters; // Funny dependency for the keyboard
 
