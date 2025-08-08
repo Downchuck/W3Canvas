@@ -1,5 +1,3 @@
-declare var colorjack: any;
-
 colorjack.util = (function() {
 	function mixin(...objects: any[]): any {
 		const result: any = {};
