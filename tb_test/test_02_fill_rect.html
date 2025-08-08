@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+<title>Colorjack Canvas Test: fillRect</title>
+
+<link rel="stylesheet" type="text/css" href="jsspec/JSSpec.css" />
+<script type="text/javascript" src="jsspec/diff_match_patch.js"></script>
+<script type="text/javascript" src="jsspec/JSSpec.js"></script>
+
+<script src="../base2-jsb-fp.js"></script>
+<script src="../lang_util.js" ></script>
+<script src="../canvas_lib.js" ></script>
+<script src="../alg/scanline_fill.js"></script>
+
+</head>
+
+<body>
+
+<canvas width="600" height="400" id="canvas"></canvas>
+
+<script type="text/javascript">
+// <![CDATA[
+describe('Canvas fillRect', {
+    'should draw a solid rectangle': function() {
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
+
+        var x = 50;
+        var y = 50;
+        var width = 100;
+        var height = 75;
+        var color = '#ff0000';
+
+        ctx.fillStyle = color;
+        colorjack.alg.scanlineFill(ctx, x, y, width, height);
+
+        // Verify a few pixels
+        var imageData = ctx.getImageData(x, y, width, height);
+        var data = imageData.data;
+
+        // Check top-left pixel
+        value_of(data[0]).should_be(255);
+        value_of(data[1]).should_be(0);
+        value_of(data[2]).should_be(0);
+        value_of(data[3]).should_be(255);
+
+        // Check a pixel in the middle
+        var middleX = Math.floor(width / 2);
+        var middleY = Math.floor(height / 2);
+        var middleIndex = (middleY * width + middleX) * 4;
+        value_of(data[middleIndex]).should_be(255);
+        value_of(data[middleIndex + 1]).should_be(0);
+        value_of(data[middleIndex + 2]).should_be(0);
+        value_of(data[middleIndex + 3]).should_be(255);
+
+         // Check bottom-right pixel
+        var lastPixelIndex = (width * height - 1) * 4;
+        value_of(data[lastPixelIndex]).should_be(255);
+        value_of(data[lastPixelIndex + 1]).should_be(0);
+        value_of(data[lastPixelIndex + 2]).should_be(0);
+        value_of(data[lastPixelIndex + 3]).should_be(255);
+    }
+});
+// ]]>
+</script>
+
+</body>
+</html>
