@@ -1,0 +1,28 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "base2-jsb-fp.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Downchuck/W3Canvas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Downchuck/W3Canvas/issues"
+  },
+  "homepage": "https://github.com/Downchuck/W3Canvas#readme",
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}

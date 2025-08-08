@@ -123,14 +123,58 @@ var RectDisplay = function() {
 
  var repaint = function() {
    ctx = layer.getContext('2d');
-   layer.width = 200; layer.height = 200;
-//   RectPainter(this.getX()||0,this.getY()||0,this.getWidth()||300,this.getHeight||150,this.getRx(),this.getRy());
-   rectEl.setFill('blue');
-   RectPainter(this.getX()||0,this.getY()||0,this.getWidth()||300,this.getHeight()||150,this.getRx(),this.getRy());
-   ctx.fillStyle = this.getFill();
-   ctx.strokeStyle = this.getStroke();
-   ctx.fill();
-   ctx.stroke();
+    console.log("Repainting rectangle...");
+
+    var x = this.getX() || 0;
+    var y = this.getY() || 0;
+    var w = this.getWidth() || 300;
+    var h = this.getHeight() || 150;
+    var rx = this.getRx() || 0;
+    var ry = this.getRy() || 0;
+    var fill = this.getFill();
+    var stroke = this.getStroke();
+
+    console.log(`  - Coords: (${x}, ${y})`);
+    console.log(`  - Dims: ${w}x${h}`);
+    console.log(`  - Rounded: ${rx}, ${ry}`);
+    console.log(`  - Fill: ${fill}`);
+    console.log(`  - Stroke: ${stroke}`);
+
+
+    // Fill
+    ctx.fillStyle = fill;
+    if (fill) {
+        if (rx === 0 && ry === 0) {
+            console.log("  - Filling with scanlineFill");
+            colorjack.alg.scanlineFill(ctx, x, y, w, h);
+        } else {
+            console.log("  - Filling with native fill");
+            RectPainter(x, y, w, h, rx, ry);
+            ctx.fill();
+        }
+    }
+
+    // Stroke
+    ctx.strokeStyle = stroke;
+    ctx.fillStyle = stroke;
+    if (stroke) {
+        console.log("  - Stroking...");
+        if (rx === 0 && ry === 0) {
+            colorjack.alg.bresenham(ctx, x, y, x + w, y);
+            colorjack.alg.bresenham(ctx, x + w, y, x + w, y + h);
+            colorjack.alg.bresenham(ctx, x + w, y + h, x, y + h);
+            colorjack.alg.bresenham(ctx, x, y + h, x, y);
+        } else {
+            colorjack.alg.bresenham(ctx, x + rx, y, x + w - rx, y);
+            colorjack.alg.drawBezier(ctx, x + w - rx, y, x + w, y, x + w, y + ry, x + w, y + ry);
+            colorjack.alg.bresenham(ctx, x + w, y + ry, x + w, y + h - ry);
+            colorjack.alg.drawBezier(ctx, x + w, y + h - ry, x + w, y + h, x + w - rx, y + h, x + w - rx, y + h);
+            colorjack.alg.bresenham(ctx, x + w - rx, y + h, x + rx, y + h);
+            colorjack.alg.drawBezier(ctx, x + rx, y + h, x, y + h, x, y + h - ry, x, y + h - ry);
+            colorjack.alg.bresenham(ctx, x, y + h - ry, x, y + ry);
+            colorjack.alg.drawBezier(ctx, x, y + ry, x, y, x + rx, y, x + rx, y);
+        }
+    }
  };
 	
  return {
