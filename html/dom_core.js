@@ -22,6 +22,7 @@ colorjack.dom = (function() {
     var childNodeIdx  = -1;
     var parent        = null;
     var children      = [];
+    var listeners     = {};
 
     var hasChildNodes = function() { return (children.length > 0); };
 
@@ -66,6 +67,33 @@ colorjack.dom = (function() {
       return parent;
     };
 
+    var addEventListener = function(type, listener) {
+        if (!listeners[type]) {
+            listeners[type] = [];
+        }
+        listeners[type].push(listener);
+    };
+
+    var removeEventListener = function(type, listener) {
+        if (listeners[type]) {
+            var index = listeners[type].indexOf(listener);
+            if (index > -1) {
+                listeners[type].splice(index, 1);
+            }
+        }
+    };
+
+    var dispatchEvent = function(event) {
+        if (listeners[event.type]) {
+            listeners[event.type].forEach(function(listener) {
+                listener(event);
+            });
+        }
+        if (parent) {
+            parent.dispatchEvent(event);
+        }
+    };
+
     return {
       'getNodeType'    : getNodeType,
       'hasChildNodes'    : hasChildNodes,
@@ -75,7 +103,10 @@ colorjack.dom = (function() {
       'getParent'      : getParent,
       'setChildNodeIdx'  : setChildNodeIdx,
       'setParent'      : setParent,
-      'getChildren'    : getChildren
+      'getChildren'    : getChildren,
+      'addEventListener' : addEventListener,
+      'removeEventListener' : removeEventListener,
+      'dispatchEvent' : dispatchEvent
     };
   };
 

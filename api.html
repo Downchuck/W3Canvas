@@ -23,7 +23,8 @@ for (var i in window) {
 <!--
 	helpers: mixin, clone, others.
 -->
-	<script src="lang_util.js" ></script>
+    <script src="https://unpkg.com/typescript@latest/lib/typescript.js"></script>
+	<script type="text/typescript" src="lang_util.ts" ></script>
 	<script src="canvas_lib.js" ></script>
 
 <!--
@@ -50,6 +51,10 @@ for (var i in window) {
 <!--
 	DOM API
 -->
+    <script src="alg/bresenham.js"></script>
+    <script src="alg/scanline_fill.js"></script>
+    <script src="alg/bezier.js"></script>
+    <script src="alg/arc.js"></script>
 	<script src="html/dom_core.js" ></script>
 	<script src="html/dom_html_basic.js" ></script>
 	<script src="html/dom_html_option.js" ></script>
@@ -125,6 +130,18 @@ function reflect(ref, refName) {
   }
   document.write("</ul>");
 }
+</script>
+<script>
+    const scripts = document.querySelectorAll('script[type="text/typescript"]');
+    scripts.forEach(async (script) => {
+        const src = script.getAttribute('src');
+        if (src) {
+            const response = await fetch(src);
+            const tsCode = await response.text();
+            const jsCode = ts.transpile(tsCode);
+            eval(jsCode);
+        }
+    });
 </script>
 </body>
 </html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verification</title>
+    <script src="lang_util.js"></script>
+    <script src="canvas_lib.js"></script>
+    <script src="css/box_basic.js"></script>
+    <script src="css/box_model.js"></script>
+    <script src="css/css_style.js"></script>
+    <script src="css/box_paint.js"></script>
+    <script src="css/scrollbar.js"></script>
+    <script src="css/viewport.js"></script>
+    <script src="css/line_basic.js"></script>
+    <script src="css/text_wrap.js"></script>
+    <script src="css/line_model.js"></script>
+    <script src="css/line_paint.js"></script>
+    <script src="css/overflow.js"></script>
+    <script src="alg/bresenham.js"></script>
+    <script src="alg/scanline_fill.js"></script>
+    <script src="alg/bezier.js"></script>
+    <script src="alg/arc.js"></script>
+    <script src="html/dom_core.js"></script>
+    <script src="html/dom_html_basic.js"></script>
+    <script src="html/dom_html_option.js"></script>
+    <script src="html/dom_html_select.js"></script>
+    <script src="html/dom_html_doc.js"></script>
+    <script src="html/control_factory.js"></script>
+    <script src="html/select_control.js"></script>
+    <script src="html/combobox_control.js"></script>
+    <script src="html/image_control.js"></script>
+    <script src="html/button_control.js"></script>
+    <script src="html/slider_control.js"></script>
+    <script src="svg/dom_svg_rect.js"></script>
+    <script src="html/textbox/factory.js"></script>
+    <script src="html/textbox/basic_model.js"></script>
+    <script src="html/textbox/cursor.js"></script>
+    <script src="html/textbox/selection.js"></script>
+    <script src="html/textbox/keyboard.js"></script>
+    <script src="html/textbox/mouse.js"></script>
+    <script src="html/textbox/keyboard_edit.js"></script>
+    <script src="html/textbox/keyboard_nav.js"></script>
+    <script src="html/textbox/textbox_comp.js"></script>
+    <script src="html/textbox/textmodel_copypaste.js"></script>
+    <script src="html/textbox/textmodel.js"></script>
+</head>
+<body>
+    <canvas id="mainCanvas" width="800" height="600"></canvas>
+    <script>
+        window.onload = function() {
+            var canvas = document.getElementById('mainCanvas');
+            var ctx = canvas.getContext('2d');
+
+            // --- Test SVG Rectangle with sharp corners ---
+            var rect1 = new colorjack.controlFactory.Rectangle(canvas);
+            rect1.setX(50);
+            rect1.setY(50);
+            rect1.setWidth(100);
+            rect1.setHeight(50);
+            rect1.setFill('rgba(255, 0, 0, 0.5)');
+            rect1.setStroke('blue');
+            rect1.repaint();
+
+            // --- Test SVG Rectangle with rounded corners ---
+            var rect2 = new colorjack.controlFactory.Rectangle(canvas);
+            rect2.setX(200);
+            rect2.setY(50);
+            rect2.setWidth(150);
+            rect2.setHeight(75);
+            rect2.setRx(20);
+            rect2.setRy(20);
+            rect2.setFill('rgba(0, 255, 0, 0.5)');
+            rect2.setStroke('green');
+            rect2.repaint();
+
+            // --- Test Arc Drawing ---
+            ctx.fillStyle = 'purple';
+            colorjack.alg.drawArc(ctx, 400, 200, 50, 0, Math.PI);
+
+            // --- Test DOM Methods ---
+            var doc = colorjack.currentDocument;
+            var body = doc.body;
+
+            var p1 = doc.createElement('p');
+            p1.setId('my-paragraph');
+            body.appendChild(p1);
+
+            var div1 = doc.createElement('div');
+            div1.setClassName('my-class');
+            body.appendChild(div1);
+
+            var div2 = doc.createElement('div');
+            div2.setClassName('my-class');
+            body.appendChild(div2);
+
+            var foundP = doc.getElementById('my-paragraph');
+            console.log('getElementById("my-paragraph"):', foundP);
+
+            var foundDivs = doc.querySelectorAll('.my-class');
+            console.log('querySelectorAll(".my-class"):', foundDivs);
+
+            var allDivs = doc.getElementsByTagName('div');
+            console.log('getElementsByTagName("div"):', allDivs);
+
+            var firstDiv = doc.querySelector('div');
+            console.log('querySelector("div"):', firstDiv);
+        };
+    </script>
+</body>
+</html>

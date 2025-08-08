@@ -6,36 +6,36 @@
 	<link rel="stylesheet" type="text/css" href="fvlogger/logger.css" />
 	<script type="text/javascript" src="fvlogger/logger.js"></script>
 
-	<script src="lang_util.js" ></script>
-	<script src="canvas_lib.js" ></script>
+	<script src="../lang_util.js" ></script>
+	<script src="../canvas_lib.js" ></script>
 
-	<script src="font/base2-p.js" ></script>
-	<script src="font/font.js" ></script>
-	<script src="font/path.js" ></script>
-	<script src="font/arial_font.js" ></script>
+	<script src="../font/base2-p.js" ></script>
+	<script src="../font/font.js" ></script>
+	<script src="../font/path.js" ></script>
+	<script src="../font/arial_font.js" ></script>
 
-	<script src="domhtml/dom_core.js" ></script>
-	<script src="domhtml/dom_html_basic.js" ></script>
+	<script src="../html/dom_core.js" ></script>
+	<script src="../html/dom_html_basic.js" ></script>
 
-	<script src="cssbox/box_basic.js" ></script>
-	<script src="cssbox/box_model.js" ></script>
-	<script src="cssbox/css_style.js" ></script>
-	<script src="cssbox/box_paint.js" ></script>
-	<script src="cssbox/scrollbar.js" ></script>
-	<script src="cssbox/viewport.js" ></script>
+	<script src="../css/box_basic.js" ></script>
+	<script src="../css/box_model.js" ></script>
+	<script src="../css/css_style.js" ></script>
+	<script src="../css/box_paint.js" ></script>
+	<script src="../css/scrollbar.js" ></script>
+	<script src="../css/viewport.js" ></script>
 
-	<script src="domhtml/dom_html_option.js" ></script>
-	<script src="domhtml/dom_html_select.js" ></script>
-	<script src="domhtml/dom_html_doc.js" ></script>
+	<script src="../html/dom_html_option.js" ></script>
+	<script src="../html/dom_html_select.js" ></script>
+	<script src="../html/dom_html_doc.js" ></script>
 
-	<script src="cssbox/vertical_layout.js" ></script>
-	<script src="control/select_control.js" ></script>
-	<script src="control/combobox_control.js" ></script>
-	<script src="control/control_factory.js" ></script>
+	<script src="../css/vertical_layout.js" ></script>
+	<script src="../html/select_control.js" ></script>
+	<script src="../html/combobox_control.js" ></script>
+	<script src="../html/control_factory.js" ></script>
 
-	<script src="combo_blue.js" ></script>
-	<script src="combo_mike.js" ></script>
-	<script src="select_main.js" ></script>
+	<script src="../combo_blue.js" ></script>
+	<script src="../combo_mike.js" ></script>
+	<script src="../select_main.js" ></script>
 
 	<script>
 
@@ -125,6 +125,24 @@
 		</dl>
 	</div>
 
+<canvas id="verificationCanvas" width="500" height="200"></canvas>
+<script>
+    var canvas = document.getElementById('verificationCanvas');
+    var ctx = canvas.getContext('2d');
 
+    // --- Test SVG Rectangle with sharp corners ---
+    var rect1 = new colorjack.controlFactory.Rectangle(canvas);
+    rect1.setX(10);
+    rect1.setY(10);
+    rect1.setWidth(100);
+    rect1.setHeight(50);
+    rect1.setFill('rgba(255, 0, 0, 0.5)');
+    rect1.setStroke('blue');
+    rect1.repaint();
+
+    // --- Test Arc Drawing ---
+    ctx.fillStyle = 'purple';
+    colorjack.alg.drawArc(ctx, 200, 75, 50, 0, Math.PI);
+</script>
 </body>
 </html>
