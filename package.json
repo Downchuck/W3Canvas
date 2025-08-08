@@ -7,8 +7,8 @@
     "example": "examples"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc"
+    "test": "node scripts/build.js --test",
+    "build": "node scripts/build.js"
   },
   "repository": {
     "type": "git",
@@ -24,5 +24,6 @@
   "homepage": "https://github.com/Downchuck/W3Canvas#readme",
   "devDependencies": {
     "typescript": "^5.9.2"
-  }
+  },
+  "packageManager": "yarn@4.9.2"
 }
