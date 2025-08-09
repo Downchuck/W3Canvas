@@ -1,324 +1,168 @@
-// http://www.w3.org/TR/DOM-Level-2-Style/css.html#CSS-CSS2Properties
+import * as dom from '../html/dom_core';
 
-/*
-var CSS2Properties = function() {
-	this.azimuth = '';
-	this.background = '';
-	this.backgroundAttachment = '';
-	this.backgroundColor = '';
-	this.backgroundImage = '';
-	this.backgroundPosition = '';
-	this.backgroundRepeat = '';
-	this.border = '';
-	this.borderCollapse = '';
-	this.borderColor = '';
-	this.borderSpacing = '';
-	this.borderStyle = '';
-	this.borderTop = '';
-	this.borderRight = '';
-	this.borderBottom = '';
-	this.borderLeft = '';
-	this.borderTopColor = '';
-	this.borderRightColor = '';
-	this.borderBottomColor = '';
-	this.borderLeftColor = '';
-	this.borderTopStyle = '';
-	this.borderRightStyle = '';
-	this.borderBottomStyle = '';
-	this.borderLeftStyle = '';
-	this.borderTopWidth = '';
-	this.borderRightWidth = '';
-	this.borderBottomWidth = '';
-	this.borderLeftWidth = '';
-	this.borderWidth = '';
-	this.bottom = '';
-	this.captionSide = '';
-	this.clear = '';
-	this.clip = '';
-	this.color = '';
-	this.content = '';
-	this.counterIncrement = '';
-	this.counterReset = '';
-	this.cue = '';
-	this.cueAfter = '';
-	this.cueBefore = '';
-	this.cursor = '';
-	this.direction = '';
-	this.display = '';
-	this.elevation = '';
-	this.emptyCells = '';
-	this.cssFloat = '';
-	this.font = '';
-	this.fontFamily = '';
-	this.fontSize = '';
-	this.fontSizeAdjust = '';
-	this.fontStretch = '';
-	this.fontStyle = '';
-	this.fontVariant = '';
-	this.fontWeight = '';
-	this.height = '';
-	this.left = '';
-	this.letterSpacing = '';
-	this.lineHeight = '';
-	this.listStyle = '';
-	this.listStyleImage = '';
-	this.listStylePosition = '';
-	this.listStyleType = '';
-	this.margin = '';
-	this.marginTop = '';
-	this.marginRight = '';
-	this.marginBottom = '';
-	this.marginLeft = '';
-	this.markerOffset = '';
-	this.marks = '';
-	this.maxHeight = '';
-	this.maxWidth = '';
-	this.minHeight = '';
-	this.minWidth = '';
-	this.orphans = '';
-	this.outline = '';
-	this.outlineColor = '';
-	this.outlineStyle = '';
-	this.outlineWidth = '';
-	this.overflow = '';
-	this.padding = '';
-	this.paddingTop = '';
-	this.paddingRight = '';
-	this.paddingBottom = '';
-	this.paddingLeft = '';
-	this.page = '';
-	this.pageBreakAfter = '';
-	this.pageBreakBefore = '';
-	this.pageBreakInside = '';
-	this.pause = '';
-	this.pauseAfter = '';
-	this.pauseBefore = '';
-	this.pitch = '';
-	this.pitchRange = '';
-	this.playDuring = '';
-	this.position = '';
-	this.quotes = '';
-	this.richness = '';
-	this.right = '';
-	this.size = '';
-	this.speak = '';
-	this.speakHeader = '';
-	this.speakNumeral = '';
-	this.speakPunctuation = '';
-	this.speechRate = '';
-	this.stress = '';
-	this.tableLayout = '';
-	this.textAlign = '';
-	this.textDecoration = '';
-	this.textIndent = '';
-	this.textShadow = '';
-	this.textTransform = '';
-	this.top = '';
-	this.unicodeBidi = '';
-	this.verticalAlign = '';
-	this.visibility = '';
-	this.voiceFamily = '';
-	this.volume = '';
-	this.whiteSpace = '';
-	this.widows = '';
-	this.width = '';
-	this.wordSpacing = '';
-	this.zIndex = '';
-};
+export class CSSStyleDeclaration {
+	shortProps = [];
+	cssProps = [];
+	cssText = "";
+	propertyPriority = 0;
 
-*/
+	getPropertyValue(name) {
+		return this.shortProps[name];
+	}
 
-colorjack.css.CSSStyleDeclaration = function() {
-	var shortProps = [];
-	var cssProps = [];
-	var cssText = "";	// Full declaration of the style
-	var propertyPriority = 0;
-	
-	var getPropertyValue = function(name) {	// only used for "shorthand" properties
-		return shortProps[name];
-	};
-	
-	var getPropertyCSSValue = function(name) { // Return a CSSValue
-		return cssProps[name];
-	};
-	
-	var removeProperty = function(name) {
-		cssProps[name] = null;	// Not the best solution for iterating through explicit items()
-	};
-	
-	var getPropertyPriority = function() {
-		return propertyPriority;
-	};
-	
-	var isShorthandProperty = function(name) {
-		return false;	// TODO: overwrite properly
-	};
-	
-	var setProperty = function(name, value, priority) {
-		if (isShorthandProperty(name)) {
-			shortProps[name] = value;
+	getPropertyCSSValue(name) {
+		return this.cssProps[name];
+	}
+
+	removeProperty(name) {
+		this.cssProps[name] = null;
+	}
+
+	getPropertyPriority() {
+		return this.propertyPriority;
+	}
+
+	isShorthandProperty(name) {
+		return false;
+	}
+
+	setProperty(name, value, priority) {
+		if (this.isShorthandProperty(name)) {
+			this.shortProps[name] = value;
 		}
 		else {
-			cssProps[name] = value;
+			this.cssProps[name] = value;
 		}
-		propertyPriority = priority;
-	};
-	
-	var getLength = function() {
-		return cssProps.length + shortProps.length; // "explicitly" set in this declaration block.
-	};
-	
-	var item = function(idx) {
-		var result = "";
-		if (idx < cssProps.length) {
-			result = cssProps[idx];
+		this.propertyPriority = priority;
+	}
+
+	getLength() {
+		return this.cssProps.length + this.shortProps.length;
+	}
+
+	item(idx) {
+		let result = "";
+		if (idx < this.cssProps.length) {
+			result = this.cssProps[idx];
 		}
 		else {
-			result = shortProps[idx];
+			result = this.shortProps[idx];
 		}
 		return result;
-	};
-	
-	var getParentRule = function() {
+	}
+
+	getParentRule() {
 		throw new Error("getParentRule() not implemented");
-	};
-	
-	return {
-		'cssText'				: cssText,
-		'getPropertyValue'		: getPropertyValue,
-		'getPropertyCSSValue'	: getPropertyCSSValue,
-		'removeProperty'		: removeProperty,
-		'getPropertyPriority'	: getPropertyPriority,
-		'setProperty'			: setProperty,
-		'getLength'				: getLength,
-		'item'					: item,
-		'getParentRule'			: getParentRule
-	};
-};
+	}
+}
 
+export class CssStyle {
+	properties = [];
 
-colorjack.css.CssStyle = function() {
-	var properties = [];
-	
-	var getProperty = function(prop) {
-		return properties[prop];
-	};
-	
-	var setProperty = function(prop, val) {
-		properties[prop] = val;
-	};
-	
-	var clearProperty = function(prop) {
-		properties[prop] = null;
-	};
+	getProperty(prop) {
+		return this.properties[prop];
+	}
 
-	return {
-		'clearProperty'	: clearProperty,
-		'getProperty'	: getProperty,
-		'setProperty'	: setProperty
-	};
-};
+	setProperty(prop, val) {
+		this.properties[prop] = val;
+	}
 
-colorjack.css.ElementStyle = function(style, element) {
-	var font = null;
-	var marginColor = "#ddd";
-	
-	style.setProperty("background-color: hover", "#8c2");
-	style.setProperty("background-color: active", "blue");
-	style.setProperty("background-color", "white");
-	
-	style.setProperty("border-color: hover", "#7c7");
-	style.setProperty("border-color: active", "red");
-	style.setProperty("border-color", "white");
-	
-	var setFont = function(f) { font = f; };	
-	var getFont = function() { return font;	};
-	
-	var getState = function() {
-		var state = 0;
-		if (element && element.getState) {
-			state = element.getState();
+	clearProperty(prop) {
+		this.properties[prop] = null;
+	}
+}
+
+export class ElementStyle {
+	font = null;
+	marginColor = "#ddd";
+	style: CssStyle;
+	element: any;
+
+	constructor(style, element) {
+		this.style = style;
+		this.element = element;
+		this.style.setProperty("background-color: hover", "#8c2");
+		this.style.setProperty("background-color: active", "blue");
+		this.style.setProperty("background-color", "white");
+		this.style.setProperty("border-color: hover", "#7c7");
+		this.style.setProperty("border-color: active", "red");
+		this.style.setProperty("border-color", "white");
+	}
+
+	setFont(f) { this.font = f; }
+	getFont() { return this.font;	}
+
+	getState() {
+		let state = 0;
+		if (this.element && this.element.getState) {
+			state = this.element.getState();
 		}
 		return state;
-	};
+	}
 
-	var getBackgroundColor = function() {	// This section is not working unfortunately.
-		var color = null;
-		var state = getState();
-		
-		if (state == colorjack.dom.ELEMENT_STATE_HOVER) {
-		 	color = style.getProperty("background-color: hover");
+	getBackgroundColor() {
+		let color = null;
+		const state = this.getState();
+		if (state == dom.ELEMENT_STATE_HOVER) {
+			color = this.style.getProperty("background-color: hover");
 		}
-		else if (state == colorjack.dom.ELEMENT_STATE_ACTIVE) {
-		 	color = style.getProperty("background-color: active");
-		}
-		else {
-			color = style.getProperty("background-color");
-		}
-		return color;
-	};
-	
-	var getBackgroundImage = function() {
-		var prop = style.getProperty("background-image");
-		return prop;
-	};
-	
-	var getBorderColor = function() {
-		var color = null;
-		var state = getState();
-		
-		if (state == colorjack.dom.ELEMENT_STATE_HOVER) {
-		 	color = style.getProperty("border-color: hover");
-		}
-		else if (state == colorjack.dom.ELEMENT_STATE_ACTIVE) {
-		 	color = style.getProperty("border-color: active");
+		else if (state == dom.ELEMENT_STATE_ACTIVE) {
+			color = this.style.getProperty("background-color: active");
 		}
 		else {
-			color = style.getProperty("border-color");
+			color = this.style.getProperty("background-color");
 		}
 		return color;
-	};
-	
-	var getMarginColor = function() {
-		return marginColor;	// We want transparent usually.
-	};
-	
-	var setBackgroundColor = function(b, h, a) {
+	}
+
+	getBackgroundImage() {
+		return this.style.getProperty("background-image");
+	}
+
+	getBorderColor() {
+		let color = null;
+		const state = this.getState();
+		if (state == dom.ELEMENT_STATE_HOVER) {
+			color = this.style.getProperty("border-color: hover");
+		}
+		else if (state == dom.ELEMENT_STATE_ACTIVE) {
+			color = this.style.getProperty("border-color: active");
+		}
+		else {
+			color = this.style.getProperty("border-color");
+		}
+		return color;
+	}
+
+	getMarginColor() {
+		return this.marginColor;
+	}
+
+	setBackgroundColor(b, h, a) {
 		if (b) {
-			style.setProperty("background-color", b);
+			this.style.setProperty("background-color", b);
 		}
 		if (h) {
-		 	style.setProperty("background-color: hover", h);
+			this.style.setProperty("background-color: hover", h);
 		}
 		if (a) {
-		 	style.setProperty("background-color: active", a);
+			this.style.setProperty("background-color: active", a);
 		}
-	};
-	
-	var setBorderColor = function(b, h, a) {
+	}
+
+	setBorderColor(b, h, a) {
 		if (b) {
-			style.setProperty("border-color", b);
+			this.style.setProperty("border-color", b);
 		}
 		if (h) {
-		 	style.setProperty("border-color: hover", h);
+			this.style.setProperty("border-color: hover", h);
 		}
 		if (a) {
-		 	style.setProperty("border-color: active", a);
+			this.style.setProperty("border-color: active", a);
 		}
-	};
-	
-	var setMarginColor = function(m) {
-		marginColor = m;
-	};
-	
-	return {
-		'setFont'				: setFont,
-		'getFont'				: getFont,
-		'getMarginColor'		: getMarginColor,
-		'getBackgroundColor'	: getBackgroundColor,
-		'getBackgroundImage'	: getBackgroundImage,
-		'getBorderColor'		: getBorderColor,
-		'setBackgroundColor'	: setBackgroundColor,
-		'setBorderColor'		: setBorderColor
-	};
-};
+	}
+
+	setMarginColor(m) {
+		this.marginColor = m;
+	}
+}

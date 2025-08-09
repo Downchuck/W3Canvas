@@ -1,35 +1,28 @@
-colorjack.textbox.ui.InputScrolling = function() {
-	var enabled = false;
-	var offset = 0;
-	var viewportBox = null;		// offset + visualTextBox.getBoxModel().getLeftLength()
-	var visualTextBox = null;
-	
-	var getOffset = function() { return (enabled)? offset : 0; };
-	var setOffset = function(f) { offset = f; };
-	
-	var isEnabled = function() { return enabled; };
-	
-	var setEnabled = function(e) {
-		enabled = e;
-		visualTextBox.resetBox(); // resize control to 1-line or not.
-	};
-	
-	var init = function(vars) {
+import * as debug from '../lang_debug.js';
+
+export class InputScrolling {
+	enabled = false;
+	offset = 0;
+	viewportBox = null;
+	visualTextBox = null;
+
+	getOffset() { return (this.enabled)? this.offset : 0; }
+	setOffset(f) { this.offset = f; }
+
+	isEnabled() { return this.enabled; }
+
+	setEnabled(e) {
+		this.enabled = e;
+		this.visualTextBox.resetBox();
+	}
+
+	init(vars) {
 		try {
-			visualTextBox = vars.visualTextBox;
-		
-			colorjack.debug.checkNull("InputScrolling", [visualTextBox]);
+			this.visualTextBox = vars.visualTextBox;
+			debug.checkNull("InputScrolling", [this.visualTextBox]);
 		}
 		catch (e837) {
-			colorjack.debug.programmerPanic("InputScrolling. Initialization error: " + e837.name + " = " + e837.message);
+			debug.programmerPanic("InputScrolling. Initialization error: " + e837.name + " = " + e837.message);
 		}
-	};
-	
-	return {
-		'init'				: init,
-		'getOffset' 		: getOffset,
-		'setOffset'			: setOffset,
-		'isEnabled'			: isEnabled,
-		'setEnabled'		: setEnabled
-	};
-};
+	}
+}

@@ -1,75 +1,63 @@
+import { currentDocument } from './dom_html_doc.js';
+import { mixin } from '../../lang_util.js';
+import * as currentWindow from '../../canvas_lib.js';
 
-colorjack.controlFactory.Image = function(layer) {
-	var imageEl = colorjack.currentDocument.createElement("img");
+export class ImageControl {
+	constructor(layer) {
+		const imageEl = currentDocument.createElement("img");
+		const ImageDisplay = function() {
+			this.borderColor = "black";
+			this.img = new Image();
 
-	var ImageDisplay = function() {
-		var borderColor = "black";
-		var img = new Image();
-
-		var hasPredefinedWidthAndHeight = function() {
-			var has = (imageEl.getWidth() > 0 && imageEl.getHeight() > 0); // Both attributes must be defined.
-			return has;
-		};
-		
-		var paintImage = function() {
-			// Paint the BoxModel: margin/border/padding. Padding = 0				
-			var ctx = layer.getContext('2d');
-
-			// Border
-			var b = imageEl.getBorderBox();				
-			ctx.fillStyle = borderColor;
-			ctx.fillRect(b.x, b.y, b.width, b.height);
-
-			// Content: image
-			var c = imageEl.getContentBox();
-			ctx.drawImage(img, 0, 0, img.width, img.height, c.x, c.y, c.width, c.height);
-		};
-		
-		// Note: Make sure to call it last after setting all the other options.
-		var setSource = function(src) {
-		
-			var resizeLayer = function() {
-				var w = imageEl.getTotalWidth();
-				var h = imageEl.getTotalHeight();
-				colorjack.currentWindow.setCanvasSize(layer, w, h);
+			this.hasPredefinedWidthAndHeight = () => {
+				return (imageEl.getWidth() > 0 && imageEl.getHeight() > 0);
 			};
 
-			img.onload = function() { // Start the "load" asap
-				if (!hasPredefinedWidthAndHeight()) {
-					imageEl.setSize(img.width, img.height);
+			this.paintImage = () => {
+				const ctx = layer.getContext('2d');
+				const b = imageEl.getBorderBox();
+				ctx.fillStyle = this.borderColor;
+				ctx.fillRect(b.x, b.y, b.width, b.height);
+				const c = imageEl.getContentBox();
+				ctx.drawImage(this.img, 0, 0, this.img.width, this.img.height, c.x, c.y, c.width, c.height);
+			};
+
+			this.setSource = (src) => {
+				const resizeLayer = () => {
+					const w = imageEl.getTotalWidth();
+					const h = imageEl.getTotalHeight();
+					currentWindow.setCanvasSize(layer, w, h);
+				};
+
+				this.img.onload = () => {
+					if (!this.hasPredefinedWidthAndHeight()) {
+						imageEl.setSize(this.img.width, this.img.height);
+						resizeLayer();
+					}
+					this.paintImage();
+				};
+				this.img.src = src;
+
+				if (this.hasPredefinedWidthAndHeight()) {
 					resizeLayer();
-				}				
-				paintImage();
+				}
 			};
-			img.src = src; // start loading the image
-			
-			if (hasPredefinedWidthAndHeight()) { // Resize while loading the image
-				resizeLayer();
-			}
-		};
 
-		var setBorderSize = function(t,r,l,b) {
-			if (!t) {
-				throw new Error("setBorderSize() Missing parameters");
-			}
-			var border = imageEl.border;
-			
-			border.top		= t;
-			border.right	= r || t;
-			border.bottom	= b || t;
-			border.left		= l || t;
-		};
-		
-		var setBorderColor = function(c) {
-			borderColor = c;
-		};
-		
-		return {
-			'setBorderColor': setBorderColor,
-			'setBorderSize'	: setBorderSize,
-			'setSource'		: setSource
-		};
-	};
-	return colorjack.util.mixin(imageEl, new ImageDisplay());
-};
+			this.setBorderSize = (t,r,l,b) => {
+				if (!t) {
+					throw new Error("setBorderSize() Missing parameters");
+				}
+				const border = imageEl.border;
+				border.top		= t;
+				border.right	= r || t;
+				border.bottom	= b || t;
+				border.left		= l || t;
+			};
 
+			this.setBorderColor = (c) => {
+				this.borderColor = c;
+			};
+		};
+		return mixin(imageEl, new ImageDisplay());
+	}
+}

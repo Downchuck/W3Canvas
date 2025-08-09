@@ -1,4 +1,4 @@
-colorjack.textbox.ui.cursor.DummyCursor = function() { // For testing framework
+w3canvas.textbox.ui.cursor.DummyCursor = function() { // For testing framework
 	var noOp = function() {};
 
 	return {
@@ -12,7 +12,7 @@ colorjack.textbox.ui.cursor.DummyCursor = function() { // For testing framework
 };
 
 
-colorjack.textbox.ui.cursor.Cursor = function() {
+w3canvas.textbox.ui.cursor.Cursor = function() {
 	//----------------------------------------------------------------------
 	var context = null;
 	var cursorPosition = null;
@@ -26,10 +26,10 @@ colorjack.textbox.ui.cursor.Cursor = function() {
 			textBoxId			= vars.textBoxId;
 			visualTextBox		= vars.visualTextBox;
 			
-			colorjack.debug.checkNull("Cursor", [cursorPosition, context, textBoxId, visualTextBox]);
+			w3canvas.debug.checkNull("Cursor", [cursorPosition, context, textBoxId, visualTextBox]);
 		}
 		catch (e) {
-			colorjack.debug.programmerPanic("Cursor. Initialization error: " + e.name + " = " + e.message);
+			w3canvas.debug.programmerPanic("Cursor. Initialization error: " + e.name + " = " + e.message);
 		}
 	};
 	
@@ -44,7 +44,7 @@ colorjack.textbox.ui.cursor.Cursor = function() {
 		return visualTextBox.getBoxStyle().cursorWidth;
 	};
 	
-	var graphicsLib = colorjack.graphicsLib;
+	var graphicsLib = w3canvas.graphicsLib;
 	
 	var drawCursor = function() {
 		if (cursorDrawn) { return; }
@@ -103,7 +103,7 @@ colorjack.textbox.ui.cursor.Cursor = function() {
 	var cursorTimers = [];
 	
 	var blinkCursor = function() {
-		var self = "colorjack.textBoxFactory.getTextBox(" + textBoxId + ")";
+		var self = "w3canvas.textBoxFactory.getTextBox(" + textBoxId + ")";
 		var cmd = self + '.showCursor()';
 		cursorTimers.push(
 			cursorTimer = setTimeout(cmd, cursorInterval)
@@ -129,7 +129,7 @@ colorjack.textbox.ui.cursor.Cursor = function() {
 			drawCursor();
 		}
 		
-		var textFocusManager = colorjack.textFocusManager;
+		var textFocusManager = w3canvas.textFocusManager;
 		var focusedId = textFocusManager.getCurrentTextBoxId();
 		if (focusedId === textBoxId) {
 			blinkCursor();
@@ -150,7 +150,7 @@ colorjack.textbox.ui.cursor.Cursor = function() {
 };
 
 
-colorjack.textbox.ui.cursor.CursorPosition = function() {
+w3canvas.textbox.ui.cursor.CursorPosition = function() {
 	//----------------------------------------------------------------------
 	var basicModel = null;
 	var inputScrolling = null;	
@@ -166,10 +166,10 @@ colorjack.textbox.ui.cursor.CursorPosition = function() {
 			visualSelection = vars.visualSelection;
 			context = vars.context;
 			
-			colorjack.debug.checkNull("CursorPosition", [basicModel, inputScrolling, visualTextBox, visualSelection, context]);
+			w3canvas.debug.checkNull("CursorPosition", [basicModel, inputScrolling, visualTextBox, visualSelection, context]);
 		}
 		catch (e) {
-			colorjack.debug.programmerPanic("CursorPosition. Initialization error: " + e.name + " = " + e.message);
+			w3canvas.debug.programmerPanic("CursorPosition. Initialization error: " + e.name + " = " + e.message);
 		}
 	};
 	//----------------------------------------------------------------------

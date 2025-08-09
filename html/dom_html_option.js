@@ -1,113 +1,57 @@
+import { registerElement, HTMLElement } from './dom_html_basic.js';
+import { mixin } from '../../lang_util.js';
+import * as dom from './dom_core.js';
+import { BoxModelPainter } from '../../css/box_paint.js';
 
-colorjack.dom.registerElement("OPTION", "HTMLOptionElement", function(element) {
-
-	var OptionElement = function() {
-		var defaultSelected = false;
-		var disabled	= false;
-		var label 		= "";		// Shorter version than "text", and should be used for display (unless it's not set, usually not set, except for some hierarchical menus)
-		var index 		= -1;
-		var selected	= false;
-		var text		= "";		
-		var value		= "";		// For the form control (to the server)
-		
-		var getDefaultSelected = function() {
-			return defaultSelected;
-		};
-		
-		var getDisabled = function() {
-			return disabled;
-		};
-		
-		var getIndex = function() {
-			return index;
-		};
-		
-		var getLabel = function() {
-			return label;
-		};
-		
-		var getSelected = function() {
-			return selected;
-		};
-		
-		var getText = function() {
-			return text;
-		};
-		
-		var getValue = function() {
-			return value;
-		};
-		
-		var setDefaultSelected = function(ds) {
-			defaultSelected = ds;
-		};
-		
-		var setDisabled = function(d) {
-			disabled = d;
-		};
-		
-		var setLabel = function(c) {
-			label = c;
-		};
-		
-		var setSelected = function(s) {
-			selected = s;
-		};
-		
-		var setValue = function(v) {
-			value = v;
-		};
-		
-		var setIndex = function(idx) {
-			index = idx;
-		};
-		
-		return {
-			'getDefaultSelected'	: getDefaultSelected,
-			'getDisabled'			: getDisabled,
-			'getIndex'				: getIndex,
-			'getLabel'				: getLabel,
-			'getSelected'			: getSelected,
-			'getText'				: getText,
-			'getValue'				: getValue,
-			'setDefaultSelected'	: setDefaultSelected,
-			'setDisabled'			: setDisabled,
-			'setLabel'				: setLabel,
-			'setSelected'			: setSelected,
-			'setValue'				: setValue,
-			'setIndex'				: setIndex
-		};
+registerElement("OPTION", "HTMLOptionElement", function(element) {
+	const OptionElement = function() {
+		this.defaultSelected = false;
+		this.disabled	= false;
+		this.label 		= "";
+		this.index 		= -1;
+		this.selected	= false;
+		this.text		= "";
+		this.value		= "";
+		this.getDefaultSelected = () => this.defaultSelected;
+		this.getDisabled = () => this.disabled;
+		this.getIndex = () => this.index;
+		this.getLabel = () => this.label;
+		this.getSelected = () => this.selected;
+		this.getText = () => this.text;
+		this.getValue = () => this.value;
+		this.setDefaultSelected = (ds) => this.defaultSelected = ds;
+		this.setDisabled = (d) => this.disabled = d;
+		this.setLabel = (c) => this.label = c;
+		this.setSelected = (s) => this.selected = s;
+		this.setValue = (v) => this.value = v;
+		this.setIndex = (idx) => this.index = idx;
 	};
-	var base = new colorjack.dom.HTMLElement(element);
-	var optionElement = new OptionElement();
-	
-	var OptionDisplay = function() {
-		var highlight = false;
-		
-		var getHighlight = function() { return highlight; };
-		var setHighlight = function(h) { highlight = h; };
-	
-		var computeContentSize = function(ctx) {
-			var text = optionElement.getLabel();	// ignoring getText()
-			var font = base.style.getFont();
-			var width = font.measureText(ctx, text);
-			var height = font.getTextHeight();
+	const base = new HTMLElement(element);
+	const optionElement = new OptionElement();
 
-			// Anti-alias on fractional width found here!!
-			base.contentArea.width = Math.round(width);		
+	const OptionDisplay = function() {
+		this.highlight = false;
+		this.getHighlight = () => this.highlight;
+		this.setHighlight = (h) => this.highlight = h;
+
+		this.computeContentSize = (ctx) => {
+			const text = optionElement.getLabel();
+			const font = base.style.getFont();
+			const width = font.measureText(ctx, text);
+			const height = font.getTextHeight();
+			base.contentArea.width = Math.round(width);
 			base.contentArea.height = Math.round(height);
-			
 			return {
 				'width'  : width,
 				'height' : height
 			};
 		};
-		
-		var getOptionContentWidth = function() {
-			var optionContentWidth = 0;
+
+		this.getOptionContentWidth = () => {
+			let optionContentWidth = 0;
 			if (base.getParent()) {
-				var selectWidth = base.getParent().contentArea.width;
-				var option = element.getFirstChild();
+				const selectWidth = base.getParent().contentArea.width;
+				const option = element.getFirstChild();
 				if (option) {
 					optionContentWidth = selectWidth - option.getLeftLength() - option.getRightLength();
 				}
@@ -115,47 +59,45 @@ colorjack.dom.registerElement("OPTION", "HTMLOptionElement", function(element) {
 			return optionContentWidth;
 		};
 
-		var getState = function() {
+		this.getState = () => {
 			if (optionElement.getDisabled()) {
-				return colorjack.dom.ELEMENT_STATE_DISABLED;
+				return dom.ELEMENT_STATE_DISABLED;
 			}
-			else if (highlight) {
-				return colorjack.dom.ELEMENT_STATE_HOVER;
+			else if (this.highlight) {
+				return dom.ELEMENT_STATE_HOVER;
 			}
 			else {
-				return colorjack.dom.ELEMENT_STATE_NORMAL;
+				return dom.ELEMENT_STATE_NORMAL;
 			}
 		};
-		
-		var defaultOptionPainter = null;
-		var optionPainter = null;
-		
-		var display = function(ctx) {
-			var width = getOptionContentWidth();
-			var label = optionElement.getLabel();
-			
-			var state = {
-				'hover' 	: highlight,
+
+		let defaultOptionPainter = null;
+		let optionPainter = null;
+
+		this.display = (ctx) => {
+			const width = this.getOptionContentWidth();
+			const label = optionElement.getLabel();
+			const state = {
+				'hover' 	: this.highlight,
 				'disabled'	: optionElement.getDisabled(),
 				'checked'	: optionElement.getSelected()
 			};
-			
+
 			if (optionPainter && optionPainter.paintOption) {
 				optionPainter.paintOption(ctx, base, state, width, label, this.first, this.last);
 			}
 			else {
 				if (!defaultOptionPainter) {
-					var DefaultOptionPainter = function() {
-						var painter = new colorjack.css.BoxModelPainter();
-
+					const DefaultOptionPainter = function() {
+						const painter = new BoxModelPainter();
 						this.paintOption = function(ctx, node, state, width, label) {
-							var style = (!state.hover)? node.style : {
+							const style = (!state.hover)? node.style : {
 								'getPaddingColor'		: function() { return "white"; },
 								'getBorderColor'		: function() { return "#9cb"; },
 								'getBackgroundColor'	: function() { return "#dff"; },
 								'getFont'				: function() { return base.style.getFont(); }
 							};
-							painter.paintBox(ctx, node, style, width, label);	
+							painter.paintBox(ctx, node, style, width, label);
 						};
 					};
 					defaultOptionPainter = new DefaultOptionPainter();
@@ -164,25 +106,17 @@ colorjack.dom.registerElement("OPTION", "HTMLOptionElement", function(element) {
 			}
 		};
 
-		return {
-			'setOptionPainter'	: function(p) { optionPainter = p; },
-			'setHighlight'		: setHighlight,
-			'getHighlight'		: getHighlight,
-			'computeContentSize': computeContentSize,
-			'display'			: display,
-			'getState'			: getState,
-			'getOptionContentWidth' : getOptionContentWidth
-		};
+		this.setOptionPainter = (p) => { optionPainter = p; };
 	};
-	return colorjack.util.mixin(base, optionElement, new OptionDisplay());
+	return mixin(base, optionElement, new OptionDisplay());
 });
 
-	
-colorjack.dom.registerElement("OPTGROUP", "HTMLOptGroupElement", function(element) {
-	var OptGroupElement = function() {
+
+registerElement("OPTGROUP", "HTMLOptGroupElement", function(element) {
+	const OptGroupElement = function() {
 		this.disabled = true;
 		this.label = "";
 	};
-	var base = new colorjack.dom.HTMLElement(element);
-	return colorjack.util.mixin(base, new OptGroupElement());
+	const base = new HTMLElement(element);
+	return mixin(base, new OptGroupElement());
 });

@@ -51,7 +51,7 @@
             var ctx = canvas.getContext('2d');
 
             // --- Test SVG Rectangle with sharp corners ---
-            var rect1 = new colorjack.controlFactory.Rectangle(canvas);
+            var rect1 = new w3canvas.controlFactory.Rectangle(canvas);
             rect1.setX(50);
             rect1.setY(50);
             rect1.setWidth(100);
@@ -61,7 +61,7 @@
             rect1.repaint();
 
             // --- Test SVG Rectangle with rounded corners ---
-            var rect2 = new colorjack.controlFactory.Rectangle(canvas);
+            var rect2 = new w3canvas.controlFactory.Rectangle(canvas);
             rect2.setX(200);
             rect2.setY(50);
             rect2.setWidth(150);
@@ -74,10 +74,10 @@
 
             // --- Test Arc Drawing ---
             ctx.fillStyle = 'purple';
-            colorjack.alg.drawArc(ctx, 400, 200, 50, 0, Math.PI);
+            w3canvas.alg.drawArc(ctx, 400, 200, 50, 0, Math.PI);
 
             // --- Test DOM Methods ---
-            var doc = colorjack.currentDocument;
+            var doc = w3canvas.currentDocument;
             var body = doc.body;
 
             var p1 = doc.createElement('p');

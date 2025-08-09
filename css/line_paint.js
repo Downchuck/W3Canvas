@@ -1,338 +1,249 @@
+import { BoxModel } from './box_model.js';
+import { BoxModelPainter } from './box_paint.js';
+import { boxModelFactory } from './box_basic.js';
+import * as debug from '../lang_debug.js';
 
-// Debug 
-colorjack.component.BoxStyle = function() {
-	this.color = "rgb(200,0,0)";
-	
-	this.reverseMode = false;
-	this.showLines = true;
-	this.lineColor = 'rgba(10,10,120,1)';
-	this.cursorWidth = 4;
-	this.cursorColor = '#555';
+import { LineWrapper } from './text_wrap.js';
 
-	this.borderColor = "black";
-	this.selectionColor = "rgba(20,40,200,.7)"; // used in VisualSelection.showRange()
-};
-colorjack.component.DrawingBoxDebugging = function() {
-	this.showSingleLineBorder = true; // to see the border lines
-	this.singleLineBorderColor = 'rgb(0,200,0)';
-};
+export class BoxStyle {
+	color = "rgb(200,0,0)";
+	reverseMode = false;
+	showLines = true;
+	lineColor = 'rgba(10,10,120,1)';
+	cursorWidth = 4;
+	cursorColor = '#555';
+	borderColor = "black";
+	selectionColor = "rgba(20,40,200,.7)";
+}
 
+export class DrawingBoxDebugging {
+	showSingleLineBorder = true;
+	singleLineBorderColor = 'rgb(0,200,0)';
+}
 
-// http://www.w3.org/TR/css3-linebox
+export class VisualTextBox {
+	debugging = new DrawingBoxDebugging();
+	initialized = false;
+	baseLineExtraSpacing = 5;
+	basicModel = null;
+	box = null;
+	boxStyle = new BoxStyle();
+	canvasBox = null;
+	context = null;
+	boxModel = null;
+	originalBoxModel = null;
+	inputScrolling = null;
+	testingMode = false;
+	textBoxId = -1;
+	images = [];
 
-// lineStacking (within block element)
-colorjack.textbox.VisualTextBox = function() {
-	var debugging		= new colorjack.component.DrawingBoxDebugging();
-	var initialized		= false;
-	// -------------------------------------------------------------------------------
-	var baseLineExtraSpacing = 5;
-	var basicModel		= null;
-	var box				= null;		// Canvas box size
-	var boxStyle		= new colorjack.component.BoxStyle();	// Default style
-	var canvasBox		= null;
-	var context			= null;
-	var boxModel		= null;
-	var originalBoxModel	= null;
-	
-	var inputScrolling	= null;
-	var testingMode		= false;	
-	var textBoxId		= -1;
-	
-	var images = []; //cache images to be drawn!
-	
-	// Instead of expanding the original box model, we choose to shrink the box model.
-	// And the rest increase the bottom margin area... OR the bottom padding area.
-	// For the width, we shouldn't have problems expanding to the maximum.
-	
-	var getLineHeight = function() {
-		//return baseLineExtraSpacing + font.getTextHeight();
-		var ctx  = getContext();		
-		var fontHeight = getFontHeight(ctx);		
-		return baseLineExtraSpacing + fontHeight;
-	};
-	
-	//get the current font height of canvas's context by analyzing the font's CSS text
-	var getFontHeight = function(ctx) {
-		
-		var tokens = ctx.font.split(' ');
-		var i;
-		for (i = 0; i < tokens.length; i++)
-		{
-			var l = tokens[i].length;
-			if (l > 2 && tokens[i][l-2]=='p' && tokens[i][l-1]=='x')
-			{
-				var str = tokens[i].substr(0, l-2);
+	getLineHeight() {
+		const ctx  = this.getContext();
+		const fontHeight = this.getFontHeight(ctx);
+		return this.baseLineExtraSpacing + fontHeight;
+	}
+
+	getFontHeight(ctx) {
+		const tokens = ctx.font.split(' ');
+		for (let i = 0; i < tokens.length; i++) {
+			const l = tokens[i].length;
+			if (l > 2 && tokens[i][l-2]=='p' && tokens[i][l-1]=='x') {
+				const str = tokens[i].substr(0, l-2);
 				return str*1;
 			}
 		}
-		colorjack.debug.programmerPanic("VisualTextBox. Cannot find font height!");
-		//return 0; //cannot find -> return some random value!?
+		debug.programmerPanic("VisualTextBox. Cannot find font height!");
 	}
 
-
-// HTMLTextAreaElement
-	var adjustBoxModel = function(boxModel, canvasBox) {
-		var adjusted = new colorjack.css.BoxModel();
+	adjustBoxModel(boxModel, canvasBox) {
+		const adjusted = new BoxModel();
 		adjusted.copyRectFrom(boxModel);
-		var w, h;
-		// The DOM Element takes precedence in terms of content size.
-		if (boxModel.contentArea.width > 0 &&
-			boxModel.contentArea.height > 0) {
-				w = boxModel.contentArea.width;
-				h = boxModel.contentArea.height;
-		}
-		else {
+		let w, h;
+		if (boxModel.contentArea.width > 0 && boxModel.contentArea.height > 0) {
+			w = boxModel.contentArea.width;
+			h = boxModel.contentArea.height;
+		} else {
 			w = canvasBox.width - boxModel.getLeftLength() - boxModel.getRightLength();
 			h = canvasBox.height - boxModel.getTopLength() - boxModel.getBottomLength();
 		}
 		adjusted.setSize(w, h);
-// single textContent block
-		// Now adjust the height so that it fits for visible # of lines within "h"
-//		debug("lineHeight: " + lineHeight + ", " + totalLinesHeight);
-		var lineHeight = getLineHeight() ;
-		var numLines = 0;		
-		if (inputScrolling.isEnabled()) {
+		const lineHeight = this.getLineHeight();
+		let numLines = 0;
+		if (this.inputScrolling.isEnabled()) {
 			numLines = 1;
-		}
-		else {
+		} else {
 			numLines = Math.floor( h / lineHeight );
 		}
-		var totalLinesHeight = numLines * lineHeight;
-//		throw new Error("Number of Lines: " + numLines + ", " + lineHeight + ", " + totalLinesHeight);
+		let totalLinesHeight = numLines * lineHeight;
 		totalLinesHeight += lineHeight;
-		var diff = h - totalLinesHeight;    
+		const diff = h - totalLinesHeight;
 		adjusted.contentArea.height -= diff;
-//		throw new Error("Adjusted height: " + adjusted.contentArea.height);
-		var balanceToTheMargin = true;
+		const balanceToTheMargin = true;
 		if (balanceToTheMargin) {
 			adjusted.margin.bottom += diff;
-		}
-		else {
+		} else {
 			adjusted.padding.bottom += diff;
 		}
-		//else { // Enable for debugging
-		//	adjusted.border.bottom += diff;
-		//}
-//		throw new Error("Adjusted width: " + adjusted.contentArea.width);
-//		throw new Error("Adjusted height: " + adjusted.contentArea.height);
 		return adjusted;
-	};
+	}
 
-	var resetBox = function() {
-		boxModel = adjustBoxModel(originalBoxModel, canvasBox);
-		box = colorjack.boxModelFactory.createBox();
-		var offset = boxModel.getOffset();
-		box.x = offset.x;
-		//box.y = offset.y + font.getTextHeight();		
-		box.y = offset.y + getFontHeight(context);
-		box.width = boxModel.contentArea.width - box.x - 1;
-		box.height = boxModel.contentArea.height;
-		box.writingMode = 'lr-tb';
-	};
-	
-	var setFont = function(f) {
-		context.font = f;
-	};
-	
-	var init = function(vars) {
-		
+	resetBox() {
+		this.boxModel = this.adjustBoxModel(this.originalBoxModel, this.canvasBox);
+		this.box = boxModelFactory.createBox();
+		const offset = this.boxModel.getOffset();
+		this.box.x = offset.x;
+		this.box.y = offset.y + this.getFontHeight(this.context);
+		this.box.width = this.boxModel.contentArea.width - this.box.x - 1;
+		this.box.height = this.boxModel.contentArea.height;
+		this.box.writingMode = 'lr-tb';
+	}
+
+	setFont(f) {
+		this.context.font = f;
+	}
+
+	init(vars) {
 		try {
-			if (!initialized) {
-				initialized = true;
-				basicModel			= vars.basicModel;
-				canvasBox			= vars.canvasBox;	// We can resize() the "canvasBox".
-				context				= vars.context;
-				boxModel			= vars.textDomElement;		
-				inputScrolling		= vars.inputScrolling;
-				textBoxId			= vars.textBoxId;
-				
-				originalBoxModel	= vars.textDomElement;
-				resetBox();
-
-//				throw new Error("InitAdjusted: " + boxModel.contentArea.width);				
-				colorjack.debug.checkNull("VisualTextBox", [basicModel, box, canvasBox, context, textBoxId]);
+			if (!this.initialized) {
+				this.initialized = true;
+				this.basicModel = vars.basicModel;
+				this.canvasBox = vars.canvasBox;
+				this.context = vars.context;
+				this.boxModel = vars.textDomElement;
+				this.inputScrolling = vars.inputScrolling;
+				this.textBoxId = vars.textBoxId;
+				this.originalBoxModel = vars.textDomElement;
+				this.resetBox();
+				debug.checkNull("VisualTextBox", [this.basicModel, this.box, this.canvasBox, this.context, this.textBoxId]);
 			}
 		}
 		catch (e541) {
-			colorjack.debug.programmerPanic("VisualTextBox. Initialization error: " + e541.name + " = " + e541.message);
+			debug.programmerPanic("VisualTextBox. Initialization error: " + e541.name + " = " + e541.message);
 		}
-		return boxModel;
-	};
-	
-	var getContext = function() { return context; };	
-	var painter	= new colorjack.css.BoxModelPainter();
-	var wrapper = new colorjack.css.LineWrapper();
-	
-	var drawLine  = function(linebox, boxStyle) { 
-		var ctx = getContext();
-		
-		var saveFont = ctx.font;
+		return this.boxModel;
+	}
+
+	getContext() { return this.context; }
+
+	drawLine(linebox, boxStyle) {
+		const ctx = this.getContext();
+		const saveFont = ctx.font;
 		ctx.save();
-		
-		var i = 0;
-		
-		//erase the whole line
-		ctx.save();		
-		ctx.translate(linebox.getLeft(), linebox.getTop()); // text-baseline: bottom
+		ctx.save();
+		ctx.translate(linebox.getLeft(), linebox.getTop());
 		ctx.clearRect(0,0,linebox.getMaxWidth(),linebox.getHeight());
-	
 
 		if (boxStyle.reverseMode) {
 			ctx.fillStyle  = boxStyle.color;
-			ctx.fillRect(0,0,line.getMaxWidth(),line.getHeight());
+			ctx.fillRect(0,0,linebox.getMaxWidth(),linebox.getHeight());
 		}
-		
+
 		if (boxStyle.showLines) {
 			ctx.strokeStyle = boxStyle.lineColor;
 			ctx.strokeRect(0,0,linebox.getMaxWidth(),linebox.getHeight());
 		}
-		
-		if (debugging.showSingleLineBorder) {
-			ctx.strokeStyle = debugging.singleLineBorderColor;
-			//ctx.strokeRect(0,line.maxHeight-line.height,line.getMaxWidth(),line.getHeight());
-		}
-		
-		ctx.restore();
-		
-		//draw the inline boxes
-		for (i = 0; i < linebox.getBoxes().length; i++)
-		{
-			ctx.save();			
-			var box = linebox.getBoxes()[i];
-			
-			if (box.contentFragment.isImage) {
-				//draw the image
 
-				if (images[box.contentFragment.url]== null) { //not in the cache yet!					
-					//load it
-					var img = new Image();
-					//customized properties
+		if (this.debugging.showSingleLineBorder) {
+			ctx.strokeStyle = this.debugging.singleLineBorderColor;
+		}
+
+		ctx.restore();
+
+		for (let i = 0; i < linebox.getBoxes().length; i++) {
+			ctx.save();
+			const box = linebox.getBoxes()[i];
+
+			if (box.contentFragment.isImage) {
+				if (this.images[box.contentFragment.url]== null) {
+					const img = new Image();
 					img.box = box;
-					img.url = box.contentFragment.url; //original url, we remember this to put the image into cache later!
-					
-					img.onload = function() {
-						//info('image loaded: ' + img.src);												
-						images[img.url] = img;	
+					img.url = box.contentFragment.url;
+					img.onload = () => {
+						this.images[img.url] = img;
 						ctx.drawImage(img, img.box.x, img.box.y, img.box.width, img.box.height);
-					}					
+					}
 					img.src = box.contentFragment.url;
 				} else {
-					//fill some place-holder rect first
-					/*
-					ctx.save();						
-					ctx.beginPath();
-					ctx.rect(box.x, box.y, box.width, box.height);
-					ctx.fillStyle = "#007f00"; //dark green				
-					ctx.fill();
-					ctx.restore();
-					*/
-					//info('image found in cache');
-					
-					//just draw the image in the cache
-					ctx.drawImage(images[box.contentFragment.url], box.x, box.y, box.width, box.height);	
+					ctx.drawImage(this.images[box.contentFragment.url], box.x, box.y, box.width, box.height);
 				}
-			}
-			else {
-				ctx.textBaseline="bottom"; //put the anchor point at the bottom of the linebox
-				
-				ctx.translate(box.x, box.y + box.height); //temporarily hardcode!
+			} else {
+				ctx.textBaseline="bottom";
+				ctx.translate(box.x, box.y + box.height);
 				ctx.fillStyle = boxStyle.color;
-				
+
 				if (box.contentFragment.style!="")
 					ctx.font = box.contentFragment.style;
-					
-				//info('fillText: ' + box.contentFragment.content + 'font: ' + ctx.font + " pos: " + box.x + "," + box.y);
-				ctx.fillText(box.contentFragment.content, 0, 0);			
+
+				ctx.fillText(box.contentFragment.content, 0, 0);
 				ctx.restore();
 			}
-		}	
-		
-			
+		}
 		ctx.restore();
-		ctx.font = saveFont; //restore		
-		
+		ctx.font = saveFont;
 	}
-	
 
-//	adjustLineBox [ reflow lines, re-apply styles]
-	var drawBox = function() {
-		//alert('drawBox');
-		if (!initialized) {
-			colorjack.debug.programmerPanic("need to call TextBox.init() first");
+	drawBox() {
+		if (!this.initialized) {
+			debug.programmerPanic("need to call TextBox.init() first");
 			return;
 		}
-		var outerBox = box;		
-		var textContent = basicModel.getTextContent();
-		var fragments = basicModel.getContentFragments();		
-		
-		var lineMaxWidth = outerBox.width;
-		var frameHeight = outerBox.height;
-		
-		var offset = { 'x' : 0,	'y' : 0	};
-		
-		if (boxModel) {
-			lineMaxWidth = boxModel.contentArea.width;
-			offset.x = boxModel.getLeftLength();
-			offset.y = boxModel.getTopLength();
+		const outerBox = this.box;
+		const textContent = this.basicModel.getTextContent();
+		const fragments = this.basicModel.getContentFragments();
+		let lineMaxWidth = outerBox.width;
+		const frameHeight = outerBox.height;
+		let offset = { 'x' : 0,	'y' : 0	};
+
+		if (this.boxModel) {
+			lineMaxWidth = this.boxModel.contentArea.width;
+			offset.x = this.boxModel.getLeftLength();
+			offset.y = this.boxModel.getTopLength();
 		}
-		
-		var lineBoxes = wrapper.createLineBoxes(fragments, context, getLineHeight(), lineMaxWidth, frameHeight, baseLineExtraSpacing, offset);
-		
-		basicModel.setLines(lineBoxes);		
-		
-		if (!testingMode) {
-			//var drawText = font.drawString;		
-			var ctx = getContext();			
-			var drawText = ctx.fillText;
-			
+
+		const wrapper = new LineWrapper();
+		const lineBoxes = wrapper.createLineBoxes(fragments, this.context, this.getLineHeight(), lineMaxWidth, frameHeight, this.baseLineExtraSpacing, offset);
+
+		this.basicModel.setLines(lineBoxes);
+
+		if (!this.testingMode) {
+			const ctx = this.getContext();
 			ctx.save();
 
-
-
-			if (boxModel) {
-				// Just want to paint the border
-				var style = {
-					'getBackgroundColor' : function() { return null; }, // Just want to paint the border
-					'getBorderColor'     : function() { return boxStyle.borderColor; },
-					'getFont'            : function() { return font; }
+			if (this.boxModel) {
+				const style = {
+					'getBackgroundColor' : () => null,
+					'getBorderColor'     : () => this.boxStyle.borderColor,
+					'getFont'            : () => this.context.font
 				};
-				painter.paintBox(ctx, boxModel, style); 
+				const painter	= new BoxModelPainter();
+				painter.paintBox(ctx, this.boxModel, style);
 
-				// BoxModel clipping area: ok for TextArea
-				var top  = boxModel.getTopLength();
-				var left = boxModel.getLeftLength();
-				var w = boxModel.contentArea.width;
-				var h = boxModel.contentArea.height;
+				const top  = this.boxModel.getTopLength();
+				const left = this.boxModel.getLeftLength();
+				const w = this.boxModel.contentArea.width;
+				const h = this.boxModel.contentArea.height;
 				ctx.beginPath();
 				ctx.rect(left, top, w, h);
 				ctx.clip();
-				
 				ctx.clearRect(left, top, w, h);
 			}
 
-			for (i = 0; i < lineBoxes.length; i++) {
-				drawLine(lineBoxes[i], boxStyle);
+			for (let i = 0; i < lineBoxes.length; i++) {
+				this.drawLine(lineBoxes[i], this.boxStyle);
 			}
 			ctx.restore();
 		}
-	};
-	
-	return {
-		'init'			: init,
-		'setTestingMode': function(v) { testingMode = v; },
-		'getId'			: function() { return textBoxId; },
-		'getBox'		: function() { return box; },
+	}
 
-		'getBoxModel'	: function() { return boxModel; },
-		'setBoxModel'	: function(b) { boxModel = b; },
-		
-		'resetBox'		: resetBox,
-		
-		'drawBox' 		: drawBox,
-		'setBoxStyle' 	: function(s) { boxStyle = s; },
-		'getBoxStyle' 	: function() { return boxStyle; },
-		'setFont'		: setFont,
-		'getFont' 		: function() { return context.font; }	
-	};
-};
-
+    setTestingMode(v) { this.testingMode = v; }
+    getId() { return this.textBoxId; }
+    getBox() { return this.box; }
+    getBoxModel() { return this.boxModel; }
+    setBoxModel(b) { this.boxModel = b; }
+    resetBox() { this.resetBox(); }
+    drawBox() { this.drawBox(); }
+    setBoxStyle(s) { this.boxStyle = s; }
+    getBoxStyle() { return this.boxStyle; }
+    setFont(f) { this.setFont(f); }
+    getFont() { return this.context.font; }
+}

@@ -1,12 +1,15 @@
+import { currentDocument } from '../html/dom_html_doc.js';
+import { controlFactory } from '../html/control_factory.js';
+import { ArialFont } from '../font/arial_font.js';
+import { overridePainters } from './combo_blue.js';
+import { overrideMikePainters } from './combo_mike.js';
 
-var $ = function(a) { return document.getElementById(a); };
+const $ = function(a) { return document.getElementById(a); };
 
-var setupComboBoxFruits = function() {
-  var doc = colorjack.currentDocument;
-  var fruitSelection;
-  var setupFruitSelection = function() {
-  
-    var options = [
+export function setupComboBoxFruits() {
+  let fruitSelection;
+  const setupFruitSelection = function() {
+    const options = [
       { id : "optionApple",    label: "Apple" },
       { id : "optionOrange",    label: "Orange" },
       { id : "optionKiwi",    label: "Kiwi" },
@@ -20,43 +23,42 @@ var setupComboBoxFruits = function() {
       { id : "optionBanana",    label: "BananaBananaBanana" }
     ];
 
-    var arialFont = new ArialFont();
-    
-    fruitSelection = doc.createElement('select');
-    fruitSelection = colorjack.controlFactory.createLayout(fruitSelection,$('fruitComboBox'));
+    const arialFont = new ArialFont();
+
+    fruitSelection = currentDocument.createElement('select');
+    fruitSelection = controlFactory.createLayout(fruitSelection,$('fruitComboBox'));
     fruitSelection.setFont(arialFont);
 
     overridePainters(fruitSelection);
 
-    fruitSelection.setSize(4); // "to disable the scrollbar" //4 visible rows
+    fruitSelection.setSize(4);
     fruitSelection.setOptions(options);
-    
+
     fruitSelection.setSelectionCallback(
       function(value, label) {
-        var input = document.getElementById("selectionInputBox");
+        const input = document.getElementById("selectionInputBox");
         input.value = value;
       }
     );
-    
+
     fruitSelection.setHoverCallback(
       function(value, label) {
-        var input = document.getElementById("hoverInputBox");
+        const input = document.getElementById("hoverInputBox");
         input.value = label;
       }
     );
   };
 
   setupFruitSelection();
-};
+}
 
-var setupComboBoxOther = function() {
-  var doc = colorjack.currentDocument;
-  var chordSelection;
-  var scalesSelection;
-  var musicSelection;
+export function setupComboBoxOther() {
+  let chordSelection;
+  let scalesSelection;
+  let musicSelection;
 
-  var setupChordSelection = function() {
-    var options = [
+  const setupChordSelection = function() {
+    const options = [
       { id : "opt1",   label: "Scales..." },
       { id : "opt2",   label: "Chinese Mongolian" },
       { id : "opt3",   label: "Altered" },
@@ -73,71 +75,67 @@ var setupComboBoxOther = function() {
       { id : "opt14", label: "Dorian b2" },
       { id : "opt15", label: "Dorian #4" }
     ];
-    
-    chordSelection = doc.createElement('select');
-    chordSelection = colorjack.controlFactory.createLayout(chordSelection,$('chordComboBox'));
-    
-    var smallFont = new ArialFont(0.06);
+
+    chordSelection = currentDocument.createElement('select');
+    chordSelection = controlFactory.createLayout(chordSelection,$('chordComboBox'));
+
+    const smallFont = new ArialFont(0.06);
     chordSelection.setFont(smallFont);
     chordSelection.setSize(100);
-    
+
     overrideMikePainters(chordSelection);
-    
+
     chordSelection.setOptions(options);
-    
+
     chordSelection.setSelectionCallback(function(value, label) {
-      // throw new Error("Value: " + value);  
     });
   };
 
-  var setupScalesSelection = function() {
-    var options = [
+  const setupScalesSelection = function() {
+    const options = [
       { id : "Major",   label: "Chords..." },
       { id : "Majb5",   label: "Majb5" },
       { id : "Minor",   label: "minor" },
       { id : "minb5",   label: "minb5" }
     ];
-    
-    scalesSelection = doc.createElement('select');
-    scalesSelection = colorjack.controlFactory.createLayout(scalesSelection,$('scalesComboBox'));
-    // scalesSelection = colorjack.controlFactory.create('ComboBox', 'scalesComboBox'); //new colorjack.controlFactory.ComboBox(textLayer);
-    
-    var smallFont = new ArialFont(0.06);
+
+    scalesSelection = currentDocument.createElement('select');
+    scalesSelection = controlFactory.createLayout(scalesSelection,$('scalesComboBox'));
+
+    const smallFont = new ArialFont(0.06);
     scalesSelection.setFont(smallFont);
     scalesSelection.setSize(100);
-    
+
     overrideMikePainters(scalesSelection);
-    
+
     scalesSelection.setOptions(options);
-    
+
     scalesSelection.setSelectionCallback(function(value, label) {
-      // throw new Error("Value: " + value);  
     });
   };
-  
-  var setupComposerSelection = function() {
-    var options2 = [
+
+  const setupComposerSelection = function() {
+    const options2 = [
       { id : "Mozart",  label: "Mozart" },
       { id : "Beethoven", label: "Beethoven" },
       { id : "Chopin",  label: "Chopin" },
       { id : "Vivaldi",  label: "Vivaldi" }
     ];
-    
-    musicSelection = doc.createElement('select');
-    musicSelection = colorjack.controlFactory.createLayout(musicSelection,$('composerComboBox'));
-  
-    var largerFont = new ArialFont(0.4);
+
+    musicSelection = currentDocument.createElement('select');
+    musicSelection = controlFactory.createLayout(musicSelection,$('composerComboBox'));
+
+    const largerFont = new ArialFont(0.4);
     largerFont.setTextColor("green");
     musicSelection.setFont(largerFont);
-    
+
     musicSelection.setOptions(options2);
-    
+
     musicSelection.setSelectionCallback(function(value, label) {
-      // throw new Error("Value: " + value);  
     });
   };
 
   setupChordSelection();
   setupScalesSelection();
   setupComposerSelection();
-};
+}

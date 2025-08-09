@@ -1,58 +1,80 @@
 
-colorjack.css = {};
-    
-colorjack.css.boxModelFactory = (function() {
+const DEFAULT_BOX_WIDTH	= 150;
+const DEFAULT_BOX_HEIGHT	= 300;
 
-  var DEFAULT_BOX_WIDTH	= 150;
-  var DEFAULT_BOX_HEIGHT	= 300;
+export class DOMPoint {
+  x: number;
+  y: number;
 
-  function DOMPoint(x,y) {
-  	this.x = x || 0;
-  	this.y = y || 0;
-  	this.toString = function() {
-  		return "[Point -> x:"+this.x+", y:"+this.y+"]";
-  	};
-  };
+  constructor(x?, y?) {
+    this.x = x || 0;
+    this.y = y || 0;
+  }
 
-  function DOMSize(w, h) {
-  	this.width	= w || 0;
-  	this.height = h || 0;
-  	this.toString = function() {
-  		return "[Size -> w:"+this.width+", h:"+this.height+"]";
-  	};
-  };
+  toString() {
+    return "[Point -> x:" + this.x + ", y:" + this.y + "]";
+  }
+}
 
-  function DOMBox(x,y,w,h) { // implements: Size, Point. [Box: this is what we really need for painting boxes]
-  	this.x		= x || 0;
-  	this.y		= y || 0;
-  	this.width	= w || DEFAULT_BOX_WIDTH;
-  	this.height	= h || DEFAULT_BOX_HEIGHT;
+export class DOMSize {
+  width: number;
+  height: number;
 
-  	this.isPointInsideBox = function(xx, yy) {
-  		var inside = (this.x <= xx && xx < this.x + this.width) &&
-  					 (this.y <= yy && yy < this.y + this.height);
-  		return inside;
-  	};
-  	this.toString = function() {
-  		return "[Box -> x:"+this.x+", y:"+this.y+", w:"+this.width+", h:"+this.height+"]";
-  	};
-  };
+  constructor(w?, h?) {
+    this.width	= w || 0;
+    this.height = h || 0;
+  }
 
-  function DOMRect(t,r,b,l) { // Used for margin, border and padding
-  	this.top	= t || 0;
-  	this.right	= r || 0;
-  	this.bottom = b || 0;
-  	this.left	= l || 0;
-  	this.toString = function() {
-  		return "[Rect -> t:"+this.top+",r:"+this.right+",b:"+this.bottom+",l:"+this.left+"]";
-  	};
-  };
-  
-  return {
-  	createPoint	: function(x,y)		{ return new DOMPoint(); },
-  	createRect	: function(t,r,b,l)	{ return new DOMRect(t,r,b,l); },
-  	createSize	: function(w,h)		{ return new DOMSize(w,h); },
-  	createBox	: function(x,y,w,h)	{ return new DOMBox(x,y,w,h); }
-  };
-	
-})();
+  toString() {
+    return "[Size -> w:" + this.width + ", h:" + this.height + "]";
+  }
+}
+
+export class DOMBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+
+  constructor(x?, y?, w?, h?) {
+    this.x		= x || 0;
+    this.y		= y || 0;
+    this.width	= w || DEFAULT_BOX_WIDTH;
+    this.height	= h || DEFAULT_BOX_HEIGHT;
+  }
+
+  isPointInsideBox(xx, yy) {
+    const inside = (this.x <= xx && xx < this.x + this.width) &&
+           (this.y <= yy && yy < this.y + this.height);
+    return inside;
+  }
+
+  toString() {
+    return "[Box -> x:" + this.x + ", y:" + this.y + ", w:" + this.width + ", h:" + this.height + "]";
+  }
+}
+
+export class DOMRect {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+
+  constructor(t?, r?, b?, l?) {
+    this.top	= t || 0;
+    this.right	= r || 0;
+    this.bottom = b || 0;
+    this.left	= l || 0;
+  }
+
+  toString() {
+    return "[Rect -> t:" + this.top + ",r:" + this.right + ",b:" + this.bottom + ",l:" + this.left + "]";
+  }
+}
+
+export const boxModelFactory = {
+  createPoint: function(x,y)		{ return new DOMPoint(x,y); },
+  createRect: function(t,r,b,l)	{ return new DOMRect(t,r,b,l); },
+  createSize: function(w,h)		{ return new DOMSize(w,h); },
+  createBox: function(x,y,w,h)	{ return new DOMBox(x,y,w,h); }
+};

@@ -1,30 +1,30 @@
 // Font object is "owned" by the VisualTextBox.
 
-colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, testing) {
+w3canvas.component.TextBox = function(canvasBox, textDomElement, uniqueId, testing) {
 	//----------------------------------------------------------------------
 	var initialized = false;
 	
 	if (canvasBox === undefined || canvasBox === null) {
-		colorjack.debug.programmerPanic("Invalid TextBox() constructor. Missing canvasBox parameter!");
+		w3canvas.debug.programmerPanic("Invalid TextBox() constructor. Missing canvasBox parameter!");
 	}
 	
-	var basicModel		= new colorjack.textbox.model.BasicModel();
-	var cursor			= new colorjack.textbox.ui.cursor.Cursor();
-	var cursorPosition	= new colorjack.textbox.ui.cursor.CursorPosition();
-	//var font			= new colorjack.textbox.Font();
-	var inputScrolling	= new colorjack.textbox.ui.InputScrolling();
-	var keyboard		= new colorjack.keyboard.Keyboard();
-	var mouse			= new colorjack.textbox.mouse.Mouse();
-	var textModel		= new colorjack.textbox.model.TextModel();
-	var visualSelection	= new colorjack.textbox.ui.VisualSelection();
-	var visualTextBox	= new colorjack.textbox.VisualTextBox();	
+	var basicModel		= new w3canvas.textbox.model.BasicModel();
+	var cursor			= new w3canvas.textbox.ui.cursor.Cursor();
+	var cursorPosition	= new w3canvas.textbox.ui.cursor.CursorPosition();
+	//var font			= new w3canvas.textbox.Font();
+	var inputScrolling	= new w3canvas.textbox.ui.InputScrolling();
+	var keyboard		= new w3canvas.keyboard.Keyboard();
+	var mouse			= new w3canvas.textbox.mouse.Mouse();
+	var textModel		= new w3canvas.textbox.model.TextModel();
+	var visualSelection	= new w3canvas.textbox.ui.VisualSelection();
+	var visualTextBox	= new w3canvas.textbox.VisualTextBox();
 	
 	var textBoxId		= uniqueId;
 	
 	
 	
 	if (!textDomElement) {	// For standalone TextBox without an HTMLElement (input/textarea), needed for automated testing
-		textDomElement = new colorjack.css.BoxModel();
+		textDomElement = new w3canvas.css.BoxModel();
 		textDomElement.value = "";
 		textDomElement.setValue = function(v) { this.value = v; };
 		textDomElement.getValue = function()  { return this.value; }
@@ -36,16 +36,16 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 			
 			/*
 			if (font === undefined || font === null) {
-				colorjack.debug.programmerPanic("Need to call TextBox.setFont() before colorjack.component.TextBox.init()!");
+				w3canvas.debug.programmerPanic("Need to call TextBox.setFont() before w3canvas.component.TextBox.init()!");
 				return;
 			}
 			*/
 			
 			if (testing) {
-				colorjack.graphicsLib.setTestingMode(true);
+				w3canvas.graphicsLib.setTestingMode(true);
 				visualSelection.setTestingMode(true);
 				visualTextBox.setTestingMode(true);
-				cursor = new colorjack.textbox.ui.cursor.DummyCursor();
+				cursor = new w3canvas.textbox.ui.cursor.DummyCursor();
 			}			
 			var ctx = canvasBox.getContext('2d');
 			
@@ -108,7 +108,7 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 	// HTML/Javascript TextArea
 	var focus = function() {
 		cursor.startBlink();		
-		var textFocusManager = colorjack.textFocusManager;
+		var textFocusManager = w3canvas.textFocusManager;
 		textFocusManager.setFocusedTextBoxId(textBoxId);
 	};
 
@@ -121,7 +121,7 @@ colorjack.component.TextBox = function(canvasBox, textDomElement, uniqueId, test
 		else {
 			cursor.hideCursor();
 		}
-		var textFocusManager = colorjack.textFocusManager;
+		var textFocusManager = w3canvas.textFocusManager;
 		textFocusManager.unsetCurrentTextBoxId(textBoxId);
 	};
 
