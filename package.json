@@ -6,10 +6,6 @@
   "directories": {
     "example": "examples"
   },
-  "scripts": {
-    "test": "node scripts/build.js --test",
-    "build": "node scripts/build.js"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Downchuck/W3Canvas.git"
@@ -17,7 +13,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/Downchuck/W3Canvas/issues"
   },

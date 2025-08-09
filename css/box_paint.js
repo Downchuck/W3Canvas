@@ -1,5 +1,7 @@
 
-colorjack.css.BoxModelPainter = function() {
+import { clone } from '../lang_util.js';
+
+export function BoxModelPainter() {
   // 3D CSS Box Model
   // http://www.hicksdesign.co.uk/boxmodel/
   // http://redmelon.net/tstme/box_model/
@@ -47,7 +49,7 @@ colorjack.css.BoxModelPainter = function() {
   
   var paintBox = function(ctx, baseBoxModel, style, maxContentWidth, text) {
     ctx.save();
-    var boxModel = (maxContentWidth)? colorjack.util.clone(baseBoxModel) : baseBoxModel;
+    var boxModel = (maxContentWidth)? clone(baseBoxModel) : baseBoxModel;
     if (maxContentWidth) {
       boxModel.contentArea.width = maxContentWidth; // we are changing the clone.
     }

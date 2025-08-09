@@ -1,345 +1,289 @@
-/*
-This file handles keyboard navigation. 
-File contains two interfaces: KeyNavigatorImpl and KeyNavigator. 
-KeyNavigator simply translates keystrokes to cursor movement concepts implemented in KeyNavigatorImpl. 
-*/
+import * as debug from '../../lang_debug.js';
+import { isWordSeparator } from '../../lang_util.js';
 
-// Abstract navigation concept interface, e.g. "move to home" "move to next word"
-colorjack.keyboard.KeyNavigatorImpl = function() {
-	//----------------------------------------------------------------------
-	var basicModel = null;
-	var cursor = null;
-	var cursorPosition = null;	
-	var	editLineModel = null;
-	var textModel = null;
-	var visualSelection = null;
-	var	visualLineModel = null;
-	
-	var init = function(vars) {
-		try {
-			basicModel		= vars.basicModel;
-			cursor			= vars.cursor;
-			cursorPosition	= vars.cursorPosition;
-			textModel		= vars.textModel;
-			editLineModel	= textModel.getEditLineModel();	
-			visualLineModel = textModel.getVisualLineModel();
-			visualSelection = vars.visualSelection;
-			
-			colorjack.debug.checkNull("KeyNavigatorImpl", [basicModel, cursor, cursorPosition, editLineModel, textModel, visualLineModel, visualSelection]);
-		}
-		catch (e) {
-			colorjack.debug.programmerPanic("KeyNavigatorImpl. Initialization error: " + e.name + " = " + e.message);
-		}
-	};
-	//----------------------------------------------------------------------
-	
-	var pageSize = 5;
-	var wordpadMode = true;
-	
-	var getCursorPos = function() {
-		var pos = cursorPosition.getPosition();
-		return pos;
-	};
-	
-	var moveOrSelectTo = function(container, offset, selectionMode) {	
-		var safeContainer = Math.max(0, Math.min(basicModel.getLineCount() - 1, container));
-		var safeOffset = Math.min( visualLineModel.getLastOffset(safeContainer), offset );		
-		
-		if (safeContainer != container) {
-			colorjack.debug.programmerPanic("Out of range: container: " + container + ", safe: " + safeContainer);
-		}
-		if (safeOffset != offset) {
-			colorjack.debug.programmerPanic("Out of range: offset: " + offset + ", safe: " + safeOffset);
-		}
-		// debug("Numline: " + container + " -> " + safeContainer + "," + offset + " -> " + safeOffset); /*DBG*/
-		
-		if (selectionMode) {
-			cursor.stopBlink();
-			visualSelection.clearMarkedSelection();
-			visualSelection.setEnd(safeContainer, safeOffset);
-			cursorPosition.moveToVisiblePosition(safeContainer, safeOffset);
-			visualSelection.showRange();
-			cursor.startBlink();
-		}
-		else { // just move cursor to new position		
-			//info('moveTo ' + safeContainer + ' ' + safeOffset);
-			//cursorPosition.moveToVisiblePosition(safeContainer, safeOffset);
-			cursorPosition.setPosition(safeContainer, safeOffset);			
-			// since we are not in selection mode, any cursor movement should lead to text deselection. 
-			visualSelection.clearMarkedSelection();
-		}
-	};
+class KeyNavigatorImpl {
+	constructor() {
+		let basicModel = null;
+		let cursor = null;
+		let cursorPosition = null;
+		let	editLineModel = null;
+		let textModel = null;
+		let visualSelection = null;
+		let	visualLineModel = null;
+		const pageSize = 5;
+		const wordpadMode = true;
 
-	var moveToHome = function(k) {
-		var linenum;
-		var offset;
-
-		if (k.ctrlKey) {	// start of whole document
-			linenum = 0; 
-			offset = 0;
-		}
-		else {	// start of line
-			linenum = getCursorPos()[0];
-			offset = 0; 
-		}
-		moveOrSelectTo(linenum, offset, k.shiftKey);
-		cursorPosition.computeVerticalArrowCursorPos(linenum, offset);
-	};
-	
-	var moveToEnd = function(k) {
-		var linenum;
-		var offset;
-		
-		if (k.ctrlKey) { // end of whole document
-			var last = visualLineModel.getLastPosition();			
-			linenum = last[0];
-			offset = last[1];	
-		}
-		else {	// end of line
-			linenum = getCursorPos()[0];
-			offset = visualLineModel.getLastOffset(linenum);
-		}
-		moveOrSelectTo(linenum, offset, k.shiftKey);
-		cursorPosition.computeVerticalArrowCursorPos(linenum, offset);
-	};
-	
-	var getLineCount = function() {
-		return basicModel.getLineCount();
-	};
-
-	var movePage = function(pageDown, k) {
-		var canMove;
-		var linenum;
-
-		var line = getCursorPos()[0];
-
-		if (pageDown) { // pageDown
-			canMove = (line + pageSize < getLineCount());
-			linenum = line + pageSize;
-		}
-		else { 	// pageUp
-			canMove = (line >= pageSize);
-			linenum = line - pageSize;
-		}
-		if (canMove) {
-			var charTarget = getCursorPos()[1];
-			var offset = Math.min(charTarget, visualLineModel.getLastOffset(linenum));
-			moveOrSelectTo(linenum, offset, k.shiftKey);
-		}
-	};
-
-	var moveArrowVertical = function(arrowDown, k) {
-		var normal = true; // var normal = !k.ctrlKey; // Ignore control key for vertical arrow selection
-		if (normal) {
-			var pos = getCursorPos();
-			var linenum = pos[0] + ((arrowDown)? 1:-1);
-			
-			var canMove = (0 <= linenum && linenum < getLineCount());	
-			if (canMove) {				
-				pos = cursorPosition.getVerticalArrowCursorPos(linenum);
-				var offset = pos[1];
-				moveOrSelectTo(linenum, offset, k.shiftKey);
+		this.init = (vars) => {
+			try {
+				basicModel		= vars.basicModel;
+				cursor			= vars.cursor;
+				cursorPosition	= vars.cursorPosition;
+				textModel		= vars.textModel;
+				editLineModel	= textModel.getEditLineModel();
+				visualLineModel = textModel.getVisualLineModel();
+				visualSelection = vars.visualSelection;
+				debug.checkNull("KeyNavigatorImpl", [basicModel, cursor, cursorPosition, editLineModel, textModel, visualLineModel, visualSelection]);
 			}
-			else if (k.shiftKey && wordpadMode) { // Keep moving selection to start/end of document
-				if (linenum < 0) {
-					linenum = 0;
-					offset = 0;
-				}
-				else if (linenum >= getLineCount()) {
-					var last = visualLineModel.getLastPosition();
-					linenum = last[0];
-					offset = last[1];
-				}
-				moveOrSelectTo(linenum, offset, k.shiftKey);
+			catch (e) {
+				debug.programmerPanic("KeyNavigatorImpl. Initialization error: " + e.name + " = " + e.message);
 			}
-		}		
-	};
+		};
 
-	// FIXME: Abstract to css text module
+		const getCursorPos = () => {
+			return cursorPosition.getPosition();
+		};
 
-	var getNextWordPos = function(text, linenum, offset, step) {
-		//var p = visualLineModel.convertPositionFromViewToEdit(linenum, offset, true);		
-		var p = [linenum, offset];
-		
-		if (step > 0 && p[0] > basicModel.getLineCount()) {
-			return [0,0,false]; // invalid... cannot move further than what's available
-		}		
-		var start = editLineModel.getExtendedOffset(p[0], p[1]);
-		
-		offset = start;
-		
-		text = text + "\n"; // Hack to handle the last word (Ctrl+Arrow) of text with a wordSeparator	
-		
-		for (var i = start+step; i > 0 && i < text.length; i+=step) {
-			var previous = text.charAt(i-1);
-			var current = text.charAt(i);
-
-			var startToken = (colorjack.util.isWordSeparator(previous) && !colorjack.util.isWordSeparator(current));			
-			if (startToken) {
-				offset = i;
-				break;
+		const moveOrSelectTo = (container, offset, selectionMode) => {
+			const safeContainer = Math.max(0, Math.min(basicModel.getLineCount() - 1, container));
+			const safeOffset = Math.min( visualLineModel.getLastOffset(safeContainer), offset );
+			if (safeContainer != container) {
+				debug.programmerPanic("Out of range: container: " + container + ", safe: " + safeContainer);
 			}
-		}
-		var canMove = true;
-		
-		var lastPos = visualLineModel.getLastPosition();
-		
-		if (offset != start) { // we can move to the next word
-			var pos = editLineModel.getPosition(offset);			
-			linenum = pos[0];
-			offset = pos[1];			
-			canMove =  (linenum < basicModel.getLineCount());
-			if (!canMove) {
-				pos = lastPos;
-				linenum = pos[0];
-				offset = pos[1];
-				canMove = true;
+			if (safeOffset != offset) {
+				debug.programmerPanic("Out of range: offset: " + offset + ", safe: " + safeOffset);
 			}
-		}
-		else { // Handle a bunch of special cases
-			if (i <= 0) { // start of document
+			if (selectionMode) {
+				cursor.stopBlink();
+				visualSelection.clearMarkedSelection();
+				visualSelection.setEnd(safeContainer, safeOffset);
+				cursorPosition.moveToVisiblePosition(safeContainer, safeOffset);
+				visualSelection.showRange();
+				cursor.startBlink();
+			}
+			else {
+				cursorPosition.setPosition(safeContainer, safeOffset);
+				visualSelection.clearMarkedSelection();
+			}
+		};
+
+		this.moveToHome = (k) => {
+			let linenum;
+			let offset;
+			if (k.ctrlKey) {
 				linenum = 0;
 				offset = 0;
 			}
-			//else if (i >= basicModel.getVisibleLength()) { // end of document
-			else if (i>=text.length) {
-				var last = visualLineModel.getLastPosition();
+			else {
+				linenum = getCursorPos()[0];
+				offset = 0;
+			}
+			moveOrSelectTo(linenum, offset, k.shiftKey);
+			cursorPosition.computeVerticalArrowCursorPos(linenum, offset);
+		};
+
+		this.moveToEnd = (k) => {
+			let linenum;
+			let offset;
+			if (k.ctrlKey) {
+				const last = visualLineModel.getLastPosition();
 				linenum = last[0];
 				offset = last[1];
 			}
 			else {
-				canMove = false; // no real change
+				linenum = getCursorPos()[0];
+				offset = visualLineModel.getLastOffset(linenum);
 			}
-		}
-		return [linenum, offset, canMove];
-	};
-	
-	var moveArrowHorizontal = function(arrowRight, k) {
-		var pos = getCursorPos();
-		var linenum = pos[0];
-		var offset = pos[1];
-		var step = ((arrowRight)?1:-1);
-		var canMove = false;
-		
-		//info("### linenum: " + linenum);
-		//info("### offset: " + offset);
-		//info("### canMove: " + canMove);					
-
-		var wordMovement = k.ctrlKey;
-		if (wordMovement) {
-			//var wordPos = getNextWordPos(basicModel.getTextContent(), linenum, offset, step);
-			var wordPos = getNextWordPos(basicModel.getExtendedContent(), linenum, offset, step);
-			linenum = wordPos[0];
-			offset = wordPos[1];
-			canMove = wordPos[2];
-		}
-		else { // single char movement
-			var lastOffset = visualLineModel.getLastOffset(linenum);
-			offset += step;		// could go to different lines!
-			
-			//console.log('new offset: ' + offset);
-
-			if (arrowRight) {
-				if (offset > lastOffset) {
-					linenum++; // perhaps we cannot move: we check again later below
-					offset = 0;
-				}
-			}
-			else if (offset < 0) {
-				linenum--;
-				if (linenum >= 0) {
-					offset += editLineModel.getLineLength(linenum, true); // want to count the newlines!, so that it can move to the right of the last character on the previous line. And also include the generated image in the count
-				}
-			}
-			var withinLines = (linenum >= 0 && linenum < visualLineModel.getLineCount());
-			if (withinLines) {
-				lastOffset = visualLineModel.getLastOffset(linenum);
-			}			
-			var withinLine = (0 <= offset && offset <= lastOffset);			
-			canMove = (withinLines && withinLine);
-			//info(">>> linenum: " + linenum);
-			//info(">>> offset: " + offset);
-			//info(">>> canMove: " + canMove);		
-		}
-		if (canMove) {
 			moveOrSelectTo(linenum, offset, k.shiftKey);
 			cursorPosition.computeVerticalArrowCursorPos(linenum, offset);
-		}
-	};
-	
-	return {
-		'init'					: init,
-		'moveToHome'			: moveToHome,
-		'moveToEnd'				: moveToEnd,
-		'movePage' 				: movePage,
-		'moveArrowVertical'		: moveArrowVertical,
-		'moveArrowHorizontal'	: moveArrowHorizontal
-	};
-};
+		};
 
+		const getLineCount = () => {
+			return basicModel.getLineCount();
+		};
 
-colorjack.keyboard.KeyNavigator = function() {
-	var keyNavigator = new colorjack.keyboard.KeyNavigatorImpl();	
-	var cursor = null;
-	
-	var init = function(vars) {
-		try {
-			keyNavigator.init(vars);
+		this.movePage = (pageDown, k) => {
+			let canMove;
+			let linenum;
+			const line = getCursorPos()[0];
+			if (pageDown) {
+				canMove = (line + pageSize < getLineCount());
+				linenum = line + pageSize;
+			}
+			else {
+				canMove = (line >= pageSize);
+				linenum = line - pageSize;
+			}
+			if (canMove) {
+				const charTarget = getCursorPos()[1];
+				const offset = Math.min(charTarget, visualLineModel.getLastOffset(linenum));
+				moveOrSelectTo(linenum, offset, k.shiftKey);
+			}
+		};
 
-			cursor = vars.cursor;
-			
-			colorjack.debug.checkNull("KeyNavigator", [cursor]);
-		}
-		catch (e) {
-			colorjack.debug.programmerPanic("KeyNavigator. Initialization error: " + e.name + " = " + e.message);
-		}
-	};
+		this.moveArrowVertical = (arrowDown, k) => {
+			const normal = true;
+			if (normal) {
+				let pos = getCursorPos();
+				let linenum = pos[0] + ((arrowDown)? 1:-1);
+				const canMove = (0 <= linenum && linenum < getLineCount());
+				if (canMove) {
+					pos = cursorPosition.getVerticalArrowCursorPos(linenum);
+					const offset = pos[1];
+					moveOrSelectTo(linenum, offset, k.shiftKey);
+				}
+				else if (k.shiftKey && wordpadMode) {
+					let offset;
+					if (linenum < 0) {
+						linenum = 0;
+						offset = 0;
+					}
+					else if (linenum >= getLineCount()) {
+						const last = visualLineModel.getLastPosition();
+						linenum = last[0];
+						offset = last[1];
+					}
+					moveOrSelectTo(linenum, offset, k.shiftKey);
+				}
+			}
+		};
 
-	return {
-		'init': init,
-		
-		'home': function(k) {
+		const getNextWordPos = (text, linenum, offset, step) => {
+			const p = [linenum, offset];
+			if (step > 0 && p[0] > basicModel.getLineCount()) {
+				return [0,0,false];
+			}
+			const start = editLineModel.getExtendedOffset(p[0], p[1]);
+			offset = start;
+			text = text + "\n";
+			let i;
+			for (i = start+step; i > 0 && i < text.length; i+=step) {
+				const previous = text.charAt(i-1);
+				const current = text.charAt(i);
+				const startToken = (isWordSeparator(previous) && !isWordSeparator(current));
+				if (startToken) {
+					offset = i;
+					break;
+				}
+			}
+			let canMove = true;
+			const lastPos = visualLineModel.getLastPosition();
+			if (offset != start) {
+				let pos = editLineModel.getPosition(offset);
+				linenum = pos[0];
+				offset = pos[1];
+				canMove =  (linenum < basicModel.getLineCount());
+				if (!canMove) {
+					pos = lastPos;
+					linenum = pos[0];
+					offset = pos[1];
+					canMove = true;
+				}
+			}
+			else {
+				if (i <= 0) {
+					linenum = 0;
+					offset = 0;
+				}
+				else if (i>=text.length) {
+					const last = visualLineModel.getLastPosition();
+					linenum = last[0];
+					offset = last[1];
+				}
+				else {
+					canMove = false;
+				}
+			}
+			return [linenum, offset, canMove];
+		};
+
+		this.moveArrowHorizontal = (arrowRight, k) => {
+			let pos = getCursorPos();
+			let linenum = pos[0];
+			let offset = pos[1];
+			const step = ((arrowRight)?1:-1);
+			let canMove = false;
+			const wordMovement = k.ctrlKey;
+			if (wordMovement) {
+				const wordPos = getNextWordPos(basicModel.getExtendedContent(), linenum, offset, step);
+				linenum = wordPos[0];
+				offset = wordPos[1];
+				canMove = wordPos[2];
+			}
+			else {
+				let lastOffset = visualLineModel.getLastOffset(linenum);
+				offset += step;
+				if (arrowRight) {
+					if (offset > lastOffset) {
+						linenum++;
+						offset = 0;
+					}
+				}
+				else if (offset < 0) {
+					linenum--;
+					if (linenum >= 0) {
+						offset += editLineModel.getLineLength(linenum, true);
+					}
+				}
+				const withinLines = (linenum >= 0 && linenum < visualLineModel.getLineCount());
+				if (withinLines) {
+					lastOffset = visualLineModel.getLastOffset(linenum);
+				}
+				const withinLine = (0 <= offset && offset <= lastOffset);
+				canMove = (withinLines && withinLine);
+			}
+			if (canMove) {
+				moveOrSelectTo(linenum, offset, k.shiftKey);
+				cursorPosition.computeVerticalArrowCursorPos(linenum, offset);
+			}
+		};
+	}
+}
+
+export class KeyNavigator {
+	constructor() {
+		const keyNavigator = new KeyNavigatorImpl();
+		let cursor = null;
+
+		this.init = (vars) => {
+			try {
+				keyNavigator.init(vars);
+				cursor = vars.cursor;
+				debug.checkNull("KeyNavigator", [cursor]);
+			}
+			catch (e) {
+				debug.programmerPanic("KeyNavigator. Initialization error: " + e.name + " = " + e.message);
+			}
+		};
+
+		this.home = (k) => {
 			cursor.stopBlink();
 			keyNavigator.moveToHome(k);
 			cursor.startBlink();
-		},
-		'end': function(k) {
+		};
+		this.end = (k) => {
 			cursor.stopBlink();
 			keyNavigator.moveToEnd(k);
 			cursor.startBlink();
-		},
-		'pageUp': function(k) {
+		};
+		this.pageUp = (k) => {
 			cursor.stopBlink();
 			keyNavigator.movePage(false, k);
 			cursor.startBlink();
-		},
-		'pageDown': function(k) {
+		};
+		this.pageDown = (k) => {
 			cursor.stopBlink();
 			keyNavigator.movePage(true, k);
 			cursor.startBlink();
-		},
-		'arrowUp': function(k) {
+		};
+		this.arrowUp = (k) => {
 			cursor.stopBlink();
 			keyNavigator.moveArrowVertical(false, k);
 			cursor.startBlink();
-		},
-		'arrowDown': function(k) {
+		};
+		this.arrowDown = (k) => {
 			cursor.stopBlink();
 			keyNavigator.moveArrowVertical(true, k);
 			cursor.startBlink();
-		},
-		'arrowLeft': function(k) {
+		};
+		this.arrowLeft = (k) => {
 			cursor.stopBlink();
 			keyNavigator.moveArrowHorizontal(false, k);
 			cursor.startBlink();
-		},
-		'arrowRight': function(k) {
+		};
+		this.arrowRight = (k) => {
 			cursor.stopBlink();
 			keyNavigator.moveArrowHorizontal(true, k);
 			cursor.startBlink();
-		}		
-	};
-};
-
-
-
+		};
+	}
+}

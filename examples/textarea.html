@@ -3,47 +3,7 @@
 <link rel="stylesheet" type="text/css" href="fvlogger/logger.css" />
 <script type="text/javascript" src="fvlogger/logger.js"></script>
 
-<script type="text/javascript">$=function(a){return document.getElementById(a);};</script>
-
-<script type="text/javascript" src="font/base2-p.js"></script>
-<script type="text/javascript" src="font/path.js"></script>
-<script type="text/javascript" src="font/font.js"></script>
-
-<script type="text/javascript" src="textbox/boxmodel.js"></script>
-<script type="text/javascript" src="textbox/factory.js"></script>
-
-	<script src="lang_util.js" ></script>
-	<script src="canvas_lib.js" ></script>
-	<script src="font/arial_font.js" ></script>
-	<script src="domhtml/dom_core.js" ></script>
-	<script src="domhtml/dom_html_basic.js" ></script>
-
-	<script src="cssbox/box_basic.js" ></script>
-	<script src="cssbox/box_model.js" ></script>
-	<script src="cssbox/css_style.js" ></script>
-	<script src="cssbox/box_paint.js" ></script>
-	<!-- script src="cssbox/viewport.js" ></script -->
-
-	<script src="domhtml/dom_html_option.js" ></script>
-	<script src="domhtml/dom_html_select.js" ></script>
-	<script src="domhtml/dom_html_doc.js" ></script><!-- Unfortunately too many dependencies when trying to integrate with the HTMLDocument -->
-
-<script type="text/javascript" src="textbox/basic_model.js"></script>
-<script type="text/javascript" src="textbox/cursor.js"></script>
-<script type="text/javascript" src="textbox/keyboard.js"></script>
-<script type="text/javascript" src="textbox/keyboard_edit.js"></script>
-<script type="text/javascript" src="textbox/keyboard_nav.js"></script>
-<script type="text/javascript" src="cssbox/linebreak.js"></script>
-<script type="text/javascript" src="textbox/mouse.js"></script>
-<script type="text/javascript" src="textbox/scrolling.js"></script>
-<script type="text/javascript" src="textbox/textbox_comp.js"></script>
-<script type="text/javascript" src="textbox/textmodel_copypaste.js"></script>
-<script type="text/javascript" src="textbox/textmodel.js"></script>
-<script type="text/javascript" src="textbox/visual_selection.js"></script>
-<script type="text/javascript" src="textbox/visual_textbox.js"></script>
-
-<script type="text/javascript" src="control/control_factory.js"></script>
-
+<script type="module" src="textarea.js"></script>
 </head>
 <body bgcolor="#090909">
 
@@ -74,82 +34,6 @@
 			<dd><a href="#fvlogger" onclick="eraseLog(true);" title="erase">erase</a></dd>
 		</dl>
 	</div>
-
-
-<script type="text/javascript">
-
-var drawBoxes = function() {
-
-	if (arialFontLib) {
-		//----------------------------------------
-		var lib = arialFontLib;
-
-		var cBox = $('cBox_top');
-		lib.ctx = cBox.getContext('2d'); // for drawString and path.js (path drawing mechanism using this.ctx)
-
-		var textBoxFactory = colorjack.textBoxFactory;
-
-		var textbox = ControlFactory.create('TextArea', 'cBox_top'); // textBoxFactory.createTextBox(cBox);
-
-		var font = new ArialFont();
-		font.setTextColor("red");
-		textbox.setFont(font);
-
-		var textContent = 'Canvas\n\n\nis an\textremely heavy-duty plain-woven fabric      used for making sails, tents, marquees, backpacks, and other functions where sturdiness is required. It is also popularly used as a painting surface, typically stretched, and on fashion handbags and shoes.In   the  Wyoming.';
-		//var textContent = 'used as a painting surface, typically stretched, and on fashion handbags and shoes.In   the  Wyoming.';
-		//var textContent = 'and on handbagsand shoes.Inthessss Wyoming.';
-
-		textbox.setValue(textContent);
-
-		//----------------------------------------
-
-		var cBox2 = $('cBox_bottom');
-		lib.ctx = cBox2.getContext('2d'); // for drawString and path.js (path drawing mechanism using this.ctx)
-
-		var textbox2 = ControlFactory.create('TextArea', 'cBox_bottom');
-
-		var box2Style = {
-			'color' : "rgb(200,200,0)",
-			'reverseMode' : false,
-			'showLines': true,
-			'lineColor' : 'rgba(255,120,20,1)',
-			'borderColor' : "black",
-			'cursorWidth' : 4,
-			'cursorColor'	: "#c97",
-			'selectionColor': "rgba(20,40,20,.6)"
-		};
-		textbox2.setStyle(box2Style);
-
-		var textContent = 'Roses are red, violets are blue, sugar is sweet and so is my code.';
-		textbox2.setValue(textContent);
-		//textbox2.select();
-
-		var textbox3 = ControlFactory.create('TextArea', 'cBox_blacktext');
-
-		var f = new ArialFont();
-		f.setScaleFactor(0.10);
-		textbox3.setFont(f);
-
-		var box3Style = {
-			'color' 		: "#555",
-			'reverseMode'	: false,
-			'cursorWidth'   : 1,
-			'cursorColor'	: "#555",
-			'showLines'		: true,
-			'lineColor'		: 'blue',
-			'borderColor'	: "#090909",
-			'selectionColor': "rgba(255,255,255,0.6)"
-		};
-		textbox3.setStyle(box3Style);
-
-		var textContent = 'Roses are red, violets are blue, sugar is sweet and so is my code.\nYesterday... all my troubles seem so far away.';
-		textbox3.setValue(textContent);
-	}
-};
-
-loadFont(drawBoxes);
-
-</script>
 
 
 </body>

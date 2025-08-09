@@ -1,116 +1,108 @@
+export class VerticalLayout {
+	collapseBorders: any;
 
-colorjack.css.VerticalLayout = function(collapseBorders) {
+	constructor(collapseBorders) {
+		this.collapseBorders = collapseBorders;
+	}
 
-	var setup = function(ctx, parent, itemBoxStyle, parentBoxStyle, viewport) {
-		var maxContentWidth = 0;
-		
-		var node = parent.getFirstChild();
+	setup(ctx, parent, itemBoxStyle, parentBoxStyle, viewport) {
+		let maxContentWidth = 0;
+		let node = parent.getFirstChild();
 		while (node) {
 			if (node.computeContentSize) {
-				node.computeContentSize(ctx);	// use the String measure()
+				node.computeContentSize(ctx);
 			}
 			else {
 				throw new Error("node.computeContentSize() not defined");
-			}			
-			node.copyRectFrom(itemBoxStyle);	
-			
+			}
+			node.copyRectFrom(itemBoxStyle);
 			maxContentWidth = Math.max(maxContentWidth, node.contentArea.width);
 			node = node.getNextSibling();
 		}
-		
-		// Resize all nodes to the maximum width		
+
 		node = parent.getFirstChild();
-		while (node) { 
+		while (node) {
 			node.contentArea.width = maxContentWidth;
 			node = node.getNextSibling();
 		}
 		parent.copyRectFrom(parentBoxStyle);
-		
-		if (viewport && viewport.needsVerticalScrollbar()) {
-			// Make sure to have enough space for the vertical scrollBar within the padding area
-			
-			// Allocate extra space for the vertical scrollBar within the "padding" area
-			parent.padding.right += viewport.getVerticalScrollbarWidth();
-			// parent.padding.bottom += viewport.getHorizontalScrollbarWidth();
-		}		
-		return maxContentWidth;
-	};
 
-	var computeLayout = function(ctx, parent, itemBoxStyle, parentBoxStyle) {
-		// Get the box model information from the given styles
-		var maxContentWidth     = setup(ctx, parent, itemBoxStyle, parentBoxStyle, parent.viewport);
-		
-        var maxBlockCount       = (parent.getSize)? parent.getSize() : 911;
-		
-		var leftOffset          = parent.getLeftLength();
-		var topOffset           = parent.getTopLength();
-		var scrollingHeight     = topOffset;
-		var parentContentHeight = topOffset;
-		var itemWidth           = 0;
-		var itemCount           = 0;
-		var current             = null;
-		
-		var first = parent.getFirstChild();
+		if (viewport && viewport.needsVerticalScrollbar()) {
+			parent.padding.right += viewport.getVerticalScrollbarWidth();
+		}
+		return maxContentWidth;
+	}
+
+	computeLayout(ctx, parent, itemBoxStyle, parentBoxStyle) {
+		const maxContentWidth = this.setup(ctx, parent, itemBoxStyle, parentBoxStyle, parent.viewport);
+		const maxBlockCount = (parent.getSize)? parent.getSize() : 911;
+		const leftOffset = parent.getLeftLength();
+		let topOffset = parent.getTopLength();
+		let scrollingHeight = topOffset;
+		let parentContentHeight = topOffset;
+		let itemWidth = 0;
+		let itemCount = 0;
+		let current = null;
+
+		const first = parent.getFirstChild();
 		if (first) {
 			first.setOffset(leftOffset, topOffset);
 			itemCount = 1;
-			var adjust;
+			let adjust;
 
 			current = first;
-			var next = current.getNextSibling();
+			let next = current.getNextSibling();
 			while (next) {
-				if (collapseBorders) {
+				if (this.collapseBorders) {
 					adjust = - current.border.bottom - next.margin.top;
 					topOffset += current.getTotalHeight() - current.margin.bottom + adjust;
 				}
 				else {
-					// Collapse in-between (bottom/top) margins with the greatest one.
-					var inBetweenMargin = Math.max(current.margin.bottom, next.margin.top);
+					const inBetweenMargin = Math.max(current.margin.bottom, next.margin.top);
 					adjust = inBetweenMargin - next.margin.top;
 					topOffset += current.getTotalHeight() - current.margin.bottom + adjust;
-				}			
+				}
 				next.setOffset(leftOffset, topOffset);
-				
+
 				if (itemCount < maxBlockCount) {
 					parentContentHeight = topOffset;
 				}
 				scrollingHeight = topOffset;
-				
+
 				itemCount++;
 				current = next;
 				next = current.getNextSibling();
 			}
 			itemWidth = current.getLeftLength() + maxContentWidth + current.getRightLength();
-			
+
 			adjust = current.getTotalHeight() - parent.getTopLength();
-			if (collapseBorders) {
+			if (this.collapseBorders) {
 				adjust -= (current.margin.bottom);
 			}
 			scrollingHeight = scrollingHeight + adjust;
 			parentContentHeight = parentContentHeight + adjust;
-	
+
 			parent.contentArea.width  = itemWidth;
 			parent.contentArea.height = parentContentHeight;
-		
-			var viewport = parent.viewport;
+
+			const viewport = parent.viewport;
 			if (viewport && viewport.needsVerticalScrollbar()) {
-				var unitIncr = current.getTotalHeight() - current.margin.bottom;
-				if (collapseBorders) {
+				let unitIncr = current.getTotalHeight() - current.margin.bottom;
+				if (this.collapseBorders) {
 					unitIncr = unitIncr - current.margin.bottom - current.border.bottom;
 				}
-				viewport.setVerticalSpan(0, scrollingHeight, parentContentHeight);				
+				viewport.setVerticalSpan(0, scrollingHeight, parentContentHeight);
 				viewport.setVerticalIncrement(unitIncr, unitIncr * (parent.getSize() - 1));
-				
-				// Setup Vertical Scrollbar Box within the 'right' padding area
-				var x		= parent.getLeftLength() + parent.contentArea.width;
-				var y		= parent.getTopLength();
-				var width	= viewport.getVerticalScrollbarWidth();
-				var height	= parent.contentArea.height;
-				
+
+				const x = parent.getLeftLength() + parent.contentArea.width;
+				const y = parent.getTopLength();
+				const width	= viewport.getVerticalScrollbarWidth();
+				const height = parent.contentArea.height;
+
 				viewport.setVerticalScrollbarBox(x, y, width, height);
-				
-				var clipBox = parent.getContentBox();
-				if (collapseBorders) {
+
+				const clipBox = parent.getContentBox();
+				if (this.collapseBorders) {
 					clipBox.y += current.margin.bottom;
 					clipBox.height -= current.margin.bottom;
 				}
@@ -121,10 +113,5 @@ colorjack.css.VerticalLayout = function(collapseBorders) {
 			'width'	: parent.getTotalWidth(),
 			'height': parent.getTotalHeight()
 		};
-	};
-	
-	return {
-		'computeLayout'	: computeLayout
-	};
-};
-
+	}
+}

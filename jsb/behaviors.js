@@ -1,14 +1,13 @@
+import { controlFactory } from '../html/control_factory.js';
+import { ArialFont } from '../font/arial_font.js';
+import { overrideMikePainters } from '../style/combo_mike.js';
 
-base2.require("jsb", function(namespace) { // begin: closure
+const STYLES = {};
 
-eval(namespace);
-
-var STYLES = {};
-
-forEach.csv("border,padding,margin", function(property) {
-  forEach.csv("Top,Right,Bottom,Left", function(side) {
+base2.forEach.csv("border,padding,margin", function(property) {
+  base2.forEach.csv("Top,Right,Bottom,Left", function(side) {
     if (property == "border") {
-      forEach.csv("Color,Style,Width", function(type) {
+      base2.forEach.csv("Color,Style,Width", function(type) {
         STYLES[property + side + type] = true;
       });
     } else {
@@ -17,41 +16,37 @@ forEach.csv("border,padding,margin", function(property) {
   });
 });
 
-var control = jsb.behavior.extend({
+const control = jsb.behavior.extend({
   controlType: "",
-  
   width: 0,
   height: 0,
-  
   styles: STYLES,
 
   ondocumentready: function(element) {
-    // create the canvas element
-    var canvas = document.createElement("canvas");
-    canvas.id = element.id || assignID(canvas, "id");
+    const canvas = document.createElement("canvas");
+    canvas.id = element.id || jsb.assignID(canvas, "id");
     canvas.className = this.controlType;
     canvas.width = Math.max(element.clientWidth, this.width);
     canvas.height = Math.max(element.clientHeight, this.height);
     this.setStyles(element, canvas);
     element.parentNode.replaceChild(canvas, element);
-    // create the w3canvas control
-    var control = colorjack.controlFactory.create(this.controlType, canvas.id);
+    const control = controlFactory.create(this.controlType, canvas.id);
     this.setAttributes(element, canvas, control);
     this.setPrivateData(canvas, "control", control);
   },
 
-  setAttributes: Undefined,
-  
+  setAttributes: base2.Undefined,
+
   setStyles: function(element, canvas) {
-    var canvasStyle = canvas.style,
-        elementStyle = this.getComputedStyle(element);
-    for (var propertyName in this.styles) {
+    const canvasStyle = canvas.style;
+    const elementStyle = this.getComputedStyle(element);
+    for (const propertyName in this.styles) {
       canvasStyle[propertyName] = elementStyle[propertyName];
     }
   }
 });
 
-var img = control.extend({
+const img = control.extend({
   controlType: "Image",
 
   setAttributes: function(element, canvas, control) {
@@ -60,17 +55,16 @@ var img = control.extend({
   }
 });
 
-var select = control.extend({
+const select = control.extend({
   controlType: "ComboBox",
 
   setAttributes: function(element, canvas, control) {
-
-		var smallFont = new ArialFont(arialFontLib);
+		const smallFont = new ArialFont(arialFontLib);
 		smallFont.setScaleFactor(0.06);
 		control.setFont(smallFont);
-		
-		overrideMikePainters(control); // huh?
-		
+
+		overrideMikePainters(control);
+
     control.setOptions(this.querySelectorAll(element, "option").map(function(option) {
       return {
         id: option.value,
@@ -80,7 +74,7 @@ var select = control.extend({
   }
 });
 
-var input = control.extend({
+const input = control.extend({
   width: 200,
   height: 24
 });
@@ -92,11 +86,8 @@ input.text = input.extend({
   setAttributes: function(element, canvas, control) {
     control.setInput("text");
 
-  	var textContent = 'Canvas\n\n\nis an\textremely heavy-duty plain-woven fabric      used for making sails, tents, marquees, backpacks, and other functions where sturdiness is required. It is also popularly used as a painting surface, typically stretched, and on fashion handbags and shoes.In   the  Wyoming.';
-  		//var textContent = 'used as a painting surface, typically stretched, and on fashion handbags and shoes.In   the  Wyoming.';
-  		//var textContent = 'and on handbagsand shoes.Inthessss Wyoming.';
-
-  	var boxStyle = {
+	const textContent = 'Canvas\n\n\nis an\textremely heavy-duty plain-woven fabric      used for making sails, tents, marquees, backpacks, and other functions where sturdiness is required. It is also popularly used as a painting surface, typically stretched, and on fashion handbags and shoes.In   the  Wyoming.';
+	const boxStyle = {
   		'color' 		: "#555",
   		'reverseMode'	: false,
   		'cursorWidth'   : 2,
@@ -107,23 +98,23 @@ input.text = input.extend({
   		'selectionColor': "rgba(216,216,255,0.6)"
   	};
   	control.setStyle(boxStyle);
-  	var smallFont = new ArialFont(arialFontLib);
+	const smallFont = new ArialFont(arialFontLib);
   	smallFont.setScaleFactor(0.06);
-  	//textbox.setFont(smallFont);
 
   	control.setValue(textContent);
   }
 });
 
-var bool = {
+const bool = {
   setAttributes: function(element, canvas, control) {
     control.setName(element.name);
     control.setChecked(element.checked);
+    let label;
     if (element.id) {
-      var label = this.querySelector("label[for=" + element.id + "]");
+      label = this.querySelector("label[for=" + element.id + "]");
     }
     if (!label) {
-      var parentNode = element.parentNode;
+      const parentNode = element.parentNode;
       label = parentNode.nodeName == "LABEL" ? parentNode : null;
     }
     if (label) {
@@ -163,5 +154,3 @@ new jsb.RuleList({
   "input[type=range].w3canvas": input.range,
   "select.w3canvas": select
 });
-
-}); // end: closure

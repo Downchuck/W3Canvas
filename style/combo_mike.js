@@ -1,5 +1,8 @@
+import { BoxModelPainter } from '../css/box_paint.js';
+import * as currentWindow from '../canvas_lib.js';
+import { clone } from '../lang_util.js';
 
-var menuImgs = {
+const menuImgs = {
 	'menuIcons'	    : new Image(),
 	'menuChk'		: new Image(),
 	'menuChkDark'	: new Image()
@@ -9,52 +12,42 @@ menuImgs.menuIcons.src		= "data:image/png,%89PNG%0D%0A%1A%0A%00%00%00%0DIHDR%00%
 menuImgs.menuChk.src		= "data:image/png,%89PNG%0D%0A%1A%0A%00%00%00%0DIHDR%00%00%00%0C%00%00%00%0B%08%06%00%00%00Kpl_%00%00%00%19tEXtSoftware%00Adobe%20ImageReadyq%C9e%3C%00%00%00%C2IDATx%DAb%60%20%02%ACX%B1%E2%FF%94)S%FE%13%A3%96%A1%A3%A3%03E1%13%3E%C5555%FF%FF%FC%F9%C3%90%93%93%C3H%D0d%90%E2%8A%8A%0A%0Cg%60%B5%A1%A5%A5%E5%FF%9B7o%182220%E4%98%0A%0A%0A%FE%AFY%B3%06n%D2%8C%193%FE%3Fx%F0%80!%22%22%82AAA%01%C3)L_%BE%7Ca%D8%B1c%07%03P%D1%FF%03%07%0E%FC%3Fs%E6%0C%83%81%81%01%83%83%83%03Vw3%81%24A%60%C3%86%0D%0C%40%9B%18888%F0z%92)%24%24%04%CC%B8r%E5%0A%C3%8F%1F%3F%18%60%7C%9C%1A%24%24%24%18MLL%C0%1C%19%19%19%9CNA%017n%DC%F8%0F%8AMb%22%12%20%C0%00%88%20N%AE%CA%22nc%00%00%00%00IEND%AEB%60%82";
 menuImgs.menuChkDark.src	= "data:image/png,%89PNG%0D%0A%1A%0A%00%00%00%0DIHDR%00%00%00%0C%00%00%00%0B%08%06%00%00%00Kpl_%00%00%00%19tEXtSoftware%00Adobe%20ImageReadyq%C9e%3C%00%00%00%D0IDATx%DAb%F8%FF%FF%3F%03!%3Cy%F2%E4%FF%EB%D7%AF%FF%0Fb%13T%BCw%EF%5E%B8b%82%1AN%9E%3C%F9%FF%E0%C1%83%AF%90%C5%18%C1%BA%B0%80S%A7N%FDgaa%F9kdd%C4%82%2C%CE%84M%F1%A1C%87%FE%0B%0A%0A2%3C%7F%FE%BC%09C%F2%CA%95%2B%3F%7B%7B%7Bm%60V%AEZ%B5%EA%FF%DD%BBw%FF%B7%B4%B4l%C1%E6LF%90%24P%DF%85%EB%D7%AF%DB%5E%B8p%E1ddd%A4%D6%A5K%97%EE%07%04%04(a%B3%9D%11%14%02zzz%0C%40%0D7%95%95%95%D5%81b%DF544%B8%18p%00%26%A0%E7%3E%82%18%9A%9A%9A%EAlll%0Ck%D7%AE-%60%C0%07%90%DD%7D%F4%E8%D1E%84%E2%05L%00%15%A6%01cs11%B1%0E%10%60%00%15%E2%04%DC90%00(%00%00%00%00IEND%AEB%60%82";
 
-// Fake: image test
-//menuImgs.menuChk.src		= "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAG5JREFUOE9jZGZmZqAKABpEFcBAFVNA3hqZBv1HBfgDAWcYoZkC4eIxC7tBWE3BbxYBg+BOgBuNy1FYDELWw9DQAEFA/fjNGhIGYfUFOWGEbBBm9JEQ2BCl1ElHWM0iM2WTWiqM0GKEpGAafGEEAEBa8MJv2SpKAAAAAElFTkSuQmCC";
+export function MikeComboBoxPainter() {
+	const painter		= new BoxModelPainter();
+	let gradient	= "#cc0";
+	let fullBox		= null;
+	let labelBox	= null;
+	let iconBox		= null;
 
-
-var MikeComboBoxPainter = function() {
-	var painter		= new colorjack.css.BoxModelPainter();
-	var gradient	= "#cc0";
-	var fullBox		= null;
-	var labelBox	= null;
-	var iconBox		= null;
-	
-	/*
-	 *	initLayout(): This is the right place to initialize any resources such as gradients and images.
-	 */
-	var initLayout = function(box, label, icon) { // this is called at the end of layout()
+	this.initLayout = function(box, label, icon) {
 		fullBox = box;
 		labelBox = label;
 		iconBox = icon;
-		
+
 		iconBox.x = fullBox.width-20;
 		iconBox.height = Math.round(labelBox.height);
-		
-		var createGradient = function(w, h) {
-			var canvas = colorjack.currentWindow.createCanvasLayer(w, h);
-			var ctx = canvas.getContext('2d');
 
-			var x = 0;
-			var y = 0;
+		const createGradient = function(w, h) {
+			const canvas = currentWindow.createCanvasLayer(w, h);
+			const ctx = canvas.getContext('2d');
+
+			const x = 0;
+			const y = 0;
 			painter.setupLinearGradient(ctx, x, y, w, h, '#fff', '#888', true);
 			ctx.fillRect(x, y, w, h);
 
-			var pattern = ctx.createPattern(canvas, 'repeat');
+			const pattern = ctx.createPattern(canvas, 'repeat');
 			return pattern;
 		};
 		gradient = createGradient(1, box.height);
 	};
-	
-	var arrowPainted = false; // only paint once: always fixed
-	
-	var paintIcon = function(ctx, state) {
+
+	let arrowPainted = false;
+
+	this.paintIcon = function(ctx, state) {
 		try {
 			if (!arrowPainted) {
-				
-				// Center the image within the iconBox
 				painter.paintImage(ctx, menuImgs.menuIcons, iconBox, "center", "center");
-
 				arrowPainted = true;
 			}
 		}
@@ -63,47 +56,36 @@ var MikeComboBoxPainter = function() {
 		}
 	};
 
-	var paintComboBox = function(ctx, selectedValue, font) {
-		ctx.fillStyle = colorjack.currentWindow.getBackgroundColor();
+	this.paintComboBox = function(ctx, selectedValue, font) {
+		ctx.fillStyle = currentWindow.getBackgroundColor();
 		ctx.fillRect(0, 0, fullBox.width, fullBox.height);
-		
+
 		painter.paintRoundedTextBox(ctx, fullBox, gradient, selectedValue, font, labelBox);
-		
-		arrowPainted = false;		// repaint arrow!
-		paintIcon(ctx, "normal");
+
+		arrowPainted = false;
+		this.paintIcon(ctx, "normal");
 	};
+}
 
-	return {
-		'initLayout'	: initLayout,
-		'paintIcon'	: paintIcon,
-		'paintComboBox'	: paintComboBox
-	};
-};
+export function MikeSelectPainter(color) {
+	const painter = new BoxModelPainter();
+	const topColor = color || "white";
 
-var MikeSelectPainter = function(color) {
-	var painter = new colorjack.css.BoxModelPainter();
-	
-	var topColor = color || "white";
-			
-	var paintSelectBackground = function(ctx, boxModel, style) {
-
-		var box = boxModel.getMarginBox();
-		ctx.fillStyle = colorjack.currentWindow.getBackgroundColor();
+	this.paintSelectBackground = function(ctx, boxModel, style) {
+		const box = boxModel.getMarginBox();
+		ctx.fillStyle = currentWindow.getBackgroundColor();
 		ctx.fillRect(0, 0, box.width, box.height);
-		
+
 		ctx.save();
-		
 		ctx.fillStyle = topColor;
-		
 		painter.paintRoundedBox(ctx, box.x, box.y, box.width, box.height, 6, 6);
 		ctx.clip();
 		ctx.fillRect(box.x, box.y, box.width, box.height);
-
 		ctx.restore();
 	};
-	
-	var paintOption = function(ctx, node, state, width, label, isFirst, isLast) {
-		var style = (!state.hover)? {
+
+	this.paintOption = function(ctx, node, state, width, label, isFirst, isLast) {
+		const style = (!state.hover)? {
 			'getPaddingColor'		: function() { return "white"; },
 			'getBorderColor'		: function() { return "#aaa"; },
 			'getBackgroundColor'	: function() { return "white"; },
@@ -115,7 +97,7 @@ var MikeSelectPainter = function(color) {
 			'getFont'				: function() { return node.style.getFont(); }
 		};
 
-		var boxModel = colorjack.util.clone(node);
+		const boxModel = clone(node);
 		if (isFirst) {
 			boxModel.border.top = 0;
 		}
@@ -123,31 +105,26 @@ var MikeSelectPainter = function(color) {
 			boxModel.border.bottom = 0;
 		}
 		painter.paintBox(ctx, boxModel, style, width, label);
-		
-		var img = (state.hover)? menuImgs.menuChkDark : menuImgs.menuChk;		
-		var box = boxModel.getPaddingBox();
+
+		const img = (state.hover)? menuImgs.menuChkDark : menuImgs.menuChk;
+		const box = boxModel.getPaddingBox();
 		box.x += 4;
-		
+
 		if (state.checked) {
 			painter.paintImage(ctx, img, box);
 		}
 	};
-	
-	return {
-		'paintSelectBackground'	: paintSelectBackground,
-		'paintOption'			: paintOption
-	};
-};
+}
 
-var colorCnt = 0;
+let colorCnt = 0;
 
-var overrideMikePainters = function(comboBox) {
-	var useComboBoxPainter = true;
+export function overrideMikePainters(comboBox) {
+	const useComboBoxPainter = true;
 	if (useComboBoxPainter) {
-		var bluePainter = new MikeComboBoxPainter();
+		const bluePainter = new MikeComboBoxPainter();
 		comboBox.setComboBoxPainter(bluePainter);
-		
-		var MikeComboBoxLayout = function() {
+
+		const MikeComboBoxLayout = function() {
 			this.setComboBoxModel = function(box) {
 				box.setMargin(0);
 				box.setBorder(0);
@@ -161,7 +138,6 @@ var overrideMikePainters = function(comboBox) {
 				box.padding.top = 3;
 				box.padding.right = 50;
 				box.padding.bottom = 3;
-
 			};
 			this.setIconBoxModel = function(box) {
 				box.setMargin(0);
@@ -169,24 +145,21 @@ var overrideMikePainters = function(comboBox) {
 				box.setPadding(0);
 				box.contentArea.width = 20;
 				box.contentArea.height = 20;
-			};		
-		};		
+			};
+		};
 		comboBox.setBoxLayout(new MikeComboBoxLayout());
 	}
 
-	var useSelectPainter = true;
+	const useSelectPainter = true;
 	if (useSelectPainter) {
-		
-		var MikeSelectLayout = function() {
+		const MikeSelectLayout = function() {
 			this.setOptionBoxSize = function(box) {
 				box.setMargin(0);
 				box.setBorder(1);
-				
 				box.border.right	= 0;
 				box.border.left		= 0;
-				
 				box.padding.top		= 4;
-				box.padding.right	= 40;	// enough for the arrow box!
+				box.padding.right	= 40;
 				box.padding.bottom	= 2;
 				box.padding.left	= 20;
 			};
@@ -194,30 +167,20 @@ var overrideMikePainters = function(comboBox) {
 				box.setMargin(0);
 				box.setBorder(0);
 				box.setPadding(0);
-
 				box.padding.top = 4;
-				box.padding.bottom = 4;		
+				box.padding.bottom = 4;
 			};
 			this.getSelectTopOffset = function(top, comboHeight, scrollOffset) {
-				// throw new Error("Scroll: " + window.pageYOffset);
-				
-				// return top + comboHeight;
-				// return top;
-				
-				var topOffset = Math.max(window.pageYOffset, top - scrollOffset);
-				// throw new Error("Top offset: " + topOffset);
-				
+				const topOffset = Math.max(window.pageYOffset, top - scrollOffset);
 				return topOffset;
 			};
 		};
-		var selectControl = comboBox.getSelectControl();
+		const selectControl = comboBox.getSelectControl();
 		selectControl.setBoxLayout(new MikeSelectLayout());
-		
-		var color = (colorCnt%2 === 0)? "red" : "white";		
-		var selectPainter = new MikeSelectPainter(color);
+
+		const color = (colorCnt%2 === 0)? "red" : "white";
+		const selectPainter = new MikeSelectPainter(color);
 		selectControl.setSelectPainter(selectPainter);
 		colorCnt++;
 	}
-};
-
-
+}

@@ -1,6 +1,6 @@
 // This adds "view"/hovering functionality to the plain DOM model for HTMLSelectElement
 
-colorjack.controlFactory.Select = function() {
+w3canvas.controlFactory.Select = function() {
   var deactivate = function(event) {
   	if (event.preventDefault) {
   		event.preventDefault();
@@ -21,11 +21,11 @@ colorjack.controlFactory.Select = function() {
 	var setFont = function(f) { font = f; };
 	
 	var getFont = function() {
-		if (!font) { throw new Error("colorjack.controlFactory.Select.getFont(): Need to set font first"); }
+		if (!font) { throw new Error("w3canvas.controlFactory.Select.getFont(): Need to set font first"); }
 		return font;
 	};
 
-	var doc = colorjack.currentDocument;
+	var doc = w3canvas.currentDocument;
 
 	var selectElement = doc.createElement("select");
 	
@@ -47,7 +47,7 @@ colorjack.controlFactory.Select = function() {
 		}
 		document.body.appendChild(selectLayer);
 		//info("Canvas size: " + width + "," + height);
-		colorjack.currentWindow.setCanvasSize(selectLayer, width, height);
+		w3canvas.currentWindow.setCanvasSize(selectLayer, width, height);
 
 		return selectLayer;
 	};
@@ -280,8 +280,8 @@ colorjack.controlFactory.Select = function() {
 		comboBoxHeight = comboHeight;
 
 		// --- Layout: compute layout ----		
-		var optionBoxStyle = new colorjack.css.BoxStyle(6,2,10);
-		var selectBoxStyle = new colorjack.css.BoxStyle(2,10,10);
+		var optionBoxStyle = new w3canvas.css.BoxStyle(6,2,10);
+		var selectBoxStyle = new w3canvas.css.BoxStyle(2,10,10);
 		
 		setSelectBoxProperties(optionBoxStyle, selectBoxStyle);
 		
@@ -290,7 +290,7 @@ colorjack.controlFactory.Select = function() {
 
 		var options = selectElement.getOptions();
 		
-		var selectLayer = colorjack.currentWindow.createCanvasLayer();
+		var selectLayer = w3canvas.currentWindow.createCanvasLayer();
 		var ctx = selectLayer.getContext('2d');
 		
 		// Default size for empty options[]
@@ -298,7 +298,7 @@ colorjack.controlFactory.Select = function() {
 		var height = 320;
 		if (options.length > 0) {
 			var collapseBorder = (boxLayout && boxLayout.getCollapseBorder)?boxLayout.getCollapseBorder() : true;
-			var layoutManager = new colorjack.css.VerticalLayout(collapseBorder);
+			var layoutManager = new w3canvas.css.VerticalLayout(collapseBorder);
 			var size = layoutManager.computeLayout(ctx, selectElement, optionBoxStyle, selectBoxStyle);
 			width = size.width;
 			height = size.height;
@@ -400,5 +400,5 @@ colorjack.controlFactory.Select = function() {
 			'updateHighlight'		: updateHighlight
 		};
 	};
-	return colorjack.util.mixin(selectElement, new Helper());	
+	return w3canvas.util.mixin(selectElement, new Helper());
 };
