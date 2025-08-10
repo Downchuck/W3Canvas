@@ -1,6 +1,6 @@
 import { bresenham } from './bresenham.js';
 
-export function drawBezier(ctx, x0, y0, x1, y1, x2, y2, x3, y3) {
+export function drawBezier(ctx, color, x0, y0, x1, y1, x2, y2, x3, y3) {
     // x0, y0: start point
     // x1, y1: control point 1
     // x2, y2: control point 2
@@ -21,7 +21,7 @@ export function drawBezier(ctx, x0, y0, x1, y1, x2, y2, x3, y3) {
         const x = (mt3 * x0) + (3 * mt2 * t * x1) + (3 * mt * t2 * x2) + (t3 * x3);
         const y = (mt3 * y0) + (3 * mt2 * t * y1) + (3 * mt * t2 * y2) + (t3 * y3);
 
-        bresenham(ctx, prevX, prevY, x, y);
+        bresenham(ctx.imageData, color, prevX, prevY, x, y);
         prevX = x;
         prevY = y;
     }

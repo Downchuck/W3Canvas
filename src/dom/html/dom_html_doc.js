@@ -1,4 +1,4 @@
-import { Document, NodeIterator } from './dom_core.js';
+import { Document, NodeIterator, Element } from './dom_core.js';
 import { tags, HTMLCollection } from './dom_html_basic.js';
 import { mixin } from '../../legacy/lang_util.js';
 
