@@ -19,7 +19,14 @@
   },
   "homepage": "https://github.com/Downchuck/W3Canvas#readme",
   "devDependencies": {
+    "ts-jest": "^29.4.1",
     "typescript": "^5.9.2"
   },
-  "packageManager": "yarn@4.9.2"
+  "packageManager": "yarn@4.9.2",
+  "dependencies": {
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
+    "jest-util": "^30.0.5",
+    "jsdom": "^26.1.0"
+  }
 }

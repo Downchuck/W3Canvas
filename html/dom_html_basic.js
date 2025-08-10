@@ -1,17 +1,17 @@
-import { BoxModel } from '../../css/box_model.js';
-import { ElementStyle, CssStyle } from '../../css/css_style.js';
-import { mixin } from '../../lang_util.js';
+import { BoxModel } from '../css/box_model.js';
+import { ElementStyle, CssStyle } from '../css/css_style.js';
+import { mixin } from '../lang_util.js';
 import { Node } from './dom_core.js';
 
 export const tags = {};
 
 export function registerElement(tagName, name, constructorFunction) {
   tags[tagName.toUpperCase()] = constructorFunction;
-  this[name] = constructorFunction;
+  global[name] = constructorFunction;
 }
 
 export class HTMLCollection {
-  length: number;
+  length;
   options = [];
 
   constructor(firstChild) {
@@ -31,7 +31,7 @@ export class HTMLCollection {
 }
 
 export class HTMLElement extends Node {
-  style: ElementStyle;
+  style;
 
   constructor(element) {
     super(element.nodeType);

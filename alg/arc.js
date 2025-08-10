@@ -1,7 +1,8 @@
 import { bresenham } from './bresenham.js';
 
 export function drawArc(ctx, cx, cy, radius, startAngle, endAngle) {
-    const steps = 100;
+    console.log('drawArc called');
+    const steps = 10;
     const angleStep = (endAngle - startAngle) / steps;
     let prevX = cx + radius * Math.cos(startAngle);
     let prevY = cy + radius * Math.sin(startAngle);

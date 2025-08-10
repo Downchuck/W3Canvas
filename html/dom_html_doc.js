@@ -1,9 +1,9 @@
 import { Document, NodeIterator } from './dom_core.js';
 import { tags, HTMLCollection } from './dom_html_basic.js';
-import { mixin } from '../../lang_util.js';
+import { mixin } from '../lang_util.js';
 
 export class HTMLDocument extends Document {
-  constructor(domDoc?) {
+  constructor(domDoc) {
     super();
     const doc = domDoc || new Document();
 

@@ -1,7 +1,5 @@
 import { CanvasRenderingContext2DPath } from './path.js';
 
-declare function ajax(url: string, request: any): void;
-
 export const CanvasRenderingContext2DFont = {
 	'mozTextStyle': '12pt Arial',
 	'defaultFontStyle': {
@@ -43,7 +41,7 @@ export const CanvasRenderingContext2DFont = {
 		};
 
 		if(1 || this.style.format == 'type-1') {
-			ajax('inc/'+family+'.t1a',request);
+			// ajax('inc/'+family+'.t1a',request);
 		}
 		else if (this.style.format == 'svg') {
 		}
@@ -61,7 +59,7 @@ export const CanvasRenderingContext2DFont = {
 		const family = a.pop();
 		this.font.style.fontFamily = family;
 		if(a.length) {
-			let size: any = a.pop();
+			let size = a.pop();
 			this.font.style.fontSize=parseInt(size) || 'px';
 			if(size.indexOf('/')>0) size = size.substr(size.indexOf('/')+1); else size = size * 1.4;
 			this.font.style.lineHeight=parseInt(size) || 'px';

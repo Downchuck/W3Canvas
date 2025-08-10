@@ -1,13 +1,6 @@
 import { boxModelFactory, DOMPoint, DOMRect, DOMSize, DOMBox } from './box_basic.js';
 
 export class BoxModel {
-    offset: DOMPoint;
-    deltaOffset: DOMPoint;
-    margin: DOMRect;
-    border: DOMRect;
-    padding: DOMRect;
-    contentArea: DOMSize;
-
     constructor() {
         this.offset = boxModelFactory.createPoint();
         this.deltaOffset = boxModelFactory.createPoint();

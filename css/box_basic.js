@@ -3,10 +3,10 @@ const DEFAULT_BOX_WIDTH	= 150;
 const DEFAULT_BOX_HEIGHT	= 300;
 
 export class DOMPoint {
-  x: number;
-  y: number;
+  x;
+  y;
 
-  constructor(x?, y?) {
+  constructor(x, y) {
     this.x = x || 0;
     this.y = y || 0;
   }
@@ -17,10 +17,10 @@ export class DOMPoint {
 }
 
 export class DOMSize {
-  width: number;
-  height: number;
+  width;
+  height;
 
-  constructor(w?, h?) {
+  constructor(w, h) {
     this.width	= w || 0;
     this.height = h || 0;
   }
@@ -31,12 +31,12 @@ export class DOMSize {
 }
 
 export class DOMBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  x;
+  y;
+  width;
+  height;
 
-  constructor(x?, y?, w?, h?) {
+  constructor(x, y, w, h) {
     this.x		= x || 0;
     this.y		= y || 0;
     this.width	= w || DEFAULT_BOX_WIDTH;
@@ -55,12 +55,12 @@ export class DOMBox {
 }
 
 export class DOMRect {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
+  top;
+  right;
+  bottom;
+  left;
 
-  constructor(t?, r?, b?, l?) {
+  constructor(t, r, b, l) {
     this.top	= t || 0;
     this.right	= r || 0;
     this.bottom = b || 0;
