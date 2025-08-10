@@ -1,4 +1,4 @@
-import * as dom from '../html/dom_core';
+import * as dom from '../html/dom_core.js';
 
 export class CSSStyleDeclaration {
 	shortProps = [];
@@ -75,8 +75,8 @@ export class CssStyle {
 export class ElementStyle {
 	font = null;
 	marginColor = "#ddd";
-	style: CssStyle;
-	element: any;
+	style;
+	element;
 
 	constructor(style, element) {
 		this.style = style;

@@ -1,5 +1,5 @@
-export function mixin(...objects: any[]): any {
-	const result: any = {};
+export function mixin(...objects) {
+	const result = {};
 	for (const obj of objects) {
 		if (obj) {
 			for (const key in obj) {
@@ -12,25 +12,25 @@ export function mixin(...objects: any[]): any {
 	return result;
 };
 
-export function extend(object1: any, object2: any): any {
+export function extend(object1, object2) {
 	for (var i in object2) {
 		object1[i] = object2[i];
 	}
 	return object1;
 };
 
-export function clone<T>(obj: T): T { // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
+export function clone(obj) { // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
 	if(obj == null || typeof(obj) != 'object') {
 		return obj;
 	}
 
-	var temp = new (obj as any).constructor(); // changed (twice)
+	var temp = new obj.constructor(); // changed (twice)
 
 	for (var key in obj) {
 		temp[key] = clone(obj[key]);
 	}
 	return temp;
 }
-export function isWordSeparator(ch: string): boolean {
+export function isWordSeparator(ch) {
 	return (ch == ' ' || ch == '\t' || ch == '\n' || ch == ',' || ch == ';' || ch == '.');
 };

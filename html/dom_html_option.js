@@ -1,7 +1,7 @@
 import { registerElement, HTMLElement } from './dom_html_basic.js';
-import { mixin } from '../../lang_util.js';
+import { mixin } from '../lang_util.js';
 import * as dom from './dom_core.js';
-import { BoxModelPainter } from '../../css/box_paint.js';
+import { BoxModelPainter } from '../css/box_paint.js';
 
 registerElement("OPTION", "HTMLOptionElement", function(element) {
 	const OptionElement = function() {

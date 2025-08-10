@@ -10,7 +10,7 @@ export const ELEMENT_STATE_ACTIVE  	= 3;
 export const ELEMENT_STATE_DISABLED	= 4;
 
 export class Node {
-  nodeType: number;
+  nodeType;
   childNodeIdx = -1;
   parent = null;
   children = [];
@@ -95,7 +95,7 @@ export class Node {
 }
 
 export class Element extends Node {
-  tagName: string;
+  tagName;
 
   constructor(tag) {
     if (!tag) {
@@ -107,7 +107,7 @@ export class Element extends Node {
 }
 
 class TextHandler {
-  data: string;
+  data;
 
   constructor(content) {
     this.data = (content === undefined)? "": content;
@@ -131,8 +131,8 @@ export class Document {
 }
 
 export class NodeIterator {
-  functor: any;
-  root: any;
+  functor;
+  root;
 
   constructor(elem, f) {
     this.functor = f;
