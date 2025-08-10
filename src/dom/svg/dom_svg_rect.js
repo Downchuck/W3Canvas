@@ -3,9 +3,6 @@ import { Element } from '../html/dom_core.js';
 import { mixin } from '../../legacy/lang_util.js';
 import { registerElement } from '../html/dom_html_basic.js';
 import { currentDocument } from '../html/dom_html_doc.js';
-import { scanlineFill } from '../../core/algorithms/scanline_fill.js';
-import { bresenham } from '../../core/algorithms/bresenham.js';
-import { drawBezier } from '../../core/algorithms/bezier.js';
 
 export class SVGElement extends Element {
 	constructor(tag) {
@@ -84,45 +81,26 @@ export class Rectangle extends SVGRectElement {
 		const fill = this.getFill();
 		const stroke = this.getStroke();
 
-		this.ctx.fillStyle = fill;
+		this.ctx.beginPath();
+		this.rectPainter(x, y, w, h, rx, ry);
+		this.ctx.closePath();
+
 		if (fill) {
-			if (rx === 0 && ry === 0) {
-				this.ctx.fillRect(x, y, w, h);
-			} else {
-				this.rectPainter(x, y, w, h, rx, ry);
-				this.ctx.fill();
-			}
+			this.ctx.fillStyle = fill;
+			this.ctx.fill();
 		}
 
-		this.ctx.strokeStyle = stroke;
-		this.ctx.fillStyle = stroke;
 		if (stroke) {
-			if (rx === 0 && ry === 0) {
-				bresenham(this.ctx, x, y, x + w, y);
-				bresenham(this.ctx, x + w, y, x + w, y + h);
-				bresenham(this.ctx, x + w, y + h, x, y + h);
-				bresenham(this.ctx, x, y + h, x, y);
-			} else {
-				bresenham(this.ctx, x + rx, y, x + w - rx, y);
-				drawBezier(this.ctx, x + w - rx, y, x + w, y, x + w, y + ry, x + w, y + ry);
-				bresenham(this.ctx, x + w, y + ry, x + w, y + h - ry);
-				drawBezier(this.ctx, x + w, y + h - ry, x + w, y + h, x + w - rx, y + h, x + w - rx, y + h);
-				bresenham(this.ctx, x + w - rx, y + h, x + rx, y + h);
-				drawBezier(this.ctx, x + rx, y + h, x, y + h, x, y + h - ry, x, y + h - ry);
-				bresenham(this.ctx, x, y + h - ry, x, y + ry);
-				drawBezier(this.ctx, x, y + ry, x, y, x + rx, y, x + rx, y);
-			}
+			this.ctx.strokeStyle = stroke;
+			this.ctx.stroke();
 		}
 	}
 
 	rectPainter(x,y,w,h,rx,ry) {
 		if(!rx) {
-			this.ctx.beginPath();
 			this.ctx.rect(x,y,w,h);
-			this.ctx.closePath();
 			return;
 		}
-		this.ctx.beginPath();
 		this.ctx.moveTo(x+rx,y);
 		this.ctx.lineTo(x+w-rx,y);
 		this.ctx.bezierCurveTo(x+w,y,x+w,y+ry,x+w,y+ry);
@@ -132,7 +110,6 @@ export class Rectangle extends SVGRectElement {
 		this.ctx.bezierCurveTo(x,y+h,x,y+h-ry,x,y+h-ry);
 		this.ctx.lineTo(x,y+ry);
 		this.ctx.bezierCurveTo(x,y,x+rx,y,x+rx,y);
-		this.ctx.closePath();
 	}
 }
 
