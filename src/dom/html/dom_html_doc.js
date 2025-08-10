@@ -1,6 +1,6 @@
 import { Document, NodeIterator } from './dom_core.js';
 import { tags, HTMLCollection } from './dom_html_basic.js';
-import { mixin } from '../lang_util.js';
+import { mixin } from '../../legacy/lang_util.js';
 
 export class HTMLDocument extends Document {
   constructor(domDoc) {
@@ -11,16 +11,12 @@ export class HTMLDocument extends Document {
       this.elems = [];
       this.createElement = (tagName) => {
         tagName = tagName.toUpperCase();
-        let elem = doc.createElement(tagName);
-        if (typeof(window) != 'undefined' && domDoc === window.document) {
+        const ElementConstructor = tags[tagName];
+        let elem;
+        if (ElementConstructor) {
+          elem = new ElementConstructor();
         } else {
-          const ElementConstructor = tags[tagName];
-          if (ElementConstructor) {
-            elem = new ElementConstructor(elem);
-            elem.constructor = ElementConstructor;
-          } else {
-            throw new ReferenceError("HTMLDocument.createElement() doesn't support this tag yet: " + tagName);
-          }
+          elem = new Element(tagName);
         }
         this.elems.push(elem);
         return elem;

@@ -1,6 +1,6 @@
 import { bresenham } from './bresenham.js';
 
-export function drawArc(ctx, cx, cy, radius, startAngle, endAngle) {
+export function drawArc(ctx, color, cx, cy, radius, startAngle, endAngle) {
     console.log('drawArc called');
     const steps = 10;
     const angleStep = (endAngle - startAngle) / steps;
@@ -11,7 +11,7 @@ export function drawArc(ctx, cx, cy, radius, startAngle, endAngle) {
         const angle = startAngle + i * angleStep;
         const x = cx + radius * Math.cos(angle);
         const y = cy + radius * Math.sin(angle);
-        bresenham(ctx, prevX, prevY, x, y);
+        bresenham(ctx.imageData, color, prevX, prevY, x, y);
         prevX = x;
         prevY = y;
     }

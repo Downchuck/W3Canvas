@@ -1,22 +1,48 @@
 import { HTMLElement, registerElement } from './dom_html_basic.js';
-import { mixin } from '../lang_util.js';
+import { CanvasRenderingContext2D } from '../../core/canvas/CanvasRenderingContext2D.js';
 
-registerElement("CANVAS", "HTMLCanvasElement", function(element) {
-  const CanvasElement = function() {
+class HTMLCanvasElement extends HTMLElement {
+  constructor() {
+    super('CANVAS');
     this.width = 0;
     this.height = 0;
-    this.getContext = (contextId) => {
-      if (contextId === '2d') {
-        // This will be replaced by our custom context
-        return {};
+    this.context = null;
+  }
+
+  getContext(contextId) {
+    if (contextId === '2d') {
+      if (!this.context) {
+        this.context = new CanvasRenderingContext2D(this.width, this.height);
+        this.context.canvas = this;
       }
-      return null;
-    };
-    this.getWidth = () => this.width;
-    this.setWidth = (w) => this.width = w;
-    this.getHeight = () => this.height;
-    this.setHeight = (h) => this.height = h;
-  };
-  const base = new HTMLElement(element);
-  return mixin(base, new CanvasElement());
-});
+      return this.context;
+    }
+    return null;
+  }
+
+  getWidth() {
+    return this.width;
+  }
+
+  setWidth(w) {
+    this.width = w;
+    if (this.context) {
+      this.context.width = w;
+      this.context.imageData.width = w;
+    }
+  }
+
+  getHeight() {
+    return this.height;
+  }
+
+  setHeight(h) {
+    this.height = h;
+    if (this.context) {
+      this.context.height = h;
+      this.context.imageData.height = h;
+    }
+  }
+}
+
+registerElement("CANVAS", "HTMLCanvasElement", HTMLCanvasElement);

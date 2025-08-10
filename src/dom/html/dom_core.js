@@ -1,4 +1,4 @@
-import { mixin } from '../lang_util.js';
+import { mixin } from '../../legacy/lang_util.js';
 
 export const NODE_TYPE_ELEMENT   = 1;
 export const NODE_TYPE_TEXT      = 3;

@@ -1,4 +1,5 @@
 import { bresenham } from '../algorithms/bresenham.js';
+import { drawArc } from '../algorithms/arc.js';
 
 export class CanvasRenderingContext2D {
   constructor(width, height) {
@@ -67,7 +68,6 @@ export class CanvasRenderingContext2D {
     const color = this._parseColor(this.fillStyle);
     const { data, width: canvasWidth } = this.imageData;
 
-    // Clip the rectangle to the canvas boundaries
     const xStart = Math.max(0, x);
     const yStart = Math.max(0, y);
     const xEnd = Math.min(this.width, x + width);
@@ -118,5 +118,10 @@ export class CanvasRenderingContext2D {
   _drawLine(x0, y0, x1, y1) {
     const color = this._parseColor(this.strokeStyle);
     bresenham(this.imageData, color, x0, y0, x1, y1);
+  }
+
+  arc(x, y, radius, startAngle, endAngle) {
+    const color = this._parseColor(this.strokeStyle);
+    drawArc(this, color, x, y, radius, startAngle, endAngle);
   }
 }
