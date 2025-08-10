@@ -1,6 +1,7 @@
 import { bresenham } from '../algorithms/bresenham.js';
 import { drawArc } from '../algorithms/arc.js';
 import { drawBezier } from '../algorithms/bezier.js';
+import { CanvasGradient } from './CanvasGradient.js';
 
 export class CanvasRenderingContext2D {
   constructor(width, height) {
@@ -70,18 +71,27 @@ export class CanvasRenderingContext2D {
           currentX = command.x;
           currentY = command.y;
           break;
-        case 'bezier':
+        case 'bezier': {
           // The drawBezier function uses the context, but we need to pass the color
           const color = this._parseColor(this.strokeStyle);
           drawBezier(this, color, currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y);
           currentX = command.x;
           currentY = command.y;
           break;
+        }
         case 'close':
           this._drawLine(currentX, currentY, startX, startY);
           currentX = startX;
           currentY = startY;
           break;
+        case 'arc': {
+          const color = this._parseColor(this.strokeStyle);
+          drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
+          // Update current position to the end of the arc
+          currentX = command.x + command.radius * Math.cos(command.endAngle);
+          currentY = command.y + command.radius * Math.sin(command.endAngle);
+          break;
+        }
       }
     }
   }
@@ -112,7 +122,7 @@ export class CanvasRenderingContext2D {
           currentY = command.y;
           vertices.push({ x: currentX, y: currentY });
           break;
-        case 'bezier':
+        case 'bezier': {
           // For bezier curves, we need to approximate them with line segments.
           // This is a simplified approach. A real implementation would be more complex.
           const steps = 100;
@@ -133,11 +143,24 @@ export class CanvasRenderingContext2D {
           currentX = command.x;
           currentY = command.y;
           break;
+        }
         case 'close':
           if (vertices.length > 0) {
             vertices.push({ x: vertices[0].x, y: vertices[0].y });
           }
           break;
+        case 'arc': {
+          const steps = 100;
+          for (let i = 0; i <= steps; i++) {
+              const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
+              const x = command.x + command.radius * Math.cos(angle);
+              const y = command.y + command.radius * Math.sin(angle);
+              vertices.push({ x, y });
+          }
+          currentX = command.x + command.radius * Math.cos(command.endAngle);
+          currentY = command.y + command.radius * Math.sin(command.endAngle);
+          break;
+        }
       }
     }
 
@@ -145,7 +168,6 @@ export class CanvasRenderingContext2D {
       return;
     }
 
-    const color = this._parseColor(this.fillStyle);
     const { data, width: canvasWidth } = this.imageData;
 
     let minX = Infinity;
@@ -169,6 +191,12 @@ export class CanvasRenderingContext2D {
       for (let i = minX; i < maxX; i++) {
         if (this._isPointInPath(i, j, vertices)) {
           const index = (j * canvasWidth + i) * 4;
+          let color;
+          if (this.fillStyle instanceof CanvasGradient) {
+              color = this._getColorFromGradientAtPoint(i, j, this.fillStyle);
+          } else {
+              color = this._parseColor(this.fillStyle);
+          }
           data[index] = color.r;
           data[index + 1] = color.g;
           data[index + 2] = color.b;
@@ -262,7 +290,94 @@ export class CanvasRenderingContext2D {
     return colorMap['black'];
   }
 
+  createLinearGradient(x0, y0, x1, y1) {
+    return new CanvasGradient(x0, y0, x1, y1);
+  }
+
+  _getColorFromGradient(gradient, t) {
+      const stops = gradient.colorStops;
+      if (stops.length === 0) {
+          return { r: 0, g: 0, b: 0, a: 0 }; // transparent black
+      }
+
+      let stop1 = stops[0];
+      for(const stop of stops) {
+          if (stop.offset <= t) {
+              stop1 = stop;
+          } else {
+              break;
+          }
+      }
+
+      let stop2 = stops[stops.length - 1];
+      for(let i = stops.length - 1; i >= 0; i--) {
+          const stop = stops[i];
+          if (stop.offset >= t) {
+              stop2 = stop;
+          } else {
+              break;
+          }
+      }
+
+      if (stop1 === stop2) {
+          return this._parseColor(stop1.color);
+      }
+
+      const c1 = this._parseColor(stop1.color);
+      const c2 = this._parseColor(stop2.color);
+      const range = stop2.offset - stop1.offset;
+
+      const interp_ratio = range === 0 ? 0 : (t - stop1.offset) / range;
+
+      const r = c1.r * (1 - interp_ratio) + c2.r * interp_ratio;
+      const g = c1.g * (1 - interp_ratio) + c2.g * interp_ratio;
+      const b = c1.b * (1 - interp_ratio) + c2.b * interp_ratio;
+      const a = c1.a * (1 - interp_ratio) + c2.a * interp_ratio;
+
+      return { r: Math.round(r), g: Math.round(g), b: Math.round(b), a: Math.round(a) };
+  }
+
+  _getColorFromGradientAtPoint(x, y, gradient) {
+      const g_x0 = gradient.x0;
+      const g_y0 = gradient.y0;
+      const dx = gradient.x1 - g_x0;
+      const dy = gradient.y1 - g_y0;
+      const mag_sq = dx * dx + dy * dy;
+
+      if (mag_sq === 0) {
+          const lastColorStr = gradient.colorStops.length > 0 ? gradient.colorStops[gradient.colorStops.length - 1].color : 'black';
+          return this._parseColor(lastColorStr);
+      }
+
+      const px = x - g_x0;
+      const py = y - g_y0;
+      let t = (px * dx + py * dy) / mag_sq;
+
+      t = Math.max(0, Math.min(1, t)); // Clamp t
+
+      return this._getColorFromGradient(gradient, t);
+  }
+
   fillRect(x, y, width, height) {
+    if (this.fillStyle instanceof CanvasGradient) {
+      const { data, width: canvasWidth } = this.imageData;
+      const xStart = Math.max(0, x);
+      const yStart = Math.max(0, y);
+      const xEnd = Math.min(this.width, x + width);
+      const yEnd = Math.min(this.height, y + height);
+      for (let j = yStart; j < yEnd; j++) {
+        for (let i = xStart; i < xEnd; i++) {
+          const color = this._getColorFromGradientAtPoint(i, j, this.fillStyle);
+          const index = (j * canvasWidth + i) * 4;
+          data[index] = color.r;
+          data[index + 1] = color.g;
+          data[index + 2] = color.b;
+          data[index + 3] = color.a;
+        }
+      }
+      return;
+    }
+
     const color = this._parseColor(this.fillStyle);
     const { data, width: canvasWidth } = this.imageData;
 
@@ -318,8 +433,26 @@ export class CanvasRenderingContext2D {
     bresenham(this.imageData, color, x0, y0, x1, y1);
   }
 
-  arc(x, y, radius, startAngle, endAngle) {
-    const color = this._parseColor(this.strokeStyle);
-    drawArc(this, color, x, y, radius, startAngle, endAngle);
+  arc(x, y, radius, startAngle, endAngle, anticlockwise = false) {
+    // This is a simplified implementation. The spec requires adding a line
+    // from the current point to the start of the arc if the path is not empty.
+    this.path.push({ type: 'arc', x, y, radius, startAngle, endAngle, anticlockwise });
+  }
+
+  ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle) {
+    // NOTE: rotation, startAngle, and endAngle are not implemented yet.
+    // This implementation is a simplified version that draws a full ellipse
+    // aligned with the axes.
+
+    const kappa = 0.552284749831;
+    const ox = radiusX * kappa; // control point offset horizontal
+    const oy = radiusY * kappa; // control point offset vertical
+
+    this.moveTo(x - radiusX, y);
+    this.bezierCurveTo(x - radiusX, y - oy, x - ox, y - radiusY, x, y - radiusY);
+    this.bezierCurveTo(x + ox, y - radiusY, x + radiusX, y - oy, x + radiusX, y);
+    this.bezierCurveTo(x + radiusX, y + oy, x + ox, y + radiusY, x, y + radiusY);
+    this.bezierCurveTo(x - ox, y + radiusY, x - radiusX, y + oy, x - radiusX, y);
+    this.closePath();
   }
 }

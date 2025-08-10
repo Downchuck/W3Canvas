@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVG and Gradient Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f0f0; }
+        canvas { border: 1px solid black; background-color: white; }
+    </style>
+</head>
+<body>
+    <h1>SVG and Gradient Test</h1>
+    <p>This page tests the rendering of new SVG elements and canvas gradients.</p>
+    <canvas id="canvas" width="400" height="400"></canvas>
+
+    <!-- The custom DOM parser would normally handle these -->
+    <div id="svg-elements" style="display:none">
+        <svg:circle id="test_circle" cx="70" cy="70" r="50" fill="rgba(255, 0, 0, 0.5)" stroke="red" stroke-width="2"></svg:circle>
+        <svg:ellipse id="test_ellipse" cx="220" cy="120" rx="80" ry="40" fill="rgba(0, 0, 255, 0.5)" stroke="blue" stroke-width="2"></svg:ellipse>
+        <svg:line id="test_line" x1="50" y1="200" x2="350" y2="220" stroke="green" stroke-width="4"></svg:line>
+    </div>
+
+    <script type="module">
+        // Import necessary classes from the custom browser engine
+        import { Document, init as initDoc } from '/src/dom/html/dom_html_doc.js';
+        import { CanvasRenderingContext2D } from '/src/core/canvas/CanvasRenderingContext2D.js';
+        import { HTMLCanvasElement } from '/src/dom/html/dom_html_canvas.js';
+        import { Circle } from '/src/dom/svg/dom_svg_circle.js';
+        import { Ellipse } from '/src/dom/svg/dom_svg_ellipse.js';
+        import { Line } from '/src/dom/svg/dom_svg_line.js';
+        import { Rectangle } from '/src/dom/svg/dom_svg_rect.js';
+
+        function main() {
+            const canvasEl = document.getElementById('canvas');
+            const ctx = canvasEl.getContext('2d');
+
+            console.log("Starting test rendering...");
+
+            // --- Mocking the DOM structure for the test ---
+            // The SVG elements need a parent chain leading to the canvas to get the rendering context.
+            // We'll create mock instances of our custom element classes and link them up.
+            const mockCanvas = {
+                tagName: 'CANVAS',
+                getContext: () => ctx,
+                getParent: () => null
+            };
+
+            // 1. Test SVG Circle
+            const circle = new Circle();
+            circle.setCx(70);
+            circle.setCy(70);
+            circle.setR(50);
+            circle.setFill('rgba(255, 0, 0, 0.5)');
+            circle.setStroke('red');
+            circle.getParent = () => mockCanvas; // Link to canvas
+            circle.repaint();
+            console.log("Rendered Circle");
+
+            // 2. Test SVG Ellipse
+            const ellipse = new Ellipse();
+            ellipse.setCx(220);
+            ellipse.setCy(120);
+            ellipse.setRx(80);
+            ellipse.setRy(40);
+            ellipse.setFill('rgba(0, 0, 255, 0.5)');
+            ellipse.setStroke('blue');
+            ellipse.getParent = () => mockCanvas;
+            ellipse.repaint();
+            console.log("Rendered Ellipse");
+
+            // 3. Test SVG Line
+            const line = new Line();
+            line.setX1(50);
+            line.setY1(200);
+            line.setX2(350);
+            line.setY2(220);
+            line.setStroke('green');
+            // Note: stroke-width is not implemented in our SVGElement, so this will be a thin line.
+            line.getParent = () => mockCanvas;
+            line.repaint();
+            console.log("Rendered Line");
+
+            // 4. Test Linear Gradient on a Rectangle
+            // We use the canvas API directly to test the gradient functionality in the context.
+            console.log("Rendering gradient rectangle...");
+            const grad = ctx.createLinearGradient(50, 250, 250, 350);
+            grad.addColorStop(0, 'black');
+            grad.addColorStop(0.5, 'purple');
+            grad.addColorStop(1, 'white');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(50, 250, 200, 100);
+
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(50, 250, 200, 100);
+            console.log("Rendered gradient.");
+
+            console.log("Test rendering complete.");
+        }
+
+        window.onload = main;
+    </script>
+</body>
+</html>
