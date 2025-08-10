@@ -1,24 +1,23 @@
 import { ElementStyle, CssStyle } from '../css/css_style.js';
-import { BoxModel } from '../css/box_model.js';
-import { mixin } from '../lang_util.js';
+import { Element } from '../html/dom_core.js';
+import { mixin } from '../../legacy/lang_util.js';
 import { registerElement } from '../html/dom_html_basic.js';
 import { currentDocument } from '../html/dom_html_doc.js';
-import { scanlineFill } from '../alg/scanline_fill.js';
-import { bresenham } from '../alg/bresenham.js';
-import { drawBezier } from '../alg/bezier.js';
+import { scanlineFill } from '../../core/algorithms/scanline_fill.js';
+import { bresenham } from '../../core/algorithms/bresenham.js';
+import { drawBezier } from '../../core/algorithms/bezier.js';
 
-export class SVGElement extends BoxModel {
-	constructor(element) {
-		super();
-		this.element = element;
-		this.style = new ElementStyle(new CssStyle(), element);
+export class SVGElement extends Element {
+	constructor(tag) {
+		super(tag);
+		this.style = new ElementStyle(new CssStyle(), this);
 		this.fill = "";
 		this.stroke = "";
 	}
 
 	currentColor(color) {
 		if(color && color != 'currentColor') return color;
-		if(typeof(this.element.style) != 'undefined' && this.element.style.getFont()) return this.element.style.getFont().color;
+		if(typeof(this.style) != 'undefined' && this.style.getFont()) return this.style.getFont().color;
 		return '';
 	}
 
@@ -30,8 +29,8 @@ export class SVGElement extends BoxModel {
 }
 
 export class SVGRectElement extends SVGElement {
-	constructor(element) {
-		super(element);
+	constructor() {
+		super('svg:rect');
 		this.width = 0;
 		this.height = 0;
 		this.x = 0;
@@ -54,18 +53,28 @@ export class SVGRectElement extends SVGElement {
 	setWidth(w) { this.width = w; }
 }
 
-registerElement("svg:rect", "SVGRectElement", function(element) {
-	return new SVGRectElement(element);
-});
-
 export class Rectangle extends SVGRectElement {
-	constructor(layer) {
-		super(currentDocument.createElement("svg:rect"));
-		this.layer = layer;
-		this.ctx = layer.getContext('2d');
+	constructor() {
+		super();
+		this.ctx = null;
 	}
 
 	repaint() {
+		if (!this.ctx) {
+			let parent = this.getParent();
+			while(parent && parent.tagName !== 'CANVAS') {
+				parent = parent.getParent();
+			}
+			if (parent && parent.tagName === 'CANVAS') {
+				this.ctx = parent.getContext('2d');
+			}
+		}
+
+		if (!this.ctx) {
+			console.error("Could not find canvas context to repaint rectangle.");
+			return;
+		}
+
 		const x = this.getX() || 0;
 		const y = this.getY() || 0;
 		const w = this.getWidth() || 300;
@@ -78,7 +87,7 @@ export class Rectangle extends SVGRectElement {
 		this.ctx.fillStyle = fill;
 		if (fill) {
 			if (rx === 0 && ry === 0) {
-				scanlineFill(this.ctx, x, y, w, h);
+				this.ctx.fillRect(x, y, w, h);
 			} else {
 				this.rectPainter(x, y, w, h, rx, ry);
 				this.ctx.fill();
@@ -126,3 +135,5 @@ export class Rectangle extends SVGRectElement {
 		this.ctx.closePath();
 	}
 }
+
+registerElement("svg:rect", "SVGRectElement", Rectangle);
