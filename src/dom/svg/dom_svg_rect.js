@@ -1,29 +1,5 @@
-import { ElementStyle, CssStyle } from '../css/css_style.js';
-import { Element } from '../html/dom_core.js';
-import { mixin } from '../../legacy/lang_util.js';
+import { SVGElement } from './dom_svg_base.js';
 import { registerElement } from '../html/dom_html_basic.js';
-import { currentDocument } from '../html/dom_html_doc.js';
-
-export class SVGElement extends Element {
-	constructor(tag) {
-		super(tag);
-		this.style = new ElementStyle(new CssStyle(), this);
-		this.fill = "";
-		this.stroke = "";
-	}
-
-	currentColor(color) {
-		if(color && color != 'currentColor') return color;
-		if(typeof(this.style) != 'undefined' && this.style.getFont()) return this.style.getFont().color;
-		return '';
-	}
-
-	setStroke(s) { this.stroke = s; }
-	getStroke() { return this.currentColor(this.stroke); }
-	setFill(f) { this.fill = f; }
-	getFill() { return this.currentColor(this.fill); }
-	getBoundingRect() { return this.getBorderBox(); }
-}
 
 export class SVGRectElement extends SVGElement {
 	constructor() {

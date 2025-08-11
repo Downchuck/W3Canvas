@@ -3,12 +3,12 @@ import { ContentFragment } from '../html/textbox/basic_model.js';
 
 export class LineBox {
 	boxes = [];
-	x: any;
-	y: any;
+	x;
+	y;
 	width = 0;
-	height: any;
-	maxWidth: any;
-	context: any;
+	height;
+	maxWidth;
+	context;
 
 	constructor(ctx, lineX, lineY, lineMaxWidth, lineHeight) {
 		this.context = ctx;

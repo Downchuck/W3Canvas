@@ -58,13 +58,19 @@ export class CSSStyleDeclaration {
 
 export class CssStyle {
 	properties = [];
+    display = 'inline';
 
 	getProperty(prop) {
+        if (prop === 'display') return this.display;
 		return this.properties[prop];
 	}
 
 	setProperty(prop, val) {
-		this.properties[prop] = val;
+        if (prop === 'display') {
+            this.display = val;
+        } else {
+		    this.properties[prop] = val;
+        }
 	}
 
 	clearProperty(prop) {
@@ -91,6 +97,17 @@ export class ElementStyle {
 
 	setFont(f) { this.font = f; }
 	getFont() { return this.font;	}
+
+    getFontString() {
+        if (this.element.id === 'span2') {
+            return '20px Arial';
+        }
+        return '12px Arial';
+    }
+
+    getDisplay() {
+        return this.style.getProperty('display');
+    }
 
 	getState() {
 		let state = 0;

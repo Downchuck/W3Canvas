@@ -1,5 +1,3 @@
-import { mixin } from '../../legacy/lang_util.js';
-
 export const NODE_TYPE_ELEMENT   = 1;
 export const NODE_TYPE_TEXT      = 3;
 export const NODE_TYPE_DOCUMENT  = 9;
@@ -94,8 +92,16 @@ export class Node {
   }
 }
 
+import { ElementStyle, CssStyle } from '../css/css_style.js';
+import { ContentFragment } from './textbox/basic_model.js';
+import { LineWrapper } from '../css/text_wrap.js';
+import { BoxModel } from '../css/box_model.js';
+
 export class Element extends Node {
   tagName;
+  style;
+  boxModel;
+  id = '';
 
   constructor(tag) {
     if (!tag) {
@@ -103,26 +109,57 @@ export class Element extends Node {
     }
     super(NODE_TYPE_ELEMENT);
     this.tagName = tag;
+    this.style = new ElementStyle(new CssStyle(), this);
+    this.boxModel = new BoxModel();
+  }
+
+  doLayout(ctx) {
+    if (this.style.getDisplay() === 'block') {
+      const fragments = [];
+      let child = this.getFirstChild();
+      while(child) {
+        if (child.nodeType === NODE_TYPE_TEXT) {
+          fragments.push(new ContentFragment(child.getData(), this.style.getFontString()));
+        } else if (child.nodeType === NODE_TYPE_ELEMENT) {
+          if (child.style.getDisplay() === 'inline') {
+            let grandchild = child.getFirstChild();
+            while (grandchild) {
+              if (grandchild.nodeType === NODE_TYPE_TEXT) {
+                fragments.push(new ContentFragment(grandchild.getData(), child.style.getFontString()));
+              }
+              grandchild = grandchild.getNextSibling();
+            }
+          } else {
+            child.doLayout(ctx);
+          }
+        }
+        child = child.getNextSibling();
+      }
+
+      if (fragments.length > 0) {
+        const wrapper = new LineWrapper();
+        const contentBox = this.boxModel.getContentBox();
+        this.lineBoxes = wrapper.createLineBoxes(fragments, ctx, 12, contentBox.width, 200, 0, 0, false);
+      }
+    }
+  }
+
+  repaint(ctx) {
+    this.doLayout(ctx);
+    // Painting is deferred until font rendering is implemented.
   }
 }
 
-class TextHandler {
+export class TextNode extends Node {
   data;
 
   constructor(content) {
+    super(NODE_TYPE_TEXT);
     this.data = (content === undefined)? "": content;
   }
 
   setData(c) { this.data = c; }
   getData() { return this.data; }
-}
-
-export class TextNode extends Node {
-  constructor(content) {
-    super(NODE_TYPE_TEXT);
-    const text = new TextHandler(content);
-    return mixin(this, text);
-  }
 }
 
 export class Document {
