@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Text Path Test</title>
+<script src="../base2-jsb-fp.js"></script>
+<script src="../src/legacy/font/path.js"></script>
+<script src="../src/legacy/font/font.js"></script>
+<script src="../src/legacy/font/arial_font.js"></script>
+<script>
+window.onload = function() {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    loadFont(() => {
+        const font = ArialFont();
+
+        // Solid color
+        ctx.fillStyle = 'blue';
+        font.fillText(ctx, 'Hello World', 50, 50);
+
+        // Gradient
+        const gradient = ctx.createLinearGradient(0, 0, 200, 0);
+        gradient.addColorStop(0, 'magenta');
+        gradient.addColorStop(0.5, 'blue');
+        gradient.addColorStop(1, 'red');
+        ctx.fillStyle = gradient;
+        font.fillText(ctx, 'Gradient Text', 50, 150);
+
+        // Pattern
+        const img = new Image();
+        img.src = 'marilyn_th.jpg';
+        img.onload = function() {
+            const pattern = ctx.createPattern(img, 'repeat');
+            ctx.fillStyle = pattern;
+            font.fillText(ctx, 'Pattern Text', 50, 250);
+        };
+    });
+};
+</script>
+</head>
+<body>
+<canvas id="canvas" width="500" height="300"></canvas>
+</body>
+</html>

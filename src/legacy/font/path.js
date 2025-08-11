@@ -1,4 +1,4 @@
-export const CanvasRenderingContext2DFont_svg = {
+window.CanvasRenderingContext2DFont_svg = {
 	'ctx': null,
 	'fontFaces': {},
 	'font': {},
@@ -141,7 +141,7 @@ export const CanvasRenderingContext2DFont_svg = {
 }
 
 
-export const CanvasRenderingContext2DPath = {
+window.CanvasRenderingContext2DPath = {
 	'ctx': null,
 	'closePathStroke': function () { if(this.ctx) { this.ctx.closePath(); this.ctx.fill(); if(0) this.ctx.stroke(); } return ['Z']; },
 	'_map': {

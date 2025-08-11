@@ -1,6 +1,4 @@
-import { CanvasRenderingContext2DPath } from './path.js';
-
-export const CanvasRenderingContext2DFont = {
+window.CanvasRenderingContext2DFont = {
 	'mozTextStyle': '12pt Arial',
 	'defaultFontStyle': {
 		'fontSize': '12pt', 'fontFamily': 'Arial', 'font': '12pt Arial',
