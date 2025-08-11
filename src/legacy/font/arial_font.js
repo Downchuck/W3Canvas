@@ -1,14 +1,8 @@
-import { CanvasRenderingContext2DPath, CanvasRenderingContext2DFont_svg } from './path.js';
-import { CanvasRenderingContext2DFont } from './font.js';
-
-declare const base2: any;
-declare const debug: any;
-
 const FONT_COLOR = "#555";
 
 let arialFontLib = null;
 
-export function loadFont(callback) {
+window.loadFont = function(callback) {
 	try {
 		const r = new XMLHttpRequest();
 
@@ -38,7 +32,7 @@ export function loadFont(callback) {
 }
 
 
-export const ArialFont = function() {
+window.ArialFont = function() {
 	if (!arialFontLib) {
 		console.log("Cannot use ArialFont... lib is null");
 	}
@@ -77,24 +71,15 @@ export const ArialFont = function() {
 		}
 	};
 
-	const useCustomFontPainter = true;
-
 	const fillText = function(ctx, text, x, y, maxWidth) {
 		ctx.save();
-
-		if (useCustomFontPainter) {
-			ctx.stroke = '';
-			if (x && y) {
-				ctx.translate(x, y);
-			}
-			drawString(ctx, text);
+		const path = getTextPath(text);
+		if (x && y) {
+			ctx.translate(x, y);
 		}
-		else {
-			const a = x || 0;
-			const b = y || 0;
-			ctx.fillText(text, a, b, maxWidth);
-		}
-
+		const sc = scaleFactor;
+		ctx.scale(sc, -sc);
+		ctx.fill(path);
 		ctx.restore();
 	};
 
@@ -109,7 +94,7 @@ export const ArialFont = function() {
 
 		arialFontLib.ctx = ctx;
 
-		const m = (useCustomFontPainter)? scaleFactor * 0.1 * arialFontLib.measureText(str) : ctx.measureText(str);
+		const m = scaleFactor * 0.1 * arialFontLib.measureText(str);
 		return m;
 	};
 
@@ -119,6 +104,21 @@ export const ArialFont = function() {
 
 	const getTextHeight = function() {
 		return 220 * scaleFactor;
+	};
+
+	const getTextPath = function(text) {
+		let path = new Path2D();
+		let currentX = 0;
+		for (let i = 0; i < text.length; i++) {
+			const charCode = text.charCodeAt(i);
+			if (fontLetters[charCode]) {
+				const charPath = new Path2D(fontLetters[charCode]);
+				const matrix = new DOMMatrix([1, 0, 0, 1, currentX, 0]);
+				path.addPath(charPath, matrix);
+				currentX += arialFontLib.font.lettersw[charCode] || 0;
+			}
+		}
+		return path;
 	};
 
 	return {
@@ -132,6 +132,7 @@ export const ArialFont = function() {
 		'getTextColor'	: getTextColor,
 		'setTextColor'	: setTextColor,
 		'setScaleFactor': setScaleFactor,
-		'getScaleFactor': getScaleFactor
+		'getScaleFactor': getScaleFactor,
+		'getTextPath'   : getTextPath
 	};
 };
