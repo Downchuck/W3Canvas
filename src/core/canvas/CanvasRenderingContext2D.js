@@ -16,15 +16,63 @@ export class CanvasRenderingContext2D {
     this.fillStyle = 'black';
     this.strokeStyle = 'black';
     this.font = '10px sans-serif';
+    this.textAlign = 'start';
+    this.textBaseline = 'alphabetic';
     this.path = [];
   }
 
+  _getOffscreenContext() {
+    if (!this._offscreenCanvas) {
+      this._offscreenCanvas = document.createElement('canvas');
+      this._offscreenContext = this._offscreenCanvas.getContext('2d');
+    }
+    return this._offscreenContext;
+  }
+
+  fillText(text, x, y) {
+    const offscreenCtx = this._getOffscreenContext();
+    offscreenCtx.font = this.font;
+    const metrics = offscreenCtx.measureText(text);
+    const textWidth = Math.ceil(metrics.width);
+    const textHeight = Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent);
+
+    offscreenCtx.canvas.width = textWidth;
+    offscreenCtx.canvas.height = textHeight;
+
+    offscreenCtx.fillStyle = this.fillStyle;
+    offscreenCtx.font = this.font;
+    offscreenCtx.textAlign = 'left';
+    offscreenCtx.textBaseline = 'top';
+    offscreenCtx.fillText(text, 0, 0);
+
+    const textImageData = offscreenCtx.getImageData(0, 0, textWidth, textHeight);
+    this.putImageData(textImageData, x, y);
+  }
+
+  strokeText(text, x, y) {
+    const offscreenCtx = this._getOffscreenContext();
+    offscreenCtx.font = this.font;
+    const metrics = offscreenCtx.measureText(text);
+    const textWidth = Math.ceil(metrics.width);
+    const textHeight = Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent);
+
+    offscreenCtx.canvas.width = textWidth;
+    offscreenCtx.canvas.height = textHeight;
+
+    offscreenCtx.strokeStyle = this.strokeStyle;
+    offscreenCtx.font = this.font;
+    offscreenCtx.textAlign = 'left';
+    offscreenCtx.textBaseline = 'top';
+    offscreenCtx.strokeText(text, 0, 0);
+
+    const textImageData = offscreenCtx.getImageData(0, 0, textWidth, textHeight);
+    this.putImageData(textImageData, x, y);
+  }
+
   measureText(text) {
-    // This is a very simple implementation.
-    // A real implementation would need to use font metrics.
-    const fontSize = parseInt(this.font) || 10;
-    const width = text.length * (fontSize * 0.6); // A rough estimate
-    return { width: width };
+    const offscreenCtx = this._getOffscreenContext();
+    offscreenCtx.font = this.font;
+    return offscreenCtx.measureText(text);
   }
 
   beginPath() {
@@ -257,11 +305,27 @@ export class CanvasRenderingContext2D {
     };
   }
 
-  putImageData(imageData, x, y) {
-    // This is a simplified implementation. A real implementation would
-    // need to handle cases where the provided imageData is smaller than
-    // the canvas and needs to be placed at a specific (x, y) offset.
-    this.imageData = imageData;
+  putImageData(imageData, dx, dy) {
+    const { data: sourceData, width: sourceWidth, height: sourceHeight } = imageData;
+    const { data: destData, width: destWidth, height: destHeight } = this.imageData;
+
+    for (let y = 0; y < sourceHeight; y++) {
+      for (let x = 0; x < sourceWidth; x++) {
+        const destX = dx + x;
+        const destY = dy + y;
+
+        if (destX >= 0 && destX < destWidth && destY >= 0 && destY < destHeight) {
+          const sourceIndex = (y * sourceWidth + x) * 4;
+          const destIndex = (destY * destWidth + destX) * 4;
+
+          // Copy RGBA values
+          destData[destIndex] = sourceData[sourceIndex];
+          destData[destIndex + 1] = sourceData[sourceIndex + 1];
+          destData[destIndex + 2] = sourceData[sourceIndex + 2];
+          destData[destIndex + 3] = sourceData[sourceIndex + 3];
+        }
+      }
+    }
   }
 
   _parseColor(colorStr) {
