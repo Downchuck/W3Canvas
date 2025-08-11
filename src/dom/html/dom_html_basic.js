@@ -63,13 +63,8 @@ export class HTMLElement extends Element {
 
 class HTMLFormElement extends HTMLElement { constructor() { super("FORM"); } }
 class HTMLBodyElement extends HTMLElement { constructor() { super("BODY"); } }
-export class HTMLSpanElement extends HTMLElement { constructor() { super("SPAN"); } }
-export class HTMLDivElement extends HTMLElement {
-	constructor() {
-		super("DIV");
-		this.style.style.setProperty('display', 'block');
-	}
-}
+class HTMLSpanElement extends HTMLElement { constructor() { super("SPAN"); } }
+class HTMLDivElement extends HTMLElement { constructor() { super("DIV"); } }
 class HTMLParagraphElement extends HTMLElement { constructor() { super("P"); } }
 class HTMLInputElement extends HTMLElement { constructor() { super("INPUT"); } }
 class HTMLTextAreaElement extends HTMLElement { constructor() { super("TEXTAREA"); } }

@@ -15,16 +15,7 @@ export class CanvasRenderingContext2D {
     };
     this.fillStyle = 'black';
     this.strokeStyle = 'black';
-    this.font = '10px sans-serif';
     this.path = [];
-  }
-
-  measureText(text) {
-    // This is a very simple implementation.
-    // A real implementation would need to use font metrics.
-    const fontSize = parseInt(this.font) || 10;
-    const width = text.length * (fontSize * 0.6); // A rough estimate
-    return { width: width };
   }
 
   beginPath() {
