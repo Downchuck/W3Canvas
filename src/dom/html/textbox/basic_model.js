@@ -1,16 +1,16 @@
-import * as debug from '../../../lang_debug.js';
+import * as debug from '../../../../lang_debug.js';
 
 var info;
 
 export class ContentFragment {
-	content: any;
-	style: any;
-	isImage: boolean;
-	url: any;
-	width: any;
-	height: any;
+	content;
+	style;
+	isImage;
+	url;
+	width;
+	height;
 
-	constructor(content, fontStyle, imgUrl?, width?, height?) {
+	constructor(content, fontStyle, imgUrl, width, height) {
 		this.content = content;
 		this.style = fontStyle;
 
@@ -36,16 +36,16 @@ export class ContentFragment {
 }
 
 export class FragmentStyles {
-	index: any;
+	index;
 	exOffset = 0;
-	pseudo: any;
+	pseudo;
 	fontStyle = "";
 	width = 0;
 	height = 0;
 	isImage = false;
 	url = "";
-	css: any;
-	content: any;
+	css;
+	content;
 
 	constructor(ind, pseudoElem, css) {
 		this.index = ind;
@@ -419,7 +419,7 @@ export class BasicModel {
 }
 
 export class EditLineModel {
-	basicModel: BasicModel;
+	basicModel;
 
 	init(vars) {
 		try {
@@ -494,7 +494,7 @@ export class EditLineModel {
 }
 
 export class VisualLineModel {
-	basicModel: BasicModel;
+	basicModel;
 
 	init(vars) {
 		try {

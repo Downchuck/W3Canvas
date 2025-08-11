@@ -1,4 +1,4 @@
-import { SVGElement } from './dom_svg_rect.js';
+import { SVGElement } from './dom_svg_base.js';
 import { registerElement } from '../html/dom_html_basic.js';
 
 export class SVGLineElement extends SVGElement {
