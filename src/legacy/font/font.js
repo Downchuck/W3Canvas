@@ -110,7 +110,7 @@ export const CanvasRenderingContext2DFont = {
 	'mozTextAlongPath': function(textToDraw, stroke) {
 		if(!stroke) this.mozDrawText(textToDraw);
 		else this.mozPathText(textToDraw);
- 	},
+	},
 	'mozMeasureText': function (textToMeasure) {
 		let len=0;
 		for(let i=0,x=textToMeasure.length;i<x;i++) {
