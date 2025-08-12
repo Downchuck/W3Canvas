@@ -44,6 +44,7 @@ export class Circle extends SVGCircleElement {
 		const r = this.getR() || 0;
 		const fill = this.getFill();
 		const stroke = this.getStroke();
+		const strokeWidth = this.getStrokeWidth();
 
 		this.ctx.beginPath();
 		this.ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
@@ -55,6 +56,7 @@ export class Circle extends SVGCircleElement {
 		}
 
 		if (stroke) {
+			this.ctx.lineWidth = strokeWidth;
 			this.ctx.strokeStyle = stroke;
 			this.ctx.stroke();
 		}

@@ -5,6 +5,7 @@ export class SVGElement extends Element {
 		super(tag);
 		this.fill = "";
 		this.stroke = "";
+		this.strokeWidth = 1;
 	}
 
 	currentColor(color) {
@@ -15,6 +16,8 @@ export class SVGElement extends Element {
 
 	setStroke(s) { this.stroke = s; }
 	getStroke() { return this.currentColor(this.stroke); }
+	setStrokeWidth(sw) { this.strokeWidth = sw; }
+	getStrokeWidth() { return this.strokeWidth; }
 	setFill(f) { this.fill = f; }
 	getFill() { return this.currentColor(this.fill); }
 	getBoundingRect() { return this.getBorderBox(); }

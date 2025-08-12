@@ -1,5 +1,5 @@
 
-import { clone } from '../lang_util.js';
+import { clone } from '../../legacy/lang_util.js';
 
 export function BoxModelPainter() {
   // 3D CSS Box Model

@@ -47,12 +47,14 @@ export class Line extends SVGLineElement {
 		const x2 = this.getX2() || 0;
 		const y2 = this.getY2() || 0;
 		const stroke = this.getStroke();
+		const strokeWidth = this.getStrokeWidth();
 
 		if (stroke) {
 			this.ctx.beginPath();
 			this.ctx.moveTo(x1, y1);
 			this.ctx.lineTo(x2, y2);
 			this.ctx.strokeStyle = stroke;
+			this.ctx.lineWidth = strokeWidth;
 			this.ctx.stroke();
 		}
 	}

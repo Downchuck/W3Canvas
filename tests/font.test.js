@@ -1,37 +1,55 @@
-const { describe, it, expect } = require('@jest/globals');
-const { BoxModelPainter } = require('../src/dom/css/box_paint.js');
+import { test } from 'node:test';
+import assert from 'node:assert';
+import { BoxModelPainter } from '../src/dom/css/box_paint.js';
 
-describe('Font Implementation', () => {
-    it('should call fillText with the correct parameters', () => {
-        const mockContext = {
-            save: jest.fn(),
-            restore: jest.fn(),
-            beginPath: jest.fn(),
-            rect: jest.fn(),
-            clip: jest.fn(),
-            translate: jest.fn(),
-            fillText: jest.fn(),
-        };
+const createSpy = () => {
+    let called = false;
+    let args = null;
+    const spy = (...theArgs) => {
+        called = true;
+        args = theArgs;
+    };
+    spy.wasCalled = () => called;
+    spy.getArgs = () => args;
+    return spy;
+};
 
-        const mockFont = {
-            getScaleFactor: () => 0.1,
-            getTextColor: () => 'red',
-        };
+test('Font Implementation: should call fillText with the correct parameters', () => {
+    // Arrange
+    const mockContext = {
+        save: createSpy(),
+        restore: createSpy(),
+        beginPath: createSpy(),
+        rect: createSpy(),
+        clip: createSpy(),
+        closePath: createSpy(),
+        translate: createSpy(),
+        fillText: createSpy(),
+        font: '',
+        fillStyle: '',
+        textBaseline: '',
+    };
 
-        const painter = new BoxModelPainter();
-        const contentBox = { x: 10, y: 20, width: 100, height: 50 };
+    const mockFont = {
+        getScaleFactor: () => 0.1,
+        getTextColor: () => 'red',
+    };
 
-        painter.paintText(mockContext, contentBox, 'Hello', mockFont);
+    const painter = new BoxModelPainter();
+    const contentBox = { x: 10, y: 20, width: 100, height: 50 };
 
-        const expectedFontSize = 220 * 0.1;
-        const expectedBaseline = 160 * 0.1;
+    // Act
+    painter.paintText(mockContext, contentBox, 'Hello', mockFont);
 
-        expect(mockContext.save).toHaveBeenCalled();
-        expect(mockContext.translate).toHaveBeenCalledWith(10, 20);
-        expect(mockContext.font).toBe(`${expectedFontSize}px Arial`);
-        expect(mockContext.fillStyle).toBe('red');
-        expect(mockContext.textBaseline).toBe('alphabetic');
-        expect(mockContext.fillText).toHaveBeenCalledWith('Hello', 0, expectedBaseline);
-        expect(mockContext.restore).toHaveBeenCalled();
-    });
+    // Assert
+    const expectedFontSize = 220 * 0.1;
+    const expectedBaseline = 160 * 0.1;
+
+    assert.strictEqual(mockContext.save.wasCalled(), true, 'save() should be called');
+    assert.deepStrictEqual(mockContext.translate.getArgs(), [10, 20], 'translate() should be called with correct args');
+    assert.strictEqual(mockContext.font, `${expectedFontSize}px Arial`, 'font should be set correctly');
+    assert.strictEqual(mockContext.fillStyle, 'red', 'fillStyle should be set correctly');
+    assert.strictEqual(mockContext.textBaseline, 'alphabetic', 'textBaseline should be set correctly');
+    assert.deepStrictEqual(mockContext.fillText.getArgs(), ['Hello', 0, expectedBaseline], 'fillText() should be called with correct args');
+    assert.strictEqual(mockContext.restore.wasCalled(), true, 'restore() should be called');
 });
