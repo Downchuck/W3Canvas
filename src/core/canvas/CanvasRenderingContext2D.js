@@ -323,10 +323,6 @@ export class CanvasRenderingContext2D {
           destData[destIndex + 1] = sourceData[sourceIndex + 1];
           destData[destIndex + 2] = sourceData[sourceIndex + 2];
           destData[destIndex + 3] = sourceData[sourceIndex + 3];
-
-          if (i < 5 && j < 5) { // Log first 5x5 block of pixels
-            console.log(`Copying pixel: (${sourceX},${sourceY}) -> (${destX},${destY}) | rgba(${sourceData[sourceIndex]},${sourceData[sourceIndex+1]},${sourceData[sourceIndex+2]},${sourceData[sourceIndex+3]})`);
-          }
         }
       }
     }
