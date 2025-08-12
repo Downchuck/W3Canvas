@@ -34,86 +34,77 @@ document.createElement = function(tagName) {
 <!--
 	helpers: mixin, clone, others.
 -->
-	<script src="lang_util.js" ></script>
-	<script src="canvas_lib.js" ></script>
-
-<!--
-	fillText, strokeText, measureText
-		FIXME: We have a new library, and many browsers have these built-in.
--->
-	<script src="font/base2-p.js" ></script>
-	<script src="font/font.js" ></script>
-	<script src="font/path.js" ></script>
-	<script src="font/arial_font.js" ></script>
+	<script src="src/legacy/lang_util.js" ></script>
+	<script src="src/legacy/canvas_lib.js" ></script>
 
 <!--
 	createElement, element.style
 -->
-	<script src="css/box_basic.js" ></script>
-	<script src="css/box_model.js" ></script>
-	<script src="css/css_style.js" ></script>
-	<script src="css/box_paint.js" ></script>
-	<script src="css/scrollbar.js" ></script>
-	<script src="css/viewport.js" ></script>
+	<script src="src/dom/css/box_basic.js" ></script>
+	<script src="src/dom/css/box_model.js" ></script>
+	<script src="src/dom/css/css_style.js" ></script>
+	<script src="src/dom/css/box_paint.js" ></script>
+	<script src="src/dom/css/scrollbar.js" ></script>
+	<script src="src/dom/css/viewport.js" ></script>
 
-	<script src="css/line_basic.js" ></script>
-	<script src="css/text_wrap.js" ></script>
-	<script src="css/line_model.js" ></script>
-	<script src="css/line_paint.js" ></script>
+	<script src="src/dom/css/line_basic.js" ></script>
+	<script src="src/dom/css/text_wrap.js" ></script>
+	<script src="src/dom/css/line_model.js" ></script>
+	<script src="src/dom/css/line_paint.js" ></script>
 	<!-- // css3-content is insanely cool
 	     // css/content_model.js [ this is the goal ]
 	-->
 
 <!-- overflow: scroll; overflow-style: move; overflow-y: hidden; -->
-	<script src="css/overflow.js" ></script>
+	<script src="src/dom/css/overflow.js" ></script>
 
 <!--
 	DOM API
 -->
-	<script src="html/dom_core.js" ></script>
-	<script src="html/dom_html_basic.js" ></script>
-	<script src="html/dom_html_option.js" ></script>
-	<script src="html/dom_html_select.js" ></script>
+	<script src="src/dom/html/dom_core.js" ></script>
+	<script src="src/dom/html/dom_html_basic.js" ></script>
+	<script src="src/dom/html/dom_html_option.js" ></script>
+	<script src="src/dom/html/dom_html_select.js" ></script>
 <!-- document.createElement -->
-	<script src="html/dom_html_doc.js" ></script>
+	<script src="src/dom/html/dom_html_doc.js" ></script>
 
 <!--
 	HTML Painters and Event Listeners
 -->
-	<script src="html/select_control.js" ></script>
-	<script src="html/combobox_control.js" ></script>
-	<script src="html/image_control.js" ></script>
-        <script src="html/button_control.js" ></script>
-	<script src="html/control_factory.js" ></script>
+	<script src="src/dom/html/select_control.js" ></script>
+	<script src="src/dom/html/combobox_control.js" ></script>
+	<script src="src/dom/html/image_control.js" ></script>
+        <script src="src/dom/html/button_control.js" ></script>
+	<script src="src/dom/html/control_factory.js" ></script>
 <!-- text -->
-	<script src="html/textbox/factory.js" ></script>
-	<script src="html/textbox/basic_model.js" ></script>
+	<script src="src/dom/html/textbox/factory.js" ></script>
+	<script src="src/dom/html/textbox/basic_model.js" ></script>
 <!-- css3-ui module has removed ::selection recently, css3-selectors has as well -->
 <!-- strongly related: Range, Selection -->
-	<script src="html/textbox/cursor.js" ></script>
-	<script src="html/textbox/selection.js" ></script>
+	<script src="src/dom/html/textbox/cursor.js" ></script>
+	<script src="src/dom/html/textbox/selection.js" ></script>
 
 <!--
 	<select>
 		FIXME: Use webkit CSS APIs for gradient, rounded rectangles,
 		custom scroller styling and arrow url
 -->
-	<script src="style/combo_blue.js" ></script>
-	<script src="style/combo_mike.js" ></script>
-	<script src="style/select_main.js" ></script>
+	<script src="src/legacy/style/combo_blue.js" ></script>
+	<script src="src/legacy/style/combo_mike.js" ></script>
+	<script src="src/legacy/style/select_main.js" ></script>
 
 <!--
 	<img>
 		FIXME: Finish css parser for border, margin, padding and so on.
 -->
-	<script src="style/image_main.js" ></script>
+	<script src="src/legacy/style/image_main.js" ></script>
 
 <!--
 	<input type="[checkbox|radio]">
 		FIXME: Uses XForms setLabel to set associated text.
 		Investigate this. Wouldn't :after css selector work the same way?
 -->
-	<script src="style/button_main.js" ></script>
+	<script src="src/legacy/style/button_main.js" ></script>
 
 <!--
 	<textarea> <input type="text">
@@ -122,20 +113,20 @@ document.createElement = function(tagName) {
 -->
 
 <!-- ui-events -->
-	<script src="html/textbox/keyboard.js" ></script>
-	<script src="html/textbox/mouse.js" ></script>
+	<script src="src/dom/html/textbox/keyboard.js" ></script>
+	<script src="src/dom/html/textbox/mouse.js" ></script>
 
 <!-- css3-content: move-to -->	
-	<script src="html/textbox/keyboard_edit.js" ></script>
+	<script src="src/dom/html/textbox/keyboard_edit.js" ></script>
 <!-- css3-ui: keyboard -->
-	<script src="html/textbox/keyboard_nav.js" ></script>
+	<script src="src/dom/html/textbox/keyboard_nav.js" ></script>
 
 <!-- textarea / clipboard -->
-	<script src="html/textbox/textbox_comp.js" ></script>
-	<script src="html/textbox/textmodel_copypaste.js" ></script>
-	<script src="html/textbox/textmodel.js" ></script>
+	<script src="src/dom/html/textbox/textbox_comp.js" ></script>
+	<script src="src/dom/html/textbox/textmodel_copypaste.js" ></script>
+	<script src="src/dom/html/textbox/textmodel.js" ></script>
 
-	<script src="style/input_main.js" ></script>
+	<script src="src/legacy/style/input_main.js" ></script>
 
 	<script>
 
@@ -146,8 +137,8 @@ document.createElement = function(tagName) {
 			setupButtons(); // <input type="checkbox" /><input type="radio" />
 			drawBoxes(); // <input type="text" /><textarea />
 		}
-if(0)
-		loadFont(setupCombos);
+if(1)
+		setupCombos();
 
 	</script>
 

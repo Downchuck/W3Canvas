@@ -1,7 +1,5 @@
 import { currentDocument } from './dom_html_doc.js';
 import { BoxModelPainter } from '../../css/box_paint.js';
-import { ArialFont } from '../../font/arial_font.js';
-
 const buttonIcons = {
 	'blankIcon'				: new Image(),
 	'checkedRadioIcon'	    : new Image(),
@@ -50,7 +48,14 @@ const inputRadioGroup = new InputRadioGroup();
 
 class BasicButton {
 	constructor(layer, el) {
-		const font   = new ArialFont(0.10);
+		const font = {
+            _scale: 0.10,
+            _color: 'black',
+            getScaleFactor: function() { return this._scale; },
+            getTextColor: function() { return this._color; },
+            setTextColor: function(c) { this._color = c; },
+            setScaleFactor: function(s) { this._scale = s; }
+        };
 		let label  = "LABEL";
 		const w = layer.getAttribute("width");
 		const h = layer.getAttribute("height");
