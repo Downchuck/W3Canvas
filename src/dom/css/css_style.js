@@ -98,6 +98,18 @@ export class ElementStyle {
 	setFont(f) { this.font = f; }
 	getFont() { return this.font;	}
 
+    getFontSize() {
+        const fontSize = this.style.getProperty('font-size');
+        if (fontSize) {
+            return parseInt(fontSize, 10);
+        }
+        return null;
+    }
+
+    setProperty(name, value, priority) {
+        this.style.setProperty(name, value, priority);
+    }
+
     getFontString() {
         if (this.element.id === 'span2') {
             return '20px Arial';

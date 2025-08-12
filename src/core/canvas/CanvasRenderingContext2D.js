@@ -17,8 +17,39 @@ export class CanvasRenderingContext2D {
     this.strokeStyle = 'black';
     this.font = '10px sans-serif';
     this.textAlign = 'start';
+    this.stateStack = [];
+    this.stateStack = [];
     this.textBaseline = 'alphabetic';
     this.path = [];
+  }
+
+  save() {
+    this.stateStack.push({
+      fillStyle: this.fillStyle,
+      strokeStyle: this.strokeStyle,
+      font: this.font,
+      textAlign: this.textAlign,
+      textBaseline: this.textBaseline,
+    });
+  }
+
+  restore() {
+    if (this.stateStack.length > 0) {
+      const state = this.stateStack.pop();
+      this.fillStyle = state.fillStyle;
+      this.strokeStyle = state.strokeStyle;
+      this.font = state.font;
+      this.textAlign = state.textAlign;
+      this.textBaseline = state.textBaseline;
+    }
+  }
+
+  translate(x, y) {
+    // TODO: Implement transformations
+  }
+
+  scale(x, y) {
+    // TODO: Implement transformations
   }
 
   _getOffscreenContext() {

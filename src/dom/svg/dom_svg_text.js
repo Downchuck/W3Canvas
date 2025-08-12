@@ -1,4 +1,6 @@
 import { SVGElement } from './dom_svg_base.js';
+import { Font } from './font.js';
+import { registerElement } from '../html/dom_html_basic.js';
 
 export class SVGTextElement extends SVGElement {
   constructor() {
@@ -6,6 +8,7 @@ export class SVGTextElement extends SVGElement {
     this.x = 0;
     this.y = 0;
     this.text = "";
+    this.font = new Font('examples/Z_testing_select_old/Arial.svg'); // Hardcoded for now
   }
 
   setX(x) { this.x = x; }
@@ -16,13 +19,11 @@ export class SVGTextElement extends SVGElement {
   getText() { return this.text; }
 
   repaint(ctx) {
-    if (this.getFill()) {
-      ctx.fillStyle = this.getFill();
-      ctx.fillText(this.text, this.x, this.y);
-    }
-    if (this.getStroke()) {
-      ctx.strokeStyle = this.getStroke();
-      ctx.strokeText(this.text, this.x, this.y);
-    }
+    const fontSize = this.style.getFontSize() || 16; // default font size
+    ctx.fillStyle = this.getFill();
+    ctx.strokeStyle = this.getStroke();
+    this.font.renderText(ctx, this.text, this.x, this.y, fontSize);
   }
 }
+
+registerElement("svg:text", "SVGTextElement", SVGTextElement);
