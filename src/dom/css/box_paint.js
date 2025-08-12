@@ -40,7 +40,8 @@ export function BoxModelPainter() {
     const scaleFactor = font.getScaleFactor ? font.getScaleFactor() : 0.2;
     const fontSize = 220 * scaleFactor;
     const baseline = 160 * scaleFactor;
-    ctx.font = `${fontSize}px Arial`;
+    const fontFamily = font.getFontFamily ? font.getFontFamily() : 'Arial';
+    ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.fillStyle = font.getTextColor ? font.getTextColor() : 'black';
     ctx.textBaseline = 'alphabetic'; // Let's try with alphabetic first
 

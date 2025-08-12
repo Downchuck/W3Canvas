@@ -1,9 +1,6 @@
-import { test } from 'node:test';
-import assert from 'node:assert';
 import { CanvasRenderingContext2D } from '../src/core/canvas/CanvasRenderingContext2D.js';
 import { SVGPathElement } from '../src/dom/svg/dom_svg_path.js';
 import { Element } from '../src/dom/html/dom_core.js';
-import { assertPixelIsColor } from './test-helpers.js';
 
 test('SVG path element renders a triangle', () => {
     const ctx = new CanvasRenderingContext2D(100, 100);
@@ -22,5 +19,8 @@ test('SVG path element renders a triangle', () => {
     path.repaint();
 
     const imageData = ctx.getImageData(50, 50, 1, 1);
-    assertPixelIsColor(imageData, 0, 0, [255, 0, 0, 255]);
+    expect(imageData.data[0]).toBe(255);
+    expect(imageData.data[1]).toBe(0);
+    expect(imageData.data[2]).toBe(0);
+    expect(imageData.data[3]).toBe(255);
 });

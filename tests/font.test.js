@@ -1,6 +1,5 @@
-import { test } from 'node:test';
-import assert from 'node:assert';
 import { BoxModelPainter } from '../src/dom/css/box_paint.js';
+import { Font } from '../src/dom/css/font.js';
 
 const createSpy = () => {
     let called = false;
@@ -30,10 +29,8 @@ test('Font Implementation: should call fillText with the correct parameters', ()
         textBaseline: '',
     };
 
-    const mockFont = {
-        getScaleFactor: () => 0.1,
-        getTextColor: () => 'red',
-    };
+    const mockFont = new Font('Verdana', 22, 'blue');
+    mockFont.setScaleFactor(0.1);
 
     const painter = new BoxModelPainter();
     const contentBox = { x: 10, y: 20, width: 100, height: 50 };
@@ -45,11 +42,11 @@ test('Font Implementation: should call fillText with the correct parameters', ()
     const expectedFontSize = 220 * 0.1;
     const expectedBaseline = 160 * 0.1;
 
-    assert.strictEqual(mockContext.save.wasCalled(), true, 'save() should be called');
-    assert.deepStrictEqual(mockContext.translate.getArgs(), [10, 20], 'translate() should be called with correct args');
-    assert.strictEqual(mockContext.font, `${expectedFontSize}px Arial`, 'font should be set correctly');
-    assert.strictEqual(mockContext.fillStyle, 'red', 'fillStyle should be set correctly');
-    assert.strictEqual(mockContext.textBaseline, 'alphabetic', 'textBaseline should be set correctly');
-    assert.deepStrictEqual(mockContext.fillText.getArgs(), ['Hello', 0, expectedBaseline], 'fillText() should be called with correct args');
-    assert.strictEqual(mockContext.restore.wasCalled(), true, 'restore() should be called');
+    expect(mockContext.save.wasCalled()).toBe(true);
+    expect(mockContext.translate.getArgs()).toEqual([10, 20]);
+    expect(mockContext.font).toBe(`${expectedFontSize}px Verdana`);
+    expect(mockContext.fillStyle).toBe('blue');
+    expect(mockContext.textBaseline).toBe('alphabetic');
+    expect(mockContext.fillText.getArgs()).toEqual(['Hello', 0, expectedBaseline]);
+    expect(mockContext.restore.wasCalled()).toBe(true);
 });

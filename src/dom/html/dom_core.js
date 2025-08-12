@@ -119,13 +119,17 @@ export class Element extends Node {
       let child = this.getFirstChild();
       while(child) {
         if (child.nodeType === NODE_TYPE_TEXT) {
-          fragments.push(new ContentFragment(child.getData(), this.style.getFontString()));
+          const font = this.style.getFont();
+          const fontString = `${font.getFontSize()}px ${font.getFontFamily()}`;
+          fragments.push(new ContentFragment(child.getData(), fontString));
         } else if (child.nodeType === NODE_TYPE_ELEMENT) {
           if (child.style.getDisplay() === 'inline') {
             let grandchild = child.getFirstChild();
             while (grandchild) {
               if (grandchild.nodeType === NODE_TYPE_TEXT) {
-                fragments.push(new ContentFragment(grandchild.getData(), child.style.getFontString()));
+                const font = child.style.getFont();
+                const fontString = `${font.getFontSize()}px ${font.getFontFamily()}`;
+                fragments.push(new ContentFragment(grandchild.getData(), fontString));
               }
               grandchild = grandchild.getNextSibling();
             }

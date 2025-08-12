@@ -1,4 +1,5 @@
 import * as dom from '../html/dom_core.js';
+import { Font } from './font.js';
 
 export class CSSStyleDeclaration {
 	shortProps = [];
@@ -93,17 +94,11 @@ export class ElementStyle {
 		this.style.setProperty("border-color: hover", "#7c7");
 		this.style.setProperty("border-color: active", "red");
 		this.style.setProperty("border-color", "white");
+		this.font = new Font();
 	}
 
 	setFont(f) { this.font = f; }
 	getFont() { return this.font;	}
-
-    getFontString() {
-        if (this.element.id === 'span2') {
-            return '20px Arial';
-        }
-        return '12px Arial';
-    }
 
     getDisplay() {
         return this.style.getProperty('display');

@@ -1,5 +1,3 @@
-import { test } from 'node:test';
-import assert from 'node:assert';
 import { Line } from '../src/dom/svg/dom_svg_line.js';
 import { Circle } from '../src/dom/svg/dom_svg_circle.js';
 import { Ellipse } from '../src/dom/svg/dom_svg_ellipse.js';
@@ -40,7 +38,7 @@ test('SVG line element applies stroke-width', () => {
 
     line.repaint();
 
-    assert.strictEqual(mockContext.lineWidth, 5, 'Line: context.lineWidth should be updated to the stroke-width');
+    expect(mockContext.lineWidth).toBe(5);
 });
 
 test('SVG circle element applies stroke-width', () => {
@@ -53,7 +51,7 @@ test('SVG circle element applies stroke-width', () => {
 
     circle.repaint();
 
-    assert.strictEqual(mockContext.lineWidth, 10, 'Circle: context.lineWidth should be updated to the stroke-width');
+    expect(mockContext.lineWidth).toBe(10);
 });
 
 test('SVG ellipse element applies stroke-width', () => {
@@ -66,7 +64,7 @@ test('SVG ellipse element applies stroke-width', () => {
 
     ellipse.repaint();
 
-    assert.strictEqual(mockContext.lineWidth, 2.5, 'Ellipse: context.lineWidth should be updated to the stroke-width');
+    expect(mockContext.lineWidth).toBe(2.5);
 });
 
 test('SVG rect element applies stroke-width', () => {
@@ -79,10 +77,10 @@ test('SVG rect element applies stroke-width', () => {
 
     rect.repaint();
 
-    assert.strictEqual(mockContext.lineWidth, 7, 'Rectangle: context.lineWidth should be updated to the stroke-width');
+    expect(mockContext.lineWidth).toBe(7);
 });
 
-test('SVG image element calls drawImage on repaint', (t) => {
+test('SVG image element calls drawImage on repaint', () => {
     // 1. Arrange
     const mockImageData = { w: 20, h: 30, data: new Uint8ClampedArray(2400) };
     const mockLoader = () => mockImageData;
@@ -110,10 +108,10 @@ test('SVG image element calls drawImage on repaint', (t) => {
     image._loadImage(Buffer.from(''), mockLoader);
 
     // 3. Assert
-    assert.strictEqual(drawImageCalled, true, 'context.drawImage should have been called');
-    assert.deepStrictEqual(drawImageArgs[0], { data: mockImageData.data, width: mockImageData.w, height: mockImageData.h }, 'drawImage should be called with the correct image data');
-    assert.strictEqual(drawImageArgs[1], 50, 'drawImage should be called with the correct x coordinate');
-    assert.strictEqual(drawImageArgs[2], 60, 'drawImage should be called with the correct y coordinate');
-    assert.strictEqual(drawImageArgs[3], 100, 'drawImage should be called with the correct width');
-    assert.strictEqual(drawImageArgs[4], 120, 'drawImage should be called with the correct height');
+    expect(drawImageCalled).toBe(true);
+    expect(drawImageArgs[0]).toEqual({ data: mockImageData.data, width: mockImageData.w, height: mockImageData.h });
+    expect(drawImageArgs[1]).toBe(50);
+    expect(drawImageArgs[2]).toBe(60);
+    expect(drawImageArgs[3]).toBe(100);
+    expect(drawImageArgs[4]).toBe(120);
 });
