@@ -1,5 +1,6 @@
 import { currentDocument } from '../html/dom_html_doc.js';
 import { controlFactory } from '../html/control_factory.js';
+import { ArialFont } from '../font/arial_font.js';
 import { overridePainters } from './combo_blue.js';
 import { overrideMikePainters } from './combo_mike.js';
 
@@ -22,14 +23,7 @@ export function setupComboBoxFruits() {
       { id : "optionBanana",    label: "BananaBananaBanana" }
     ];
 
-    const arialFont = {
-        _scale: 0.2,
-        _color: 'black',
-        getScaleFactor: function() { return this._scale; },
-        getTextColor: function() { return this._color; },
-        setTextColor: function(c) { this._color = c; },
-        setScaleFactor: function(s) { this._scale = s; }
-    };
+    const arialFont = new ArialFont();
 
     fruitSelection = currentDocument.createElement('select');
     fruitSelection = controlFactory.createLayout(fruitSelection,$('fruitComboBox'));
@@ -85,14 +79,7 @@ export function setupComboBoxOther() {
     chordSelection = currentDocument.createElement('select');
     chordSelection = controlFactory.createLayout(chordSelection,$('chordComboBox'));
 
-    const smallFont = {
-        _scale: 0.06,
-        _color: 'black',
-        getScaleFactor: function() { return this._scale; },
-        getTextColor: function() { return this._color; },
-        setTextColor: function(c) { this._color = c; },
-        setScaleFactor: function(s) { this._scale = s; }
-    };
+    const smallFont = new ArialFont(0.06);
     chordSelection.setFont(smallFont);
     chordSelection.setSize(100);
 
@@ -115,14 +102,7 @@ export function setupComboBoxOther() {
     scalesSelection = currentDocument.createElement('select');
     scalesSelection = controlFactory.createLayout(scalesSelection,$('scalesComboBox'));
 
-    const smallFont = {
-        _scale: 0.06,
-        _color: 'black',
-        getScaleFactor: function() { return this._scale; },
-        getTextColor: function() { return this._color; },
-        setTextColor: function(c) { this._color = c; },
-        setScaleFactor: function(s) { this._scale = s; }
-    };
+    const smallFont = new ArialFont(0.06);
     scalesSelection.setFont(smallFont);
     scalesSelection.setSize(100);
 
@@ -145,14 +125,8 @@ export function setupComboBoxOther() {
     musicSelection = currentDocument.createElement('select');
     musicSelection = controlFactory.createLayout(musicSelection,$('composerComboBox'));
 
-    const largerFont = {
-        _scale: 0.4,
-        _color: 'green',
-        getScaleFactor: function() { return this._scale; },
-        getTextColor: function() { return this._color; },
-        setTextColor: function(c) { this._color = c; },
-        setScaleFactor: function(s) { this._scale = s; }
-    };
+    const largerFont = new ArialFont(0.4);
+    largerFont.setTextColor("green");
     musicSelection.setFont(largerFont);
 
     musicSelection.setOptions(options2);

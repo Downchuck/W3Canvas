@@ -1,4 +1,5 @@
 import { controlFactory } from '../html/control_factory.js';
+import { ArialFont } from '../font/arial_font.js';
 import { overrideMikePainters } from '../style/combo_mike.js';
 
 const STYLES = {};
@@ -58,14 +59,8 @@ const select = control.extend({
   controlType: "ComboBox",
 
   setAttributes: function(element, canvas, control) {
-		const smallFont = {
-            _scale: 0.06,
-            _color: 'black',
-            getScaleFactor: function() { return this._scale; },
-            getTextColor: function() { return this._color; },
-            setTextColor: function(c) { this._color = c; },
-            setScaleFactor: function(s) { this._scale = s; }
-        };
+		const smallFont = new ArialFont(arialFontLib);
+		smallFont.setScaleFactor(0.06);
 		control.setFont(smallFont);
 
 		overrideMikePainters(control);
@@ -103,14 +98,8 @@ input.text = input.extend({
   		'selectionColor': "rgba(216,216,255,0.6)"
   	};
   	control.setStyle(boxStyle);
-	const smallFont = {
-        _scale: 0.06,
-        _color: 'black',
-        getScaleFactor: function() { return this._scale; },
-        getTextColor: function() { return this._color; },
-        setTextColor: function(c) { this._color = c; },
-        setScaleFactor: function(s) { this._scale = s; }
-    };
+	const smallFont = new ArialFont(arialFontLib);
+  	smallFont.setScaleFactor(0.06);
 
   	control.setValue(textContent);
   }

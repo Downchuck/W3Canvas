@@ -1,2 +1,4 @@
 import { setupButtons } from '../style/button_main.js';
-setupButtons();
+import { loadFont } from '../font/arial_font.js';
+
+loadFont(setupButtons);
