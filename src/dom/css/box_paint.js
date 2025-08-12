@@ -35,10 +35,17 @@ export function BoxModelPainter() {
     else {
       ctx.translate(box.x, box.y);
     }
-    var baseline = font.getBaseLine();  // Less than TextHeight
-    ctx.translate(0, baseline);
 
-    font.fillText(ctx, text);
+    // NEW CODE
+    const scaleFactor = font.getScaleFactor ? font.getScaleFactor() : 0.2;
+    const fontSize = 220 * scaleFactor;
+    const baseline = 160 * scaleFactor;
+    ctx.font = `${fontSize}px Arial`;
+    ctx.fillStyle = font.getTextColor ? font.getTextColor() : 'black';
+    ctx.textBaseline = 'alphabetic'; // Let's try with alphabetic first
+
+    ctx.fillText(text, 0, baseline);
+    // END NEW CODE
 
     ctx.restore();
   };
