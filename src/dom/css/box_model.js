@@ -1,4 +1,4 @@
-import { boxModelFactory, DOMPoint, DOMRect, DOMSize, DOMBox } from './box_basic.js';
+import { boxModelFactory } from './box_basic.js';
 
 export class BoxModel {
     constructor() {
