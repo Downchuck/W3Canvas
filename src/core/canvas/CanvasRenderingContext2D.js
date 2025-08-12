@@ -323,6 +323,10 @@ export class CanvasRenderingContext2D {
           destData[destIndex + 1] = sourceData[sourceIndex + 1];
           destData[destIndex + 2] = sourceData[sourceIndex + 2];
           destData[destIndex + 3] = sourceData[sourceIndex + 3];
+
+          if (i < 5 && j < 5) { // Log first 5x5 block of pixels
+            console.log(`Copying pixel: (${sourceX},${sourceY}) -> (${destX},${destY}) | rgba(${sourceData[sourceIndex]},${sourceData[sourceIndex+1]},${sourceData[sourceIndex+2]},${sourceData[sourceIndex+3]})`);
+          }
         }
       }
     }
@@ -527,5 +531,60 @@ export class CanvasRenderingContext2D {
     this.bezierCurveTo(x + radiusX, y + oy, x + ox, y + radiusY, x, y + radiusY);
     this.bezierCurveTo(x - ox, y + radiusY, x - radiusX, y + oy, x - radiusX, y);
     this.closePath();
+  }
+
+  drawImage(image, ...args) {
+    console.log('drawImage called with image:', image.width, 'x', image.height);
+    if (!image || !image.data) {
+      // If the image is not loaded yet, do nothing.
+      console.log('Image not loaded yet.');
+      return;
+    }
+
+    let sx = 0;
+    let sy = 0;
+    let sWidth = image.width;
+    let sHeight = image.height;
+    let dx, dy, dWidth, dHeight;
+
+    if (args.length === 2) {
+      [dx, dy] = args;
+      dWidth = image.width;
+      dHeight = image.height;
+    } else if (args.length === 4) {
+      [dx, dy, dWidth, dHeight] = args;
+    } else if (args.length === 8) {
+      [sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight] = args;
+    } else {
+      throw new Error(`Invalid number of arguments for drawImage: ${args.length + 1}`);
+    }
+
+    const { data: sourceData, width: sourceWidth } = image;
+    const { data: destData, width: destWidth } = this.imageData;
+
+    // sx, sy, sWidth, sHeight define the source rectangle in the source image.
+    // dx, dy, dWidth, dHeight define the destination rectangle in the canvas.
+
+    for (let j = 0; j < dHeight; j++) {
+      for (let i = 0; i < dWidth; i++) {
+        // Find the corresponding pixel in the source image
+        const sourceX = Math.floor(sx + (i / dWidth) * sWidth);
+        const sourceY = Math.floor(sy + (j / dHeight) * sHeight);
+
+        const destX = dx + i;
+        const destY = dy + j;
+
+        if (destX >= 0 && destX < this.width && destY >= 0 && destY < this.height) {
+          const sourceIndex = (sourceY * sourceWidth + sourceX) * 4;
+          const destIndex = (destY * destWidth + destX) * 4;
+
+          // Copy RGBA values
+          destData[destIndex]     = sourceData[sourceIndex];
+          destData[destIndex + 1] = sourceData[sourceIndex + 1];
+          destData[destIndex + 2] = sourceData[sourceIndex + 2];
+          destData[destIndex + 3] = sourceData[sourceIndex + 3];
+        }
+      }
+    }
   }
 }
