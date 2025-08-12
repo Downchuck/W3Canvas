@@ -391,7 +391,7 @@ function load_jpeg_image(j, req_comp) {
     if (!decode_jpeg_image(j)) return null;
 
     const s = j.s;
-    req_comp = req_comp ? req_comp : s.img_n >= 3 ? 3 : 1;
+    req_comp = req_comp ? req_comp : s.img_n >= 3 ? 4 : 1;
     if (req_comp < 1 || req_comp > 4) return err("bad req_comp", "Internal error");
 
     const out = new Uint8Array(s.img_x * s.img_y * req_comp);
