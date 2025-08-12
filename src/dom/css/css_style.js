@@ -106,6 +106,10 @@ export class ElementStyle {
         return null;
     }
 
+    getFontFamily() {
+        return this.style.getProperty('font-family');
+    }
+
     setProperty(name, value, priority) {
         this.style.setProperty(name, value, priority);
     }
