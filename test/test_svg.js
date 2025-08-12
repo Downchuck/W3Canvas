@@ -35,6 +35,7 @@ test('Render SVG text on canvas', () => {
     text.setText('Hello');
     text.setFill('green');
     text.style.setProperty('font-size', '20px');
+    text.style.setProperty('font-family', 'Arial');
 
     canvas.appendChild(text);
     text.repaint(canvas.getContext('2d'));

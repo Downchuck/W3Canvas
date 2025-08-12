@@ -2,6 +2,13 @@ import { bresenham } from '../algorithms/bresenham.js';
 import { drawArc } from '../algorithms/arc.js';
 import { drawBezier } from '../algorithms/bezier.js';
 import { CanvasGradient } from './CanvasGradient.js';
+import fs from 'fs';
+import {
+    FontInfo, InitFont, FindGlyphIndex, GetGlyphShape, GetCodepointHMetrics,
+    GetCodepointKernAdvance, ScaleForPixelHeight, GetFontVMetrics,
+    STBTT_vmove, STBTT_vline, STBTT_vcurve
+} from '../../stb-truetype/index.js';
+
 
 export class CanvasRenderingContext2D {
   constructor(width, height) {
@@ -18,9 +25,14 @@ export class CanvasRenderingContext2D {
     this.font = '10px sans-serif';
     this.textAlign = 'start';
     this.stateStack = [];
-    this.stateStack = [];
     this.textBaseline = 'alphabetic';
     this.path = [];
+
+    // Load font
+    this.fontInfo = new FontInfo();
+    const fontBuffer = fs.readFileSync('fonts/DejaVuSans.ttf');
+    const fontData = new Uint8Array(fontBuffer);
+    InitFont(this.fontInfo, fontData);
   }
 
   save() {
@@ -52,58 +64,109 @@ export class CanvasRenderingContext2D {
     // TODO: Implement transformations
   }
 
-  _getOffscreenContext() {
-    if (!this._offscreenCanvas) {
-      this._offscreenCanvas = document.createElement('canvas');
-      this._offscreenContext = this._offscreenCanvas.getContext('2d');
-    }
-    return this._offscreenContext;
+  _parseFont() {
+      const parts = this.font.split(' ');
+      const size = parseFloat(parts[0]);
+      const family = parts.slice(1).join(' ');
+      return { size, family };
   }
 
   fillText(text, x, y) {
-    const offscreenCtx = this._getOffscreenContext();
-    offscreenCtx.font = this.font;
-    const metrics = offscreenCtx.measureText(text);
-    const textWidth = Math.ceil(metrics.width);
-    const textHeight = Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent);
+    const { size } = this._parseFont();
+    const scale = ScaleForPixelHeight(this.fontInfo, size);
+    const { ascent } = GetFontVMetrics(this.fontInfo);
+    let currentX = x;
+    const baseline = y + ascent * scale;
 
-    offscreenCtx.canvas.width = textWidth;
-    offscreenCtx.canvas.height = textHeight;
+    for (let i = 0; i < text.length; i++) {
+        const codepoint = text.charCodeAt(i);
+        const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
+        const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
 
-    offscreenCtx.fillStyle = this.fillStyle;
-    offscreenCtx.font = this.font;
-    offscreenCtx.textAlign = 'left';
-    offscreenCtx.textBaseline = 'top';
-    offscreenCtx.fillText(text, 0, 0);
+        if (vertices) {
+            this.beginPath();
+            for (const v of vertices) {
+                const vx = currentX + v.x * scale;
+                const vy = baseline - v.y * scale;
+                const vcx = currentX + v.cx * scale;
+                const vcy = baseline - v.cy * scale;
 
-    const textImageData = offscreenCtx.getImageData(0, 0, textWidth, textHeight);
-    this.putImageData(textImageData, x, y);
+                if (v.type === STBTT_vmove) {
+                    this.moveTo(vx, vy);
+                } else if (v.type === STBTT_vline) {
+                    this.lineTo(vx, vy);
+                } else if (v.type === STBTT_vcurve) {
+                    this.bezierCurveTo(vcx, vcy, vcx, vcy, vx, vy);
+                }
+            }
+            this.fill();
+        }
+
+        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
+        currentX += advanceWidth * scale;
+
+        if (i < text.length - 1) {
+            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
+            currentX += kern * scale;
+        }
+    }
   }
 
   strokeText(text, x, y) {
-    const offscreenCtx = this._getOffscreenContext();
-    offscreenCtx.font = this.font;
-    const metrics = offscreenCtx.measureText(text);
-    const textWidth = Math.ceil(metrics.width);
-    const textHeight = Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent);
+    const { size } = this._parseFont();
+    const scale = ScaleForPixelHeight(this.fontInfo, size);
+    const { ascent } = GetFontVMetrics(this.fontInfo);
+    let currentX = x;
+    const baseline = y + ascent * scale;
 
-    offscreenCtx.canvas.width = textWidth;
-    offscreenCtx.canvas.height = textHeight;
+    for (let i = 0; i < text.length; i++) {
+        const codepoint = text.charCodeAt(i);
+        const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
+        const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
 
-    offscreenCtx.strokeStyle = this.strokeStyle;
-    offscreenCtx.font = this.font;
-    offscreenCtx.textAlign = 'left';
-    offscreenCtx.textBaseline = 'top';
-    offscreenCtx.strokeText(text, 0, 0);
+        if (vertices) {
+            this.beginPath();
+            for (const v of vertices) {
+                const vx = currentX + v.x * scale;
+                const vy = baseline - v.y * scale;
+                const vcx = currentX + v.cx * scale;
+                const vcy = baseline - v.cy * scale;
 
-    const textImageData = offscreenCtx.getImageData(0, 0, textWidth, textHeight);
-    this.putImageData(textImageData, x, y);
+                if (v.type === STBTT_vmove) {
+                    this.moveTo(vx, vy);
+                } else if (v.type === STBTT_vline) {
+                    this.lineTo(vx, vy);
+                } else if (v.type === STBTT_vcurve) {
+                    this.bezierCurveTo(vcx, vcy, vcx, vcy, vx, vy);
+                }
+            }
+            this.stroke();
+        }
+
+        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
+        currentX += advanceWidth * scale;
+
+        if (i < text.length - 1) {
+            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
+            currentX += kern * scale;
+        }
+    }
   }
 
   measureText(text) {
-    const offscreenCtx = this._getOffscreenContext();
-    offscreenCtx.font = this.font;
-    return offscreenCtx.measureText(text);
+    const { size } = this._parseFont();
+    const scale = ScaleForPixelHeight(this.fontInfo, size);
+    let width = 0;
+    for (let i = 0; i < text.length; i++) {
+        const codepoint = text.charCodeAt(i);
+        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
+        width += advanceWidth * scale;
+        if (i < text.length - 1) {
+            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
+            width += kern * scale;
+        }
+    }
+    return { width };
   }
 
   beginPath() {
