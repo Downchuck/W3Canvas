@@ -17,6 +17,8 @@
         <svg:circle id="test_circle" cx="70" cy="70" r="50" fill="rgba(255, 0, 0, 0.5)" stroke="red" stroke-width="2"></svg:circle>
         <svg:ellipse id="test_ellipse" cx="220" cy="120" rx="80" ry="40" fill="rgba(0, 0, 255, 0.5)" stroke="blue" stroke-width="2"></svg:ellipse>
         <svg:line id="test_line" x1="50" y1="200" x2="350" y2="220" stroke="green" stroke-width="4"></svg:line>
+        <svg:rect id="test_rect" x="150" y="20" width="100" height="50" fill="orange" stroke="black" stroke-width="5"></svg:rect>
+        <svg:image id="test_image" href="examples/marilyn_th.jpg" x="260" y="250" width="100" height="120"></svg:image>
     </div>
 
     <script type="module">
@@ -28,6 +30,7 @@
         import { Ellipse } from '/src/dom/svg/dom_svg_ellipse.js';
         import { Line } from '/src/dom/svg/dom_svg_line.js';
         import { Rectangle } from '/src/dom/svg/dom_svg_rect.js';
+        import { Image as SVGImage } from '/src/dom/svg/dom_svg_image.js';
 
         function main() {
             const canvasEl = document.getElementById('canvas');
@@ -51,6 +54,7 @@
             circle.setR(50);
             circle.setFill('rgba(255, 0, 0, 0.5)');
             circle.setStroke('red');
+            circle.setStrokeWidth(2);
             circle.getParent = () => mockCanvas; // Link to canvas
             circle.repaint();
             console.log("Rendered Circle");
@@ -63,6 +67,7 @@
             ellipse.setRy(40);
             ellipse.setFill('rgba(0, 0, 255, 0.5)');
             ellipse.setStroke('blue');
+            ellipse.setStrokeWidth(2);
             ellipse.getParent = () => mockCanvas;
             ellipse.repaint();
             console.log("Rendered Ellipse");
@@ -74,12 +79,35 @@
             line.setX2(350);
             line.setY2(220);
             line.setStroke('green');
-            // Note: stroke-width is not implemented in our SVGElement, so this will be a thin line.
+            line.setStrokeWidth(4);
             line.getParent = () => mockCanvas;
             line.repaint();
             console.log("Rendered Line");
 
-            // 4. Test Linear Gradient on a Rectangle
+            // 4. Test SVG Rectangle
+            const rect = new Rectangle();
+            rect.setX(150);
+            rect.setY(20);
+            rect.setWidth(100);
+            rect.setHeight(50);
+            rect.setFill('orange');
+            rect.setStroke('black');
+            rect.setStrokeWidth(5);
+            rect.getParent = () => mockCanvas;
+            rect.repaint();
+            console.log("Rendered Rectangle");
+
+            // 5. Test SVG Image
+            const svgImage = new SVGImage();
+            svgImage.setX(260);
+            svgImage.setY(250);
+            svgImage.setWidth(100);
+            svgImage.setHeight(120);
+            svgImage.getParent = () => mockCanvas;
+            svgImage.setHref('examples/marilyn_th.jpg'); // This will trigger async load and repaint
+            console.log("Rendered SVG Image (async)");
+
+            // 6. Test Linear Gradient on a Rectangle
             // We use the canvas API directly to test the gradient functionality in the context.
             console.log("Rendering gradient rectangle...");
             const grad = ctx.createLinearGradient(50, 250, 250, 350);

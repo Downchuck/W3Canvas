@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { loadImageFromMemory, getImageInfoFromMemory } = require('../stb-image.js');
+const { loadImageFromMemory, getImageInfoFromMemory } = require('../src/stb-image/index.js');
 
 function assert(condition, message) {
     if (!condition) {

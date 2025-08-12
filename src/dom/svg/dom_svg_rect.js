@@ -56,6 +56,7 @@ export class Rectangle extends SVGRectElement {
 		const ry = this.getRy() || 0;
 		const fill = this.getFill();
 		const stroke = this.getStroke();
+		const strokeWidth = this.getStrokeWidth();
 
 		this.ctx.beginPath();
 		this.rectPainter(x, y, w, h, rx, ry);
@@ -67,6 +68,7 @@ export class Rectangle extends SVGRectElement {
 		}
 
 		if (stroke) {
+			this.ctx.lineWidth = strokeWidth;
 			this.ctx.strokeStyle = stroke;
 			this.ctx.stroke();
 		}

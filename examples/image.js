@@ -1,2 +1,2 @@
-import { setupImageTest } from '../style/image_main.js';
+import { setupImageTest } from '/src/legacy/style/image_main.js';
 setupImageTest();

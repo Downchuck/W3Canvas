@@ -48,6 +48,7 @@ export class Ellipse extends SVGEllipseElement {
 		const ry = this.getRy() || 0;
 		const fill = this.getFill();
 		const stroke = this.getStroke();
+		const strokeWidth = this.getStrokeWidth();
 
 		this.ctx.beginPath();
 		// The ellipse method signature is: ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle)
@@ -59,6 +60,7 @@ export class Ellipse extends SVGEllipseElement {
 		}
 
 		if (stroke) {
+			this.ctx.lineWidth = strokeWidth;
 			this.ctx.strokeStyle = stroke;
 			this.ctx.stroke();
 		}
