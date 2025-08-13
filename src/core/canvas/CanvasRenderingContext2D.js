@@ -27,6 +27,8 @@ export class CanvasRenderingContext2D {
     this.stateStack = [];
     this.textBaseline = 'alphabetic';
     this.path = [];
+    this.clippingPath = null;
+    this.clippingPathAsVertices = null;
 
     // Load font
     this.fontInfo = new FontInfo();
@@ -179,6 +181,56 @@ export class CanvasRenderingContext2D {
     }
   }
 
+  clip() {
+    this.clippingPath = [...this.path];
+
+    // Convert path to vertices for _isPointInPath
+    const vertices = [];
+    let currentX = 0;
+    let currentY = 0;
+
+    for (const command of this.clippingPath) {
+      switch (command.type) {
+        case 'move':
+          currentX = command.x;
+          currentY = command.y;
+          vertices.push({ x: currentX, y: currentY });
+          break;
+        case 'line':
+          currentX = command.x;
+          currentY = command.y;
+          vertices.push({ x: currentX, y: currentY });
+          break;
+        case 'bezier': {
+          getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, (point) => {
+            vertices.push(point);
+          });
+          currentX = command.x;
+          currentY = command.y;
+          break;
+        }
+        case 'close':
+          if (vertices.length > 0) {
+            vertices.push({ x: vertices[0].x, y: vertices[0].y });
+          }
+          break;
+        case 'arc': {
+          const steps = 100;
+          for (let i = 0; i <= steps; i++) {
+              const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
+              const x = command.x + command.radius * Math.cos(angle);
+              const y = command.y + command.radius * Math.sin(angle);
+              vertices.push({ x, y });
+          }
+          currentX = command.x + command.radius * Math.cos(command.endAngle);
+          currentY = command.y + command.radius * Math.sin(command.endAngle);
+          break;
+        }
+      }
+    }
+    this.clippingPathAsVertices = vertices;
+  }
+
   moveTo(x, y) {
     this.path.push({ type: 'move', x, y });
   }
@@ -251,95 +303,144 @@ export class CanvasRenderingContext2D {
     if (this.path.length === 0) {
       return;
     }
+    this._scanlineFill();
+  }
 
-    // This is a very simple polygon fill algorithm that only works for convex polygons.
-    // It finds the bounding box of the polygon and then checks for each pixel
-    // if it is inside the polygon. This is not efficient, but it is simple to implement.
-    // A better implementation would use a scanline algorithm.
-
-    const vertices = [];
+  _scanlineFill() {
+    const edges = [];
     let currentX = 0;
     let currentY = 0;
+    let startX = 0;
+    let startY = 0;
+
+    const addEdge = (x1, y1, x2, y2) => {
+        // Ignore horizontal edges
+        if (y1 === y2) return;
+        const y_min = Math.min(y1, y2);
+        const y_max = Math.max(y1, y2);
+        const x = y1 < y2 ? x1 : x2;
+        const slope_inv = (x2 - x1) / (y2 - y1);
+        edges.push({ y_min, y_max, x, slope_inv });
+    };
 
     for (const command of this.path) {
-      switch (command.type) {
-        case 'move':
-          currentX = command.x;
-          currentY = command.y;
-          vertices.push({ x: currentX, y: currentY });
-          break;
-        case 'line':
-          currentX = command.x;
-          currentY = command.y;
-          vertices.push({ x: currentX, y: currentY });
-          break;
-        case 'bezier': {
-          getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, (point) => {
-            vertices.push(point);
-          });
-          currentX = command.x;
-          currentY = command.y;
-          break;
+        switch (command.type) {
+            case 'move':
+                currentX = command.x;
+                currentY = command.y;
+                startX = command.x;
+                startY = command.y;
+                break;
+            case 'line':
+                addEdge(currentX, currentY, command.x, command.y);
+                currentX = command.x;
+                currentY = command.y;
+                break;
+            case 'bezier': {
+                const fromX = currentX;
+                const fromY = currentY;
+                getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, (point) => {
+                    addEdge(currentX, currentY, point.x, point.y);
+                    currentX = point.x;
+                    currentY = point.y;
+                });
+                break;
+            }
+            case 'close':
+                addEdge(currentX, currentY, startX, startY);
+                currentX = startX;
+                currentY = startY;
+                break;
+            case 'arc': { // Arcs need to be approximated by lines
+                const steps = 100;
+                for (let i = 0; i < steps; i++) {
+                    const angle1 = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
+                    const x1 = command.x + command.radius * Math.cos(angle1);
+                    const y1 = command.y + command.radius * Math.sin(angle1);
+                    const angle2 = command.startAngle + (command.endAngle - command.startAngle) * ((i + 1) / steps);
+                    const x2 = command.x + command.radius * Math.cos(angle2);
+                    const y2 = command.y + command.radius * Math.sin(angle2);
+                    addEdge(x1, y1, x2, y2);
+                }
+                currentX = command.x + command.radius * Math.cos(command.endAngle);
+                currentY = command.y + command.radius * Math.sin(command.endAngle);
+                break;
+            }
         }
-        case 'close':
-          if (vertices.length > 0) {
-            vertices.push({ x: vertices[0].x, y: vertices[0].y });
-          }
-          break;
-        case 'arc': {
-          const steps = 100;
-          for (let i = 0; i <= steps; i++) {
-              const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
-              const x = command.x + command.radius * Math.cos(angle);
-              const y = command.y + command.radius * Math.sin(angle);
-              vertices.push({ x, y });
-          }
-          currentX = command.x + command.radius * Math.cos(command.endAngle);
-          currentY = command.y + command.radius * Math.sin(command.endAngle);
-          break;
-        }
-      }
     }
 
-    if (vertices.length < 3) {
-      return;
+    // If the path is not closed, add a closing edge
+    if (this.path.length > 0) {
+        const lastCommand = this.path[this.path.length - 1];
+        if (lastCommand.type !== 'close') {
+            if (currentX !== startX || currentY !== startY) {
+                addEdge(currentX, currentY, startX, startY);
+            }
+        }
+    }
+
+
+    if (edges.length === 0) {
+        return;
     }
 
     const { data, width: canvasWidth } = this.imageData;
+    let color;
+    const isGradient = this.fillStyle instanceof CanvasGradient;
 
-    let minX = Infinity;
     let minY = Infinity;
-    let maxX = -Infinity;
     let maxY = -Infinity;
-
-    for (const vertex of vertices) {
-      minX = Math.min(minX, vertex.x);
-      minY = Math.min(minY, vertex.y);
-      maxX = Math.max(maxX, vertex.x);
-      maxY = Math.max(maxY, vertex.y);
+    for (const edge of edges) {
+        minY = Math.min(minY, edge.y_min);
+        maxY = Math.max(maxY, edge.y_max);
     }
-
-    minX = Math.max(0, Math.floor(minX));
     minY = Math.max(0, Math.floor(minY));
-    maxX = Math.min(this.width, Math.ceil(maxX));
     maxY = Math.min(this.height, Math.ceil(maxY));
 
-    for (let j = minY; j < maxY; j++) {
-      for (let i = minX; i < maxX; i++) {
-        if (this._isPointInPath(i, j, vertices)) {
-          const index = (j * canvasWidth + i) * 4;
-          let color;
-          if (this.fillStyle instanceof CanvasGradient) {
-              color = this._getColorFromGradientAtPoint(i, j, this.fillStyle);
-          } else {
-              color = this._parseColor(this.fillStyle);
-          }
-          data[index] = color.r;
-          data[index + 1] = color.g;
-          data[index + 2] = color.b;
-          data[index + 3] = color.a;
+    const activeEdges = [];
+
+    for (let y = minY; y < maxY; y++) {
+        for (const edge of edges) {
+            if (Math.round(edge.y_min) === y) {
+                activeEdges.push({ ...edge });
+            }
         }
-      }
+
+        for (let i = activeEdges.length - 1; i >= 0; i--) {
+            if (Math.round(activeEdges[i].y_max) === y) {
+                activeEdges.splice(i, 1);
+            }
+        }
+
+        activeEdges.sort((a, b) => a.x - b.x);
+
+        for (let i = 0; i < activeEdges.length; i += 2) {
+            if (i + 1 < activeEdges.length) {
+                const x_start = Math.round(activeEdges[i].x);
+                const x_end = Math.round(activeEdges[i + 1].x);
+                for (let x = x_start; x < x_end; x++) {
+                    if (x >= 0 && x < this.width) {
+                        if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
+                            continue;
+                        }
+                        const index = (y * canvasWidth + x) * 4;
+                        if (isGradient) {
+                            color = this._getColorFromGradientAtPoint(x, y, this.fillStyle);
+                        } else {
+                            color = this._parseColor(this.fillStyle);
+                        }
+                        data[index] = color.r;
+                        data[index + 1] = color.g;
+                        data[index + 2] = color.b;
+                        data[index + 3] = color.a;
+                    }
+                }
+            }
+        }
+
+        for (const edge of activeEdges) {
+            edge.x += edge.slope_inv;
+        }
     }
   }
 
@@ -520,6 +621,9 @@ export class CanvasRenderingContext2D {
       const yEnd = Math.min(this.height, y + height);
       for (let j = yStart; j < yEnd; j++) {
         for (let i = xStart; i < xEnd; i++) {
+        if (this.clippingPath && !this._isPointInPath(i, j, this.clippingPathAsVertices)) {
+            continue;
+        }
           const color = this._getColorFromGradientAtPoint(i, j, this.fillStyle);
           const index = (j * canvasWidth + i) * 4;
           data[index] = color.r;
@@ -541,6 +645,9 @@ export class CanvasRenderingContext2D {
 
     for (let j = yStart; j < yEnd; j++) {
       for (let i = xStart; i < xEnd; i++) {
+        if (this.clippingPath && !this._isPointInPath(i, j, this.clippingPathAsVertices)) {
+            continue;
+        }
         const index = (j * canvasWidth + i) * 4;
         data[index] = color.r;
         data[index + 1] = color.g;
@@ -583,7 +690,22 @@ export class CanvasRenderingContext2D {
 
   _drawLine(x0, y0, x1, y1) {
     const color = this._parseColor(this.strokeStyle);
-    bresenham(this.imageData, color, x0, y0, x1, y1);
+    if (this.clippingPath) {
+        const plot = (x, y, c) => {
+            if (this._isPointInPath(x, y, this.clippingPathAsVertices)) {
+                if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                    const index = (y * this.width + x) * 4;
+                    this.imageData.data[index] = c.r;
+                    this.imageData.data[index + 1] = c.g;
+                    this.imageData.data[index + 2] = c.b;
+                    this.imageData.data[index + 3] = c.a;
+                }
+            }
+        };
+        bresenham(this.imageData, color, x0, y0, x1, y1, plot);
+    } else {
+        bresenham(this.imageData, color, x0, y0, x1, y1);
+    }
   }
 
   arc(x, y, radius, startAngle, endAngle, anticlockwise = false) {
