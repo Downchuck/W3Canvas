@@ -1,18 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { JSDOM } from 'jsdom';
-import { CanvasRenderingContext2D } from '../src/core/canvas/CanvasRenderingContext2D.js';
+import { currentDocument } from '../src/dom/html/dom_html_doc.js';
+import '../src/dom/html/dom_html_canvas.js';
 import { HTMLDivElement, HTMLSpanElement } from '../src/dom/html/dom_html_basic.js';
 import { TextNode } from '../src/dom/html/dom_core.js';
 
 test('Layout engine creates line boxes for a div with multiple spans', () => {
-    const dom = new JSDOM();
-    const document = dom.window.document;
+    const document = currentDocument;
 
-    const ctx = new CanvasRenderingContext2D(200, 100);
-    ctx.setDocument(document);
+    const canvas = new HTMLCanvasElement();
+    canvas.setWidth(200);
+    canvas.setHeight(100);
+    const ctx = canvas.getContext('2d');
 
     const div = new HTMLDivElement();
+    canvas.appendChild(div);
 
     const span1 = new HTMLSpanElement();
     span1.id = 'span1';
@@ -40,13 +42,15 @@ test('Layout engine creates line boxes for a div with multiple spans', () => {
 });
 
 test('Layout engine handles text-align: center', () => {
-    const dom = new JSDOM();
-    const document = dom.window.document;
+    const document = currentDocument;
 
-    const ctx = new CanvasRenderingContext2D(200, 100);
-    ctx.setDocument(document);
+    const canvas = new HTMLCanvasElement();
+    canvas.setWidth(200);
+    canvas.setHeight(100);
+    const ctx = canvas.getContext('2d');
 
     const div = new HTMLDivElement();
+    canvas.appendChild(div);
     div.style.setProperty('text-align', 'center');
 
     const span = new HTMLSpanElement();

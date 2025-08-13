@@ -27,36 +27,42 @@ export function drawBezier(ctx, color, x0, y0, x1, y1, x2, y2, x3, y3) {
     }
 }
 
-// New adaptive bezier curve generation
+// New adaptive bezier curve generation (iterative implementation)
 export function getBezierPoints(x0, y0, x1, y1, x2, y2, x3, y3, callback) {
     const flatness = 0.5; // a value to control the smoothness of the curve, lower is smoother
+    const stack = [];
 
-    function subdivide(x0, y0, x1, y1, x2, y2, x3, y3) {
-        // Calculate the distance between the control points and the line connecting the start and end points
-        const dx = x3 - x0;
-        const dy = y3 - y0;
+    stack.push([x0, y0, x1, y1, x2, y2, x3, y3]);
+
+    while (stack.length > 0) {
+        const curve = stack.pop();
+        const cur_x0 = curve[0], cur_y0 = curve[1], cur_x1 = curve[2], cur_y1 = curve[3],
+              cur_x2 = curve[4], cur_y2 = curve[5], cur_x3 = curve[6], cur_y3 = curve[7];
+
+        const dx = cur_x3 - cur_x0;
+        const dy = cur_y3 - cur_y0;
 
         // A quick check for collinearity
         if (dx === 0 && dy === 0) {
-            callback({x: x3, y: y3});
-            return;
+            callback({x: cur_x3, y: cur_y3});
+            continue;
         }
 
-        const d1 = Math.abs((x1 - x3) * dy - (y1 - y3) * dx);
-        const d2 = Math.abs((x2 - x3) * dy - (y2 - y3) * dx);
+        const d1 = Math.abs((cur_x1 - cur_x3) * dy - (cur_y1 - cur_y3) * dx);
+        const d2 = Math.abs((cur_x2 - cur_x3) * dy - (cur_y2 - cur_y3) * dx);
 
         if ((d1 + d2) * (d1 + d2) < flatness * (dx * dx + dy * dy)) {
-            callback({ x: x3, y: y3 });
-            return;
+            callback({ x: cur_x3, y: cur_y3 });
+            continue;
         }
 
         // Subdivide the curve
-        const x01 = (x0 + x1) / 2;
-        const y01 = (y0 + y1) / 2;
-        const x12 = (x1 + x2) / 2;
-        const y12 = (y1 + y2) / 2;
-        const x23 = (x2 + x3) / 2;
-        const y23 = (y2 + y3) / 2;
+        const x01 = (cur_x0 + cur_x1) / 2;
+        const y01 = (cur_y0 + cur_y1) / 2;
+        const x12 = (cur_x1 + cur_x2) / 2;
+        const y12 = (cur_y1 + cur_y2) / 2;
+        const x23 = (cur_x2 + cur_x3) / 2;
+        const y23 = (cur_y2 + cur_y3) / 2;
         const x012 = (x01 + x12) / 2;
         const y012 = (y01 + y12) / 2;
         const x123 = (x12 + x23) / 2;
@@ -64,9 +70,9 @@ export function getBezierPoints(x0, y0, x1, y1, x2, y2, x3, y3, callback) {
         const x0123 = (x012 + x123) / 2;
         const y0123 = (y012 + y123) / 2;
 
-        subdivide(x0, y0, x01, y01, x012, y012, x0123, y0123);
-        subdivide(x0123, y0123, x123, y123, x23, y23, x3, y3);
+        // Push the second half of the curve first
+        stack.push([x0123, y0123, x123, y123, x23, y23, cur_x3, cur_y3]);
+        // Push the first half of the curve
+        stack.push([cur_x0, cur_y0, x01, y01, x012, y012, x0123, y0123]);
     }
-
-    subdivide(x0, y0, x1, y1, x2, y2, x3, y3);
 }
