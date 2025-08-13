@@ -11,7 +11,8 @@ export class SVGPathElement extends SVGElement {
     setD(d) { this.d = d; }
     getD() { return this.d; }
 
-    repaint() {
+    repaint(ctx) {
+        this.ctx = ctx || this.ctx;
         if (!this.ctx) {
             let parent = this.getParent();
             while(parent && parent.tagName !== 'CANVAS') {

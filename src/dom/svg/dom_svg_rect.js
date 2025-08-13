@@ -32,7 +32,8 @@ export class Rectangle extends SVGRectElement {
 		this.ctx = null;
 	}
 
-	repaint() {
+	repaint(ctx) {
+		this.ctx = ctx || this.ctx;
 		if (!this.ctx) {
 			let parent = this.getParent();
 			while(parent && parent.tagName !== 'CANVAS') {
