@@ -223,12 +223,11 @@ export class CanvasRenderingContext2D {
           currentY = command.y;
           break;
         case 'bezier': {
-          const points = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y);
-          for (const point of points) {
+          getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, (point) => {
             this._drawLine(currentX, currentY, point.x, point.y);
             currentX = point.x;
             currentY = point.y;
-          }
+          });
           break;
         }
         case 'close':
@@ -275,10 +274,9 @@ export class CanvasRenderingContext2D {
           vertices.push({ x: currentX, y: currentY });
           break;
         case 'bezier': {
-          const points = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y);
-          for (const point of points) {
+          getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, (point) => {
             vertices.push(point);
-          }
+          });
           currentX = command.x;
           currentY = command.y;
           break;
