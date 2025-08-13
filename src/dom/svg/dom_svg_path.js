@@ -39,6 +39,9 @@ export class SVGPathElement extends SVGElement {
                 case 'L':
                     this.ctx.lineTo(command.x, command.y);
                     break;
+                case 'C':
+                    this.ctx.bezierCurveTo(command.x1, command.y1, command.x2, command.y2, command.x, command.y);
+                    break;
                 case 'Z':
                     this.ctx.closePath();
                     break;

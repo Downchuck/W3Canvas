@@ -96,6 +96,7 @@ import { ElementStyle, CssStyle } from '../css/css_style.js';
 import { ContentFragment } from './textbox/basic_model.js';
 import { LineWrapper } from '../css/text_wrap.js';
 import { BoxModel } from '../css/box_model.js';
+import { BoxModelPainter } from '../css/box_paint.js';
 
 export class Element extends Node {
   tagName;
@@ -139,14 +140,36 @@ export class Element extends Node {
       if (fragments.length > 0) {
         const wrapper = new LineWrapper();
         const contentBox = this.boxModel.getContentBox();
-        this.lineBoxes = wrapper.createLineBoxes(fragments, ctx, 12, contentBox.width, 200, 0, 0, false);
+        const padding = this.boxModel.padding;
+        this.lineBoxes = wrapper.createLineBoxes(fragments, ctx, 12, contentBox.width, 200, padding.left, padding.top, false);
+
+        if (this.lineBoxes.length > 0) {
+            const textAlign = this.style.getTextAlign();
+            for (const line of this.lineBoxes) {
+                line.align(textAlign);
+            }
+
+            const lastLine = this.lineBoxes[this.lineBoxes.length - 1];
+            this.boxModel.contentArea.height = lastLine.getBottom();
+        }
       }
     }
   }
 
   repaint(ctx) {
     this.doLayout(ctx);
-    // Painting is deferred until font rendering is implemented.
+
+    const painter = new BoxModelPainter();
+    painter.paintBox(ctx, this.boxModel, this.style);
+
+    if (this.lineBoxes) {
+        for (const line of this.lineBoxes) {
+            for (const box of line.getBoxes()) {
+                ctx.font = box.contentFragment.style;
+                ctx.fillText(box.contentFragment.content, box.x, box.y + line.height);
+            }
+        }
+    }
   }
 }
 

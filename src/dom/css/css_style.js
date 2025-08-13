@@ -59,15 +59,19 @@ export class CSSStyleDeclaration {
 export class CssStyle {
 	properties = [];
     display = 'inline';
+    textAlign = 'left';
 
 	getProperty(prop) {
         if (prop === 'display') return this.display;
+        if (prop === 'text-align') return this.textAlign;
 		return this.properties[prop];
 	}
 
 	setProperty(prop, val) {
         if (prop === 'display') {
             this.display = val;
+        } else if (prop === 'text-align') {
+            this.textAlign = val;
         } else {
 		    this.properties[prop] = val;
         }
@@ -123,6 +127,10 @@ export class ElementStyle {
 
     getDisplay() {
         return this.style.getProperty('display');
+    }
+
+    getTextAlign() {
+        return this.style.getProperty('text-align');
     }
 
 	getState() {
