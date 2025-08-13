@@ -27,8 +27,7 @@ export function drawBezier(ctx, color, x0, y0, x1, y1, x2, y2, x3, y3) {
     }
 }
 
-export function getBezierPoints(x0, y0, x1, y1, x2, y2, x3, y3) {
-    const points = [];
+export function getBezierPoints(x0, y0, x1, y1, x2, y2, x3, y3, callback) {
     const steps = 20; // number of line segments to approximate the curve
 
     for (let i = 1; i <= steps; i++) {
@@ -41,7 +40,6 @@ export function getBezierPoints(x0, y0, x1, y1, x2, y2, x3, y3) {
 
         const x = (mt3 * x0) + (3 * mt2 * t * x1) + (3 * mt * t2 * x2) + (t3 * x3);
         const y = (mt3 * y0) + (3 * mt2 * t * y1) + (3 * mt * t2 * y2) + (t3 * y3);
-        points.push({ x, y });
+        callback({ x, y });
     }
-    return points;
 }
