@@ -1,6 +1,6 @@
 import { bresenham } from '../algorithms/bresenham.js';
 import { drawArc } from '../algorithms/arc.js';
-import { drawBezier } from '../algorithms/bezier.js';
+import { getBezierPoints } from '../algorithms/bezier.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import fs from 'fs';
 import {
@@ -223,11 +223,12 @@ export class CanvasRenderingContext2D {
           currentY = command.y;
           break;
         case 'bezier': {
-          // The drawBezier function uses the context, but we need to pass the color
-          const color = this._parseColor(this.strokeStyle);
-          drawBezier(this, color, currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y);
-          currentX = command.x;
-          currentY = command.y;
+          const points = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y);
+          for (const point of points) {
+            this._drawLine(currentX, currentY, point.x, point.y);
+            currentX = point.x;
+            currentY = point.y;
+          }
           break;
         }
         case 'close':
@@ -274,22 +275,9 @@ export class CanvasRenderingContext2D {
           vertices.push({ x: currentX, y: currentY });
           break;
         case 'bezier': {
-          // For bezier curves, we need to approximate them with line segments.
-          // This is a simplified approach. A real implementation would be more complex.
-          const steps = 100;
-          let prevX = currentX;
-          let prevY = currentY;
-          for (let i = 1; i <= steps; i++) {
-            const t = i / steps;
-            const t2 = t * t;
-            const t3 = t2 * t;
-            const mt = 1 - t;
-            const mt2 = mt * mt;
-            const mt3 = mt2 * mt;
-
-            const x = (mt3 * prevX) + (3 * mt2 * t * command.cp1x) + (3 * mt * t2 * command.cp2x) + (t3 * command.x);
-            const y = (mt3 * prevY) + (3 * mt2 * t * command.cp1y) + (3 * mt * t2 * command.cp2y) + (t3 * command.y);
-            vertices.push({ x, y });
+          const points = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y);
+          for (const point of points) {
+            vertices.push(point);
           }
           currentX = command.x;
           currentY = command.y;

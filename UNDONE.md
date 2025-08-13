@@ -1,4 +1,14 @@
 # Work in Progress
 
-*   **Implement CSS Box Model and SVG DOM:** Continue filling out the implementation of the CSS box model and the SVG implementation.
-*   **Font Rendering:** The font rendering system has been updated to use a JavaScript port of `stb_truetype`, allowing the use of TTF fonts. The system currently loads a single hardcoded font (`DejaVuSans.ttf`). Future work could involve implementing the `@font-face` rule to allow loading of custom fonts.
+*   **Implement CSS Box Model and SVG DOM:**
+    *   **CSS Box Model:**
+        *   Enabled and fixed layout tests.
+        *   Integrated the box model into the layout, accounting for padding.
+        *   Implemented `text-align`.
+        *   Implemented basic painting of background, border, and text.
+    *   **SVG DOM:**
+        *   Expanded SVG path parser to handle `H`, `h`, `V`, `v`, `C`, and `c` commands.
+        *   **IN PROGRESS:** Fixing a memory leak in the Bezier curve rendering. The current implementation is inefficient and causes an out-of-memory error when rendering complex paths.
+
+*   **Font Rendering:**
+    *   **TODO:** Implement the `@font-face` rule to allow loading of custom fonts.

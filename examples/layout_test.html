@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Layout Test</title>
+</head>
+<body>
+    <canvas id="canvas" width="400" height="300"></canvas>
+    <script type="module">
+        import { CanvasRenderingContext2D } from '../src/core/canvas/CanvasRenderingContext2D.js';
+        import { HTMLDivElement } from '../src/dom/html/dom_html_basic.js';
+        import { TextNode } from '../src/dom/html/dom_core.js';
+
+        const canvas = document.getElementById('canvas');
+        const ctx = new CanvasRenderingContext2D(canvas.width, canvas.height);
+        ctx.setDocument(document);
+
+        const div = new HTMLDivElement();
+        div.style.setProperty('display', 'block');
+        div.style.setProperty('text-align', 'center');
+        div.boxModel.setOffset(10, 10);
+        div.boxModel.setSize(380, 280);
+        div.boxModel.setPadding(10);
+        div.boxModel.setBorder(5);
+        div.boxModel.setMargin(5);
+        div.style.setBackgroundColor('lightblue');
+        div.style.setBorderColor('darkblue');
+
+        const text = new TextNode('Hello, world! This is a test of the layout and rendering engine.');
+        div.appendChild(text);
+
+        div.repaint(ctx);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const realCtx = canvas.getContext('2d');
+        realCtx.putImageData(imageData, 0, 0);
+    </script>
+</body>
+</html>

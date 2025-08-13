@@ -88,6 +88,21 @@ export class LineBox {
 	getBoxes() {
 		return this.boxes;
 	}
+
+    align(textAlign) {
+        const remainingSpace = this.maxWidth - this.width;
+        if (remainingSpace > 0) {
+            if (textAlign === 'right') {
+                for (const box of this.boxes) {
+                    box.x += remainingSpace;
+                }
+            } else if (textAlign === 'center') {
+                for (const box of this.boxes) {
+                    box.x += remainingSpace / 2;
+                }
+            }
+        }
+    }
 }
 
 export class LineWrapper {
@@ -102,14 +117,14 @@ export class LineWrapper {
 		return -1;
 	}
 
-	createLineBoxes(fragments, ctx, lineHeight, lineMaxWidth, frameHeight, baseLineExtraSpacing, offset, nobr) {
+	createLineBoxes(fragments, ctx, lineHeight, lineMaxWidth, frameHeight, offsetX, offsetY, nobr) {
 		const context = ctx;
 		const lines = [];
-		let linebox = new LineBox(ctx, 0, 0, lineMaxWidth, lineHeight);
+		let linebox = new LineBox(ctx, offsetX, offsetY, lineMaxWidth, lineHeight);
 		lines.push(linebox);
 		const saveFont = ctx.font;
 		const getWidth = (str) => context.measureText(str).width;
-		let linePos = 0;
+		let linePos = offsetY;
 
 		for (let i = 0; i < fragments.length; i++) {
 			if (linebox.canAdd(fragments[i])) {
@@ -119,7 +134,7 @@ export class LineWrapper {
 			} else {
 				if (fragments[i].isImage) {
 					linePos = linebox.advance();
-					linebox = new LineBox(ctx, 0, linePos, lineMaxWidth, lineHeight);
+					linebox = new LineBox(ctx, offsetX, linePos, lineMaxWidth, lineHeight);
 					const box = boxModelFactory.createBox();
 					box.contentFragment = fragments[i];
 					linebox.add(box);
@@ -157,7 +172,7 @@ export class LineWrapper {
 							box.contentFragment = newFragment;
 							linebox.add(box);
 							linePos = linebox.advance();
-							linebox = new LineBox(ctx, 0, linePos, lineMaxWidth, lineHeight);
+							linebox = new LineBox(ctx, offsetX, linePos, lineMaxWidth, lineHeight);
 							lines.push(linebox);
 							nextLineStartOffset = wordStart;
 						}
@@ -174,7 +189,7 @@ export class LineWrapper {
 			}
 			if (fragments[i].hasLinefeed()) {
 				linePos = linebox.advance();
-				linebox = new LineBox(ctx, 0, linePos, lineMaxWidth, lineHeight);
+				linebox = new LineBox(ctx, offsetX, linePos, lineMaxWidth, lineHeight);
 				lines.push(linebox);
 			}
 		}
