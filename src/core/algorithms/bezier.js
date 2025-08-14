@@ -39,7 +39,13 @@ export function getBezierPoints(x0, y0, x1, y1, x2, y2, x3, y3, points, pointOff
     stack[stackPointer++] = x2; stack[stackPointer++] = y2;
     stack[stackPointer++] = x3; stack[stackPointer++] = y3;
 
+    let iterations = 0;
     while (stackPointer > 0) {
+        iterations++;
+        if (iterations > 200000) { // safety break
+             console.error("Bezier curve generation took too many iterations.");
+             break;
+        }
         // Pop curve
         const cur_y3 = stack[--stackPointer]; const cur_x3 = stack[--stackPointer];
         const cur_y2 = stack[--stackPointer]; const cur_x2 = stack[--stackPointer];

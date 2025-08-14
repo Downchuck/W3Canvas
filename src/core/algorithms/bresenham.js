@@ -1,4 +1,9 @@
 export function bresenham(imageData, color, x0, y0, x1, y1, plot) {
+    x0 = Math.round(x0);
+    y0 = Math.round(y0);
+    x1 = Math.round(x1);
+    y1 = Math.round(y1);
+
     const data = imageData.data;
     const width = imageData.width;
 
