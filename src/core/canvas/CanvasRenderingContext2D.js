@@ -35,6 +35,9 @@ export class CanvasRenderingContext2D {
     const fontBuffer = fs.readFileSync('fonts/DejaVuSans.ttf');
     const fontData = new Uint8Array(fontBuffer);
     InitFont(this.fontInfo, fontData);
+
+    this.bezierStack = new Float64Array(1000 * 8);
+    this.bezierPoints = new Float64Array(10000 * 2);
   }
 
   save() {
@@ -275,11 +278,12 @@ export class CanvasRenderingContext2D {
           currentY = command.y;
           break;
         case 'bezier': {
-          getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, (point) => {
-            this._drawLine(currentX, currentY, point.x, point.y);
-            currentX = point.x;
-            currentY = point.y;
-          });
+          const numPoints = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+          for (let i = 0; i < numPoints; i++) {
+            this._drawLine(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
+            currentX = this.bezierPoints[i*2];
+            currentY = this.bezierPoints[i*2+1];
+          }
           break;
         }
         case 'close':
@@ -339,11 +343,12 @@ export class CanvasRenderingContext2D {
             case 'bezier': {
                 const fromX = currentX;
                 const fromY = currentY;
-                getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, (point) => {
-                    addEdge(currentX, currentY, point.x, point.y);
-                    currentX = point.x;
-                    currentY = point.y;
-                });
+                const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+                for (let i = 0; i < numPoints; i++) {
+                    addEdge(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
+                    currentX = this.bezierPoints[i*2];
+                    currentY = this.bezierPoints[i*2+1];
+                }
                 break;
             }
             case 'close':
