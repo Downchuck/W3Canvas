@@ -82,7 +82,50 @@ function fillArcWithMidpoint(ctx, color, cx, cy, radius, startAngle, endAngle) {
 }
 
 
-export { drawArc, fillArcWithMidpoint };
+export { drawArc, fillArcWithMidpoint, getArcScanlineIntersections };
+
+function getArcScanlineIntersections(cx, cy, radius, startAngle, endAngle, y) {
+    const intersections = [];
+
+    const dy = y - cy;
+    if (Math.abs(dy) > radius) {
+        return intersections; // Scanline is outside the circle's Y-range
+    }
+
+    // Solve for x: (x - cx)^2 + (y - cy)^2 = radius^2
+    const dx = Math.sqrt(radius * radius - dy * dy);
+    const x1 = cx - dx;
+    const x2 = cx + dx;
+
+    // Normalize angles to be in [0, 2*PI)
+    let sa = startAngle % (2 * Math.PI);
+    if (sa < 0) sa += 2 * Math.PI;
+    let ea = endAngle % (2 * Math.PI);
+    if (ea < 0) ea += 2 * Math.PI;
+
+    const checkAngle = (x) => {
+        let angle = Math.atan2(y - cy, x - cx);
+        if (angle < 0) angle += 2 * Math.PI;
+
+        if (sa < ea) { // Standard case
+            if (angle >= sa && angle <= ea) {
+                intersections.push(x);
+            }
+        } else { // Arc crosses the 0-radian line
+            if (angle >= sa || angle <= ea) {
+                intersections.push(x);
+            }
+        }
+    };
+
+    checkAngle(x1);
+    // Avoid adding the same point twice if dx is zero
+    if (dx > 1e-8) {
+        checkAngle(x2);
+    }
+
+    return intersections;
+}
 
 function drawArc(ctx, color, cx, cy, radius, startAngle, endAngle) {
     // For now, we will just call the new midpoint algorithm.

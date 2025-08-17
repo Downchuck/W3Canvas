@@ -1,5 +1,5 @@
 import { bresenham } from '../algorithms/bresenham.js';
-import { drawArc, fillArcWithMidpoint } from '../algorithms/arc.js';
+import { drawArc, fillArcWithMidpoint, getArcScanlineIntersections } from '../algorithms/arc.js';
 import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algorithms/bezier.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import fs from 'fs';
@@ -370,17 +370,12 @@ export class CanvasRenderingContext2D {
                 currentX = startX;
                 currentY = startY;
                 break;
-            case 'arc': { // Arcs need to be approximated by lines
-                const steps = 100;
-                for (let i = 0; i < steps; i++) {
-                    const angle1 = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
-                    const x1 = command.x + command.radius * Math.cos(angle1);
-                    const y1 = command.y + command.radius * Math.sin(angle1);
-                    const angle2 = command.startAngle + (command.endAngle - command.startAngle) * ((i + 1) / steps);
-                    const x2 = command.x + command.radius * Math.cos(angle2);
-                    const y2 = command.y + command.radius * Math.sin(angle2);
-                    addEdge(x1, y1, x2, y2);
-                }
+            case 'arc': {
+                // TODO: The bounding box for an arc is more complex than this.
+                // This is a simplification that works for full circles.
+                const y_min = command.y - command.radius;
+                const y_max = command.y + command.radius;
+                edges.push({ type: 'arc', ...command, y_min, y_max });
                 currentX = command.x + command.radius * Math.cos(command.endAngle);
                 currentY = command.y + command.radius * Math.sin(command.endAngle);
                 break;
@@ -429,6 +424,11 @@ export class CanvasRenderingContext2D {
                         if (t >= 0 && t <= 1) {
                             intersections.push(getBezierXforT(p0, p1, p2, p3, t));
                         }
+                    }
+                } else if (edge.type === 'arc') {
+                    const arcIntersections = getArcScanlineIntersections(edge.x, edge.y, edge.radius, edge.startAngle, edge.endAngle, y);
+                    for (const x of arcIntersections) {
+                        intersections.push(x);
                     }
                 } else { // It's a line
                     const x = edge.x + (y - edge.y_min) * edge.slope_inv;
