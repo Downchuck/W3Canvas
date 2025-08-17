@@ -1,5 +1,5 @@
 import { bresenham } from '../algorithms/bresenham.js';
-import { drawArc } from '../algorithms/arc.js';
+import { drawArc, fillArcWithMidpoint } from '../algorithms/arc.js';
 import { getBezierPoints } from '../algorithms/bezier.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import fs from 'fs';
@@ -311,6 +311,15 @@ export class CanvasRenderingContext2D {
   }
 
   _scanlineFill() {
+    // Optimization: if the path is a single full circle, use a specialized fill algorithm.
+    if (this.path.length === 1 && this.path[0].type === 'arc' && this.path[0].endAngle - this.path[0].startAngle >= 2 * Math.PI) {
+        const command = this.path[0];
+        const color = this._parseColor(this.fillStyle);
+        fillArcWithMidpoint(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
+        this.path = []; // Clear the path after filling
+        return;
+    }
+
     const edges = [];
     let currentX = 0;
     let currentY = 0;
