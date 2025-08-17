@@ -320,20 +320,15 @@ export class CanvasRenderingContext2D {
         return;
     }
 
-    const edges = [];
+    const allEdges = [];
     let currentX = 0;
     let currentY = 0;
     let startX = 0;
     let startY = 0;
 
-    const addEdge = (x1, y1, x2, y2) => {
-        // Ignore horizontal edges
-        if (y1 === y2) return;
-        const y_min = Math.min(y1, y2);
-        const y_max = Math.max(y1, y2);
-        const x = y1 < y2 ? x1 : x2;
-        const slope_inv = (x2 - x1) / (y2 - y1);
-        edges.push({ y_min, y_max, x, slope_inv });
+    const addEdge = (edge) => {
+        if (edge.y_min === edge.y_max) return; // Ignore horizontal edges
+        allEdges.push(edge);
     };
 
     for (const command of this.path) {
@@ -344,11 +339,16 @@ export class CanvasRenderingContext2D {
                 startX = command.x;
                 startY = command.y;
                 break;
-            case 'line':
-                addEdge(currentX, currentY, command.x, command.y);
+            case 'line': {
+                const y_min = Math.min(currentY, command.y);
+                const y_max = Math.max(currentY, command.y);
+                const x_at_ymin = currentY < command.y ? currentX : command.x;
+                const slope_inv = (command.x - currentX) / (command.y - currentY);
+                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
                 currentX = command.x;
                 currentY = command.y;
                 break;
+            }
             case 'bezier': {
                 const p0 = { x: currentX, y: currentY };
                 const p1 = { x: command.cp1x, y: command.cp1y };
@@ -356,26 +356,24 @@ export class CanvasRenderingContext2D {
                 const p3 = { x: command.x, y: command.y };
                 const y_min = Math.min(p0.y, p1.y, p2.y, p3.y);
                 const y_max = Math.max(p0.y, p1.y, p2.y, p3.y);
-                edges.push({
-                    type: 'bezier',
-                    p0, p1, p2, p3,
-                    y_min, y_max
-                });
+                addEdge({ type: 'bezier', p0, p1, p2, p3, y_min, y_max });
                 currentX = command.x;
                 currentY = command.y;
                 break;
             }
             case 'close':
-                addEdge(currentX, currentY, startX, startY);
+                const y_min = Math.min(currentY, startY);
+                const y_max = Math.max(currentY, startY);
+                const x_at_ymin = currentY < startY ? currentX : startX;
+                const slope_inv = (startX - currentX) / (startY - currentY);
+                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
                 currentX = startX;
                 currentY = startY;
                 break;
             case 'arc': {
-                // TODO: The bounding box for an arc is more complex than this.
-                // This is a simplification that works for full circles.
                 const y_min = command.y - command.radius;
                 const y_max = command.y + command.radius;
-                edges.push({ type: 'arc', ...command, y_min, y_max });
+                addEdge({ type: 'arc', ...command, y_min, y_max });
                 currentX = command.x + command.radius * Math.cos(command.endAngle);
                 currentY = command.y + command.radius * Math.sin(command.endAngle);
                 break;
@@ -383,18 +381,7 @@ export class CanvasRenderingContext2D {
         }
     }
 
-    // If the path is not closed, add a closing edge
-    if (this.path.length > 0) {
-        const lastCommand = this.path[this.path.length - 1];
-        if (lastCommand.type !== 'close') {
-            if (currentX !== startX || currentY !== startY) {
-                addEdge(currentX, currentY, startX, startY);
-            }
-        }
-    }
-
-
-    if (edges.length === 0) {
+    if (allEdges.length === 0) {
         return;
     }
 
@@ -404,7 +391,7 @@ export class CanvasRenderingContext2D {
 
     let minY = Infinity;
     let maxY = -Infinity;
-    for (const edge of edges) {
+    for (const edge of allEdges) {
         minY = Math.min(minY, edge.y_min);
         maxY = Math.max(maxY, edge.y_max);
     }
@@ -414,26 +401,39 @@ export class CanvasRenderingContext2D {
     const activeEdges = [];
 
     for (let y = minY; y < maxY; y++) {
-        const intersections = [];
-        for (const edge of edges) {
-            if (y >= edge.y_min && y < edge.y_max) {
-                if (edge.type === 'bezier') {
-                    const p0 = edge.p0, p1 = edge.p1, p2 = edge.p2, p3 = edge.p3;
-                    const roots = getBezierYIntercepts(p0, p1, p2, p3, y);
-                    for (const t of roots) {
-                        if (t >= 0 && t <= 1) {
-                            intersections.push(getBezierXforT(p0, p1, p2, p3, t));
-                        }
-                    }
-                } else if (edge.type === 'arc') {
-                    const arcIntersections = getArcScanlineIntersections(edge.x, edge.y, edge.radius, edge.startAngle, edge.endAngle, y);
-                    for (const x of arcIntersections) {
-                        intersections.push(x);
-                    }
-                } else { // It's a line
-                    const x = edge.x + (y - edge.y_min) * edge.slope_inv;
-                    intersections.push(x);
+        // Add edges from allEdges to activeEdges if they start at this scanline
+        for (const edge of allEdges) {
+            if (Math.round(edge.y_min) === y) {
+                if (edge.type === 'line') {
+                    activeEdges.push({ ...edge, current_x: edge.x_at_ymin });
+                } else {
+                    activeEdges.push({ ...edge });
                 }
+            }
+        }
+
+        // Remove edges from activeEdges if they end at this scanline
+        for (let i = activeEdges.length - 1; i >= 0; i--) {
+            if (y >= Math.round(activeEdges[i].y_max)) {
+                activeEdges.splice(i, 1);
+            }
+        }
+
+        const intersections = [];
+        for (const edge of activeEdges) {
+            if (edge.type === 'bezier') {
+                const p0 = edge.p0, p1 = edge.p1, p2 = edge.p2, p3 = edge.p3;
+                const roots = getBezierYIntercepts(p0, p1, p2, p3, y);
+                for (const t of roots) {
+                    if (t >= 0 && t <= 1) {
+                        intersections.push(getBezierXforT(p0, p1, p2, p3, t));
+                    }
+                }
+            } else if (edge.type === 'arc') {
+                const arcIntersections = getArcScanlineIntersections(edge.x, edge.y, edge.radius, edge.startAngle, edge.endAngle, y);
+                intersections.push(...arcIntersections);
+            } else { // It's a line
+                intersections.push(edge.current_x);
             }
         }
 
@@ -460,6 +460,13 @@ export class CanvasRenderingContext2D {
                         data[index + 3] = color.a;
                     }
                 }
+            }
+        }
+
+        // Update x for next scanline
+        for (const edge of activeEdges) {
+            if (edge.type === 'line') {
+                edge.current_x += edge.slope_inv;
             }
         }
     }
