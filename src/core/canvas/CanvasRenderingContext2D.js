@@ -1,6 +1,6 @@
 import { bresenham } from '../algorithms/bresenham.js';
 import { drawArc, fillArcWithMidpoint } from '../algorithms/arc.js';
-import { getBezierPoints } from '../algorithms/bezier.js';
+import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algorithms/bezier.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import fs from 'fs';
 import {
@@ -350,14 +350,19 @@ export class CanvasRenderingContext2D {
                 currentY = command.y;
                 break;
             case 'bezier': {
-                const fromX = currentX;
-                const fromY = currentY;
-                const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
-                for (let i = 0; i < numPoints; i++) {
-                    addEdge(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
-                    currentX = this.bezierPoints[i*2];
-                    currentY = this.bezierPoints[i*2+1];
-                }
+                const p0 = { x: currentX, y: currentY };
+                const p1 = { x: command.cp1x, y: command.cp1y };
+                const p2 = { x: command.cp2x, y: command.cp2y };
+                const p3 = { x: command.x, y: command.y };
+                const y_min = Math.min(p0.y, p1.y, p2.y, p3.y);
+                const y_max = Math.max(p0.y, p1.y, p2.y, p3.y);
+                edges.push({
+                    type: 'bezier',
+                    p0, p1, p2, p3,
+                    y_min, y_max
+                });
+                currentX = command.x;
+                currentY = command.y;
                 break;
             }
             case 'close':
@@ -414,27 +419,33 @@ export class CanvasRenderingContext2D {
     const activeEdges = [];
 
     for (let y = minY; y < maxY; y++) {
+        const intersections = [];
         for (const edge of edges) {
-            if (Math.round(edge.y_min) === y) {
-                activeEdges.push({ ...edge });
+            if (y >= edge.y_min && y < edge.y_max) {
+                if (edge.type === 'bezier') {
+                    const p0 = edge.p0, p1 = edge.p1, p2 = edge.p2, p3 = edge.p3;
+                    const roots = getBezierYIntercepts(p0, p1, p2, p3, y);
+                    for (const t of roots) {
+                        if (t >= 0 && t <= 1) {
+                            intersections.push(getBezierXforT(p0, p1, p2, p3, t));
+                        }
+                    }
+                } else { // It's a line
+                    const x = edge.x + (y - edge.y_min) * edge.slope_inv;
+                    intersections.push(x);
+                }
             }
         }
 
-        for (let i = activeEdges.length - 1; i >= 0; i--) {
-            if (Math.round(activeEdges[i].y_max) === y) {
-                activeEdges.splice(i, 1);
-            }
-        }
+        intersections.sort((a, b) => a - b);
 
-        activeEdges.sort((a, b) => a.x - b.x);
-
-        for (let i = 0; i < activeEdges.length; i += 2) {
-            if (i + 1 < activeEdges.length) {
-                const x_start = Math.round(activeEdges[i].x);
-                const x_end = Math.round(activeEdges[i + 1].x);
+        for (let i = 0; i < intersections.length; i += 2) {
+            if (i + 1 < intersections.length) {
+                const x_start = Math.round(intersections[i]);
+                const x_end = Math.round(intersections[i + 1]);
                 for (let x = x_start; x < x_end; x++) {
                     if (x >= 0 && x < this.width) {
-                        if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
+                         if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
                             continue;
                         }
                         const index = (y * canvasWidth + x) * 4;
@@ -450,10 +461,6 @@ export class CanvasRenderingContext2D {
                     }
                 }
             }
-        }
-
-        for (const edge of activeEdges) {
-            edge.x += edge.slope_inv;
         }
     }
   }
