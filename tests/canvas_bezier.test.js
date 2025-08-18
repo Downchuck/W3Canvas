@@ -25,15 +25,10 @@ test('Stroking a simple bezier curve', () => {
   assert.deepStrictEqual(getPixel(ctx.imageData, 89, 89), [0, 0, 0, 255], 'A point near the end should be black');
 
   // Check a point somewhere in the middle of the curve.
-  // I'll need to calculate a point manually. For t=0.5:
-  // B(t) = (1-t)^3 * P0 + 3(1-t)^2 * t * P1 + 3(1-t) * t^2 * P2 + t^3 * P3
-  // B(0.5) = 0.125*P0 + 0.375*P1 + 0.375*P2 + 0.125*P3
   const t = 0.5;
-  const x = 0.125 * 10 + 0.375 * 20 + 0.375 * 80 + 0.125 * 90; // 1.25 + 7.5 + 30 + 11.25 = 50
-  const y = 0.125 * 10 + 0.375 * 80 + 0.375 * 20 + 0.125 * 90; // 1.25 + 30 + 7.5 + 11.25 = 50
+  const x = 0.125 * 10 + 0.375 * 20 + 0.375 * 80 + 0.125 * 90; // 50
+  const y = 0.125 * 10 + 0.375 * 80 + 0.375 * 20 + 0.125 * 90; // 50
 
-  // The bresenham line drawing might not hit the exact integer coordinate.
-  // I'll check a small area around the calculated point.
   let pixelFound = false;
   for (let i = -1; i <= 1; i++) {
     for (let j = -1; j <= 1; j++) {

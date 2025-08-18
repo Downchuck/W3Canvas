@@ -281,6 +281,8 @@ export class CanvasRenderingContext2D {
               case 'move': currentX = command.x; currentY = command.y; startX = command.x; startY = command.y; break;
               case 'line': this._drawLine(currentX, currentY, command.x, command.y); currentX = command.x; currentY = command.y; break;
               case 'bezier': {
+                  // Explicitly draw the start point (like a round cap) to ensure it's there.
+                  this._drawLine(currentX, currentY, currentX, currentY);
                   const numPoints = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
                   for (let i = 0; i < numPoints; i++) {
                       this._drawLine(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
