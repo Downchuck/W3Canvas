@@ -26,7 +26,6 @@ export class CanvasRenderingContext2D {
     this.lineWidth = 1.0;
     this.lineJoin = 'miter';
     this.lineCap = 'butt';
-    this.miterLimit = 10;
     this.font = '10px sans-serif';
     this.textAlign = 'start';
     this.stateStack = [];
@@ -52,7 +51,6 @@ export class CanvasRenderingContext2D {
       lineWidth: this.lineWidth,
       lineJoin: this.lineJoin,
       lineCap: this.lineCap,
-      miterLimit: this.miterLimit,
       font: this.font,
       textAlign: this.textAlign,
       textBaseline: this.textBaseline,
@@ -67,7 +65,6 @@ export class CanvasRenderingContext2D {
       this.lineWidth = state.lineWidth;
       this.lineJoin = state.lineJoin;
       this.lineCap = state.lineCap;
-      this.miterLimit = state.miterLimit;
       this.font = state.font;
       this.textAlign = state.textAlign;
       this.textBaseline = state.textBaseline;
@@ -363,7 +360,7 @@ export class CanvasRenderingContext2D {
                 currentX = command.x;
                 currentY = command.y;
             } else if (command.type === 'arc') {
-                const steps = 100; // Tessellation for arc in stroke
+                const steps = 150; // Tessellation for arc in stroke
                 for (let i = 0; i < steps; i++) {
                     const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
                     points.push({
@@ -383,7 +380,7 @@ export class CanvasRenderingContext2D {
 
         // Now that we have a polyline, stroke it.
         const isClosed = subPath[subPath.length - 1].type === 'close';
-        const polygon = strokePolyline(points, this.lineWidth, isClosed, this.miterLimit);
+        const polygon = strokePolyline(points, this.lineWidth, isClosed);
 
         if (polygon.length > 0) {
             this.moveTo(polygon[0].x, polygon[0].y);
