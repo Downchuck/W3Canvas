@@ -22,6 +22,7 @@ export class CanvasRenderingContext2D {
     };
     this.fillStyle = 'black';
     this.strokeStyle = 'black';
+    this.lineWidth = 1.0;
     this.font = '10px sans-serif';
     this.textAlign = 'start';
     this.stateStack = [];
@@ -44,6 +45,7 @@ export class CanvasRenderingContext2D {
     this.stateStack.push({
       fillStyle: this.fillStyle,
       strokeStyle: this.strokeStyle,
+      lineWidth: this.lineWidth,
       font: this.font,
       textAlign: this.textAlign,
       textBaseline: this.textBaseline,
@@ -55,6 +57,7 @@ export class CanvasRenderingContext2D {
       const state = this.stateStack.pop();
       this.fillStyle = state.fillStyle;
       this.strokeStyle = state.strokeStyle;
+      this.lineWidth = state.lineWidth;
       this.font = state.font;
       this.textAlign = state.textAlign;
       this.textBaseline = state.textBaseline;
@@ -258,49 +261,86 @@ export class CanvasRenderingContext2D {
     if (this.path.length === 0) {
       return;
     }
+    this._strokePath();
+  }
+
+  _strokePath() {
+    const originalPath = this.path;
+    this.beginPath(); // Clear the current path to build the stroke path
 
     let currentX = 0;
     let currentY = 0;
-    let startX = 0;
-    let startY = 0;
 
-    for (const command of this.path) {
-      switch (command.type) {
-        case 'move':
-          currentX = command.x;
-          currentY = command.y;
-          startX = command.x;
-          startY = command.y;
-          break;
-        case 'line':
-          this._drawLine(currentX, currentY, command.x, command.y);
-          currentX = command.x;
-          currentY = command.y;
-          break;
-        case 'bezier': {
-          const numPoints = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
-          for (let i = 0; i < numPoints; i++) {
-            this._drawLine(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
-            currentX = this.bezierPoints[i*2];
-            currentY = this.bezierPoints[i*2+1];
-          }
-          break;
+    // This is a simplified stroke implementation that only handles lines
+    // and converts them into a fillable polygon.
+    for (let i = 0; i < originalPath.length; i++) {
+        const command = originalPath[i];
+        switch (command.type) {
+            case 'move':
+                currentX = command.x;
+                currentY = command.y;
+                break;
+            case 'line': {
+                const x0 = currentX;
+                const y0 = currentY;
+                const x1 = command.x;
+                const y1 = command.y;
+
+                const dx = x1 - x0;
+                const dy = y1 - y0;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len === 0) continue;
+
+                const nx = -dy / len;
+                const ny = dx / len;
+
+                const halfWidth = this.lineWidth / 2;
+
+                const p0 = { x: x0 + nx * halfWidth, y: y0 + ny * halfWidth };
+                const p1 = { x: x1 + nx * halfWidth, y: y1 + ny * halfWidth };
+                const p2 = { x: x1 - nx * halfWidth, y: y1 - ny * halfWidth };
+                const p3 = { x: x0 - nx * halfWidth, y: y0 - ny * halfWidth };
+
+                this.moveTo(p0.x, p0.y);
+                this.lineTo(p1.x, p1.y);
+                this.lineTo(p2.x, p2.y);
+                this.lineTo(p3.x, p3.y);
+                this.closePath();
+
+                currentX = command.x;
+                currentY = command.y;
+                break;
+            }
+            // --- Fallback for unsupported stroke types ---
+            case 'bezier': {
+                const fromX = currentX;
+                const fromY = currentY;
+                const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+                for (let j = 0; j < numPoints; j++) {
+                    this._drawLine(currentX, currentY, this.bezierPoints[j*2], this.bezierPoints[j*2+1]);
+                    currentX = this.bezierPoints[j*2];
+                    currentY = this.bezierPoints[j*2+1];
+                }
+                break;
+            }
+            case 'arc': {
+                const color = this._parseColor(this.strokeStyle);
+                drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
+                currentX = command.x + command.radius * Math.cos(command.endAngle);
+                currentY = command.y + command.radius * Math.sin(command.endAngle);
+                break;
+            }
         }
-        case 'close':
-          this._drawLine(currentX, currentY, startX, startY);
-          currentX = startX;
-          currentY = startY;
-          break;
-        case 'arc': {
-          const color = this._parseColor(this.strokeStyle);
-          drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
-          // Update current position to the end of the arc
-          currentX = command.x + command.radius * Math.cos(command.endAngle);
-          currentY = command.y + command.radius * Math.sin(command.endAngle);
-          break;
-        }
-      }
     }
+
+    // Now fill the path we just constructed
+    const strokeFillStyle = this.strokeStyle;
+    this.fillStyle = strokeFillStyle;
+    this.fill();
+
+    // Restore original path and fillStyle
+    this.path = originalPath;
+    this.fillStyle = this.stateStack.length > 0 ? this.stateStack[this.stateStack.length - 1].fillStyle : 'black';
   }
 
   fill() {
