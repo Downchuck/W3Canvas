@@ -363,7 +363,7 @@ export class CanvasRenderingContext2D {
                 currentX = command.x;
                 currentY = command.y;
             } else if (command.type === 'arc') {
-                const steps = 50; // Tessellation for arc in stroke
+                const steps = 100; // Tessellation for arc in stroke
                 for (let i = 0; i < steps; i++) {
                     const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
                     points.push({

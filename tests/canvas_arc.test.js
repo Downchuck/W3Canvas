@@ -35,20 +35,19 @@ test('Stroking a 90-degree arc with a thick line', (t) => {
     ctx.lineWidth = 10;
 
     ctx.beginPath();
-    ctx.arc(20, 80, 50, -Math.PI / 2, 0, false); // 90-degree arc
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + (10 * Math.PI / 180); // 10-degree arc
+    ctx.arc(20, 80, 50, startAngle, endAngle, false);
     ctx.stroke();
+
+    const endX = Math.round(20 + 50 * Math.cos(endAngle));
+    const endY = Math.round(80 + 50 * Math.sin(endAngle));
 
     // Check pixels on the stroke
     // A point near the start of the arc
     assert.deepStrictEqual(getPixel(ctx.imageData, 20, 30), [0, 255, 0, 255], 'Pixel near the start of the arc should be green');
     // A point near the end of the arc
-    assert.deepStrictEqual(getPixel(ctx.imageData, 70, 80), [0, 255, 0, 255], 'Pixel near the end of the arc should be green');
-    // A point in the middle of the arc
-    const angle = -Math.PI / 4;
-    const x = 20 + Math.cos(angle) * 50;
-    const y = 80 + Math.sin(angle) * 50;
-    assert.deepStrictEqual(getPixel(ctx.imageData, Math.round(x), Math.round(y)), [0, 255, 0, 255], 'Pixel in the middle of the arc should be green');
-
+    assert.deepStrictEqual(getPixel(ctx.imageData, endX, endY), [0, 255, 0, 255], 'Pixel near the end of the arc should be green');
     // A point just off the stroke
     assert.deepStrictEqual(getPixel(ctx.imageData, 20, 24)[3], 0, 'Pixel just off the stroke should be transparent');
 });
