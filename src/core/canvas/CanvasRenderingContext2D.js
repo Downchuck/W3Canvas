@@ -1,6 +1,7 @@
 import { bresenham } from '../algorithms/bresenham.js';
-import { drawArc } from '../algorithms/arc.js';
-import { getBezierPoints } from '../algorithms/bezier.js';
+import { drawArc, fillArcWithMidpoint, getArcScanlineIntersections } from '../algorithms/arc.js';
+import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algorithms/bezier.js';
+import { strokePolyline } from '../algorithms/stroke.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import fs from 'fs';
 import {
@@ -22,6 +23,9 @@ export class CanvasRenderingContext2D {
     };
     this.fillStyle = 'black';
     this.strokeStyle = 'black';
+    this.lineWidth = 1.0;
+    this.lineJoin = 'miter';
+    this.lineCap = 'butt';
     this.font = '10px sans-serif';
     this.textAlign = 'start';
     this.stateStack = [];
@@ -44,6 +48,9 @@ export class CanvasRenderingContext2D {
     this.stateStack.push({
       fillStyle: this.fillStyle,
       strokeStyle: this.strokeStyle,
+      lineWidth: this.lineWidth,
+      lineJoin: this.lineJoin,
+      lineCap: this.lineCap,
       font: this.font,
       textAlign: this.textAlign,
       textBaseline: this.textBaseline,
@@ -55,6 +62,9 @@ export class CanvasRenderingContext2D {
       const state = this.stateStack.pop();
       this.fillStyle = state.fillStyle;
       this.strokeStyle = state.strokeStyle;
+      this.lineWidth = state.lineWidth;
+      this.lineJoin = state.lineJoin;
+      this.lineCap = state.lineCap;
       this.font = state.font;
       this.textAlign = state.textAlign;
       this.textBaseline = state.textBaseline;
@@ -258,49 +268,135 @@ export class CanvasRenderingContext2D {
     if (this.path.length === 0) {
       return;
     }
+    this._strokePath();
+  }
 
-    let currentX = 0;
-    let currentY = 0;
-    let startX = 0;
-    let startY = 0;
-
-    for (const command of this.path) {
-      switch (command.type) {
-        case 'move':
-          currentX = command.x;
-          currentY = command.y;
-          startX = command.x;
-          startY = command.y;
-          break;
-        case 'line':
-          this._drawLine(currentX, currentY, command.x, command.y);
-          currentX = command.x;
-          currentY = command.y;
-          break;
-        case 'bezier': {
-          const numPoints = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
-          for (let i = 0; i < numPoints; i++) {
-            this._drawLine(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
-            currentX = this.bezierPoints[i*2];
-            currentY = this.bezierPoints[i*2+1];
+  _legacyStroke() {
+      let currentX = 0;
+      let currentY = 0;
+      let startX = 0;
+      let startY = 0;
+      for (const command of this.path) {
+          switch (command.type) {
+              case 'move': currentX = command.x; currentY = command.y; startX = command.x; startY = command.y; break;
+              case 'line': this._drawLine(currentX, currentY, command.x, command.y); currentX = command.x; currentY = command.y; break;
+              case 'bezier': {
+                  // Explicitly draw the start point (like a round cap) to ensure it's there.
+                  this._drawLine(currentX, currentY, currentX, currentY);
+                  const numPoints = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+                  for (let i = 0; i < numPoints; i++) {
+                      this._drawLine(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
+                      currentX = this.bezierPoints[i*2];
+                      currentY = this.bezierPoints[i*2+1];
+                  }
+                  break;
+              }
+              case 'close': this._drawLine(currentX, currentY, startX, startY); currentX = startX; currentY = startY; break;
+              case 'arc': {
+                  const color = this._parseColor(this.strokeStyle);
+                  drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
+                  currentX = command.x + command.radius * Math.cos(command.endAngle);
+                  currentY = command.y + command.radius * Math.sin(command.endAngle);
+                  break;
+              }
           }
-          break;
-        }
-        case 'close':
-          this._drawLine(currentX, currentY, startX, startY);
-          currentX = startX;
-          currentY = startY;
-          break;
-        case 'arc': {
-          const color = this._parseColor(this.strokeStyle);
-          drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
-          // Update current position to the end of the arc
-          currentX = command.x + command.radius * Math.cos(command.endAngle);
-          currentY = command.y + command.radius * Math.sin(command.endAngle);
-          break;
-        }
       }
+  }
+
+  _strokePath() {
+    if (this.lineWidth === 1) {
+        this._legacyStroke();
+        return;
     }
+
+    const originalPath = this.path;
+    const subPaths = [];
+    let currentSubPath = [];
+
+    // First, split the path into sub-paths
+    for (const command of originalPath) {
+        if (command.type === 'move') {
+            if (currentSubPath.length > 0) {
+                subPaths.push(currentSubPath);
+            }
+            currentSubPath = [command];
+        } else {
+            currentSubPath.push(command);
+        }
+    }
+    if (currentSubPath.length > 0) {
+        subPaths.push(currentSubPath);
+    }
+
+    // Clear the current path to build the new stroke path
+    this.beginPath();
+
+    for (const subPath of subPaths) {
+        const points = [];
+        let currentX = 0;
+        let currentY = 0;
+
+        // First, convert the entire sub-path into a single polyline
+        for (const command of subPath) {
+            if (command.type === 'move') {
+                currentX = command.x;
+                currentY = command.y;
+                points.push({ x: currentX, y: currentY });
+            } else if (command.type === 'line') {
+                currentX = command.x;
+                currentY = command.y;
+                points.push({ x: currentX, y: currentY });
+            } else if (command.type === 'bezier') {
+                const fromX = currentX;
+                const fromY = currentY;
+                // We need to include the start point of the bezier curve
+                if (points.length === 0 || points[points.length-1].x !== fromX || points[points.length-1].y !== fromY) {
+                    points.push({x: fromX, y: fromY});
+                }
+                const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+                for (let i = 0; i < numPoints; i++) {
+                    points.push({ x: this.bezierPoints[i*2], y: this.bezierPoints[i*2+1] });
+                }
+                currentX = command.x;
+                currentY = command.y;
+            } else if (command.type === 'arc') {
+                const steps = 50; // Tessellation for arc in stroke
+                for (let i = 0; i <= steps; i++) {
+                    const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
+                    points.push({
+                        x: command.x + command.radius * Math.cos(angle),
+                        y: command.y + command.radius * Math.sin(angle)
+                    });
+                }
+                currentX = command.x + command.radius * Math.cos(command.endAngle);
+                currentY = command.y + command.radius * Math.sin(command.endAngle);
+            }
+        }
+
+        // Now that we have a polyline, stroke it.
+        const isClosed = subPath[subPath.length - 1].type === 'close';
+        const polygon = strokePolyline(points, this.lineWidth, isClosed);
+
+        if (polygon.length > 0) {
+            this.moveTo(polygon[0].x, polygon[0].y);
+            for (let i = 1; i < polygon.length; i++) {
+                this.lineTo(polygon[i].x, polygon[i].y);
+            }
+            this.closePath();
+        }
+    }
+
+    // If we built a new path to fill, fill it.
+    if (this.path.length > 0) {
+        const strokeFillStyle = this.strokeStyle;
+        const oldFillStyle = this.fillStyle;
+        this.fillStyle = strokeFillStyle;
+        this.fill();
+        this.fillStyle = oldFillStyle;
+    }
+
+    // Restore original path
+    this.path = originalPath;
   }
 
   fill() {
@@ -311,20 +407,24 @@ export class CanvasRenderingContext2D {
   }
 
   _scanlineFill() {
-    const edges = [];
+    // Optimization: if the path is a single full circle, use a specialized fill algorithm.
+    if (this.path.length === 1 && this.path[0].type === 'arc' && this.path[0].endAngle - this.path[0].startAngle >= 2 * Math.PI) {
+        const command = this.path[0];
+        const color = this._parseColor(this.fillStyle);
+        fillArcWithMidpoint(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
+        this.path = []; // Clear the path after filling
+        return;
+    }
+
+    const allEdges = [];
     let currentX = 0;
     let currentY = 0;
     let startX = 0;
     let startY = 0;
 
-    const addEdge = (x1, y1, x2, y2) => {
-        // Ignore horizontal edges
-        if (y1 === y2) return;
-        const y_min = Math.min(y1, y2);
-        const y_max = Math.max(y1, y2);
-        const x = y1 < y2 ? x1 : x2;
-        const slope_inv = (x2 - x1) / (y2 - y1);
-        edges.push({ y_min, y_max, x, slope_inv });
+    const addEdge = (edge) => {
+        if (edge.y_min === edge.y_max) return; // Ignore horizontal edges
+        allEdges.push(edge);
     };
 
     for (const command of this.path) {
@@ -335,38 +435,41 @@ export class CanvasRenderingContext2D {
                 startX = command.x;
                 startY = command.y;
                 break;
-            case 'line':
-                addEdge(currentX, currentY, command.x, command.y);
+            case 'line': {
+                const y_min = Math.min(currentY, command.y);
+                const y_max = Math.max(currentY, command.y);
+                const x_at_ymin = currentY < command.y ? currentX : command.x;
+                const slope_inv = (command.x - currentX) / (command.y - currentY);
+                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
                 currentX = command.x;
                 currentY = command.y;
                 break;
+            }
             case 'bezier': {
-                const fromX = currentX;
-                const fromY = currentY;
-                const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
-                for (let i = 0; i < numPoints; i++) {
-                    addEdge(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
-                    currentX = this.bezierPoints[i*2];
-                    currentY = this.bezierPoints[i*2+1];
-                }
+                const p0 = { x: currentX, y: currentY };
+                const p1 = { x: command.cp1x, y: command.cp1y };
+                const p2 = { x: command.cp2x, y: command.cp2y };
+                const p3 = { x: command.x, y: command.y };
+                const y_min = Math.min(p0.y, p1.y, p2.y, p3.y);
+                const y_max = Math.max(p0.y, p1.y, p2.y, p3.y);
+                addEdge({ type: 'bezier', p0, p1, p2, p3, y_min, y_max });
+                currentX = command.x;
+                currentY = command.y;
                 break;
             }
             case 'close':
-                addEdge(currentX, currentY, startX, startY);
+                const y_min = Math.min(currentY, startY);
+                const y_max = Math.max(currentY, startY);
+                const x_at_ymin = currentY < startY ? currentX : startX;
+                const slope_inv = (startX - currentX) / (startY - currentY);
+                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
                 currentX = startX;
                 currentY = startY;
                 break;
-            case 'arc': { // Arcs need to be approximated by lines
-                const steps = 100;
-                for (let i = 0; i < steps; i++) {
-                    const angle1 = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
-                    const x1 = command.x + command.radius * Math.cos(angle1);
-                    const y1 = command.y + command.radius * Math.sin(angle1);
-                    const angle2 = command.startAngle + (command.endAngle - command.startAngle) * ((i + 1) / steps);
-                    const x2 = command.x + command.radius * Math.cos(angle2);
-                    const y2 = command.y + command.radius * Math.sin(angle2);
-                    addEdge(x1, y1, x2, y2);
-                }
+            case 'arc': {
+                const y_min = command.y - command.radius;
+                const y_max = command.y + command.radius;
+                addEdge({ type: 'arc', ...command, y_min, y_max });
                 currentX = command.x + command.radius * Math.cos(command.endAngle);
                 currentY = command.y + command.radius * Math.sin(command.endAngle);
                 break;
@@ -374,18 +477,7 @@ export class CanvasRenderingContext2D {
         }
     }
 
-    // If the path is not closed, add a closing edge
-    if (this.path.length > 0) {
-        const lastCommand = this.path[this.path.length - 1];
-        if (lastCommand.type !== 'close') {
-            if (currentX !== startX || currentY !== startY) {
-                addEdge(currentX, currentY, startX, startY);
-            }
-        }
-    }
-
-
-    if (edges.length === 0) {
+    if (allEdges.length === 0) {
         return;
     }
 
@@ -395,7 +487,7 @@ export class CanvasRenderingContext2D {
 
     let minY = Infinity;
     let maxY = -Infinity;
-    for (const edge of edges) {
+    for (const edge of allEdges) {
         minY = Math.min(minY, edge.y_min);
         maxY = Math.max(maxY, edge.y_max);
     }
@@ -405,27 +497,51 @@ export class CanvasRenderingContext2D {
     const activeEdges = [];
 
     for (let y = minY; y < maxY; y++) {
-        for (const edge of edges) {
+        // Add edges from allEdges to activeEdges if they start at this scanline
+        for (const edge of allEdges) {
             if (Math.round(edge.y_min) === y) {
-                activeEdges.push({ ...edge });
+                if (edge.type === 'line') {
+                    activeEdges.push({ ...edge, current_x: edge.x_at_ymin });
+                } else {
+                    activeEdges.push({ ...edge });
+                }
             }
         }
 
+        // Remove edges from activeEdges if they end at this scanline
         for (let i = activeEdges.length - 1; i >= 0; i--) {
-            if (Math.round(activeEdges[i].y_max) === y) {
+            if (y >= Math.round(activeEdges[i].y_max)) {
                 activeEdges.splice(i, 1);
             }
         }
 
-        activeEdges.sort((a, b) => a.x - b.x);
+        const intersections = [];
+        for (const edge of activeEdges) {
+            if (edge.type === 'bezier') {
+                const p0 = edge.p0, p1 = edge.p1, p2 = edge.p2, p3 = edge.p3;
+                const roots = getBezierYIntercepts(p0, p1, p2, p3, y);
+                for (const t of roots) {
+                    if (t >= 0 && t <= 1) {
+                        intersections.push(getBezierXforT(p0, p1, p2, p3, t));
+                    }
+                }
+            } else if (edge.type === 'arc') {
+                const arcIntersections = getArcScanlineIntersections(edge.x, edge.y, edge.radius, edge.startAngle, edge.endAngle, y);
+                intersections.push(...arcIntersections);
+            } else { // It's a line
+                intersections.push(edge.current_x);
+            }
+        }
 
-        for (let i = 0; i < activeEdges.length; i += 2) {
-            if (i + 1 < activeEdges.length) {
-                const x_start = Math.round(activeEdges[i].x);
-                const x_end = Math.round(activeEdges[i + 1].x);
+        intersections.sort((a, b) => a - b);
+
+        for (let i = 0; i < intersections.length; i += 2) {
+            if (i + 1 < intersections.length) {
+                const x_start = Math.round(intersections[i]);
+                const x_end = Math.round(intersections[i + 1]);
                 for (let x = x_start; x < x_end; x++) {
                     if (x >= 0 && x < this.width) {
-                        if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
+                         if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
                             continue;
                         }
                         const index = (y * canvasWidth + x) * 4;
@@ -443,8 +559,11 @@ export class CanvasRenderingContext2D {
             }
         }
 
+        // Update x for next scanline
         for (const edge of activeEdges) {
-            edge.x += edge.slope_inv;
+            if (edge.type === 'line') {
+                edge.current_x += edge.slope_inv;
+            }
         }
     }
   }
