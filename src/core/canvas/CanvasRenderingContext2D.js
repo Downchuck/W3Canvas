@@ -1,6 +1,7 @@
 import { bresenham } from '../algorithms/bresenham.js';
 import { drawArc, fillArcWithMidpoint, getArcScanlineIntersections } from '../algorithms/arc.js';
 import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algorithms/bezier.js';
+import { strokePolyline } from '../algorithms/stroke.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import fs from 'fs';
 import {
@@ -23,6 +24,8 @@ export class CanvasRenderingContext2D {
     this.fillStyle = 'black';
     this.strokeStyle = 'black';
     this.lineWidth = 1.0;
+    this.lineJoin = 'miter';
+    this.lineCap = 'butt';
     this.font = '10px sans-serif';
     this.textAlign = 'start';
     this.stateStack = [];
@@ -46,6 +49,8 @@ export class CanvasRenderingContext2D {
       fillStyle: this.fillStyle,
       strokeStyle: this.strokeStyle,
       lineWidth: this.lineWidth,
+      lineJoin: this.lineJoin,
+      lineCap: this.lineCap,
       font: this.font,
       textAlign: this.textAlign,
       textBaseline: this.textBaseline,
@@ -58,6 +63,8 @@ export class CanvasRenderingContext2D {
       this.fillStyle = state.fillStyle;
       this.strokeStyle = state.strokeStyle;
       this.lineWidth = state.lineWidth;
+      this.lineJoin = state.lineJoin;
+      this.lineCap = state.lineCap;
       this.font = state.font;
       this.textAlign = state.textAlign;
       this.textBaseline = state.textBaseline;
@@ -266,81 +273,103 @@ export class CanvasRenderingContext2D {
 
   _strokePath() {
     const originalPath = this.path;
-    this.beginPath(); // Clear the current path to build the stroke path
+    const subPaths = [];
+    let currentSubPath = [];
 
-    let currentX = 0;
-    let currentY = 0;
-
-    // This is a simplified stroke implementation that only handles lines
-    // and converts them into a fillable polygon.
-    for (let i = 0; i < originalPath.length; i++) {
-        const command = originalPath[i];
-        switch (command.type) {
-            case 'move':
-                currentX = command.x;
-                currentY = command.y;
-                break;
-            case 'line': {
-                const x0 = currentX;
-                const y0 = currentY;
-                const x1 = command.x;
-                const y1 = command.y;
-
-                const dx = x1 - x0;
-                const dy = y1 - y0;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                if (len === 0) continue;
-
-                const nx = -dy / len;
-                const ny = dx / len;
-
-                const halfWidth = this.lineWidth / 2;
-
-                const p0 = { x: x0 + nx * halfWidth, y: y0 + ny * halfWidth };
-                const p1 = { x: x1 + nx * halfWidth, y: y1 + ny * halfWidth };
-                const p2 = { x: x1 - nx * halfWidth, y: y1 - ny * halfWidth };
-                const p3 = { x: x0 - nx * halfWidth, y: y0 - ny * halfWidth };
-
-                this.moveTo(p0.x, p0.y);
-                this.lineTo(p1.x, p1.y);
-                this.lineTo(p2.x, p2.y);
-                this.lineTo(p3.x, p3.y);
-                this.closePath();
-
-                currentX = command.x;
-                currentY = command.y;
-                break;
+    // First, split the path into sub-paths
+    for (const command of originalPath) {
+        if (command.type === 'move') {
+            if (currentSubPath.length > 0) {
+                subPaths.push(currentSubPath);
             }
-            // --- Fallback for unsupported stroke types ---
-            case 'bezier': {
-                const fromX = currentX;
-                const fromY = currentY;
-                const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
-                for (let j = 0; j < numPoints; j++) {
-                    this._drawLine(currentX, currentY, this.bezierPoints[j*2], this.bezierPoints[j*2+1]);
-                    currentX = this.bezierPoints[j*2];
-                    currentY = this.bezierPoints[j*2+1];
+            currentSubPath = [command];
+        } else {
+            currentSubPath.push(command);
+        }
+    }
+    if (currentSubPath.length > 0) {
+        subPaths.push(currentSubPath);
+    }
+
+    // Clear the current path to build the new stroke path
+    this.beginPath();
+
+    for (const subPath of subPaths) {
+        // For now, we only handle sub-paths of pure lines.
+        // If we find a curve, we fall back to the old method for that sub-path.
+        const hasCurves = subPath.some(cmd => cmd.type === 'bezier' || cmd.type === 'arc');
+
+        if (hasCurves) {
+            // Fallback for sub-paths with curves
+            let currentX = 0;
+            let currentY = 0;
+            for (const command of subPath) {
+                switch(command.type) {
+                    case 'move':
+                        currentX = command.x;
+                        currentY = command.y;
+                        break;
+                    case 'bezier': {
+                        const fromX = currentX;
+                        const fromY = currentY;
+                        const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+                        for (let j = 0; j < numPoints; j++) {
+                            this._drawLine(currentX, currentY, this.bezierPoints[j*2], this.bezierPoints[j*2+1]);
+                            currentX = this.bezierPoints[j*2];
+                            currentY = this.bezierPoints[j*2+1];
+                        }
+                        break;
+                    }
+                    case 'arc': {
+                        const color = this._parseColor(this.strokeStyle);
+                        drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
+                        currentX = command.x + command.radius * Math.cos(command.endAngle);
+                        currentY = command.y + command.radius * Math.sin(command.endAngle);
+                        break;
+                    }
                 }
-                break;
             }
-            case 'arc': {
-                const color = this._parseColor(this.strokeStyle);
-                drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
-                currentX = command.x + command.radius * Math.cos(command.endAngle);
-                currentY = command.y + command.radius * Math.sin(command.endAngle);
-                break;
+        } else {
+            // This sub-path contains only lines. Convert to a polyline and stroke it.
+            const points = [];
+            let currentX, currentY;
+            for(const command of subPath) {
+                if (command.type === 'move') {
+                    points.push({x: command.x, y: command.y});
+                    currentX = command.x;
+                    currentY = command.y;
+                } else if (command.type === 'line') {
+                    points.push({x: command.x, y: command.y});
+                    currentX = command.x;
+                    currentY = command.y;
+                }
+            }
+
+            const isClosed = subPath[subPath.length - 1].type === 'close';
+            // strokePolyline will return a polygon. Add it to the new path.
+            const polygon = strokePolyline(points, this.lineWidth, isClosed);
+
+            if (polygon.length > 0) {
+                this.moveTo(polygon[0].x, polygon[0].y);
+                for (let i = 1; i < polygon.length; i++) {
+                    this.lineTo(polygon[i].x, polygon[i].y);
+                }
+                this.closePath();
             }
         }
     }
 
-    // Now fill the path we just constructed
-    const strokeFillStyle = this.strokeStyle;
-    this.fillStyle = strokeFillStyle;
-    this.fill();
+    // If we built a new path to fill, fill it.
+    if (this.path.length > 0) {
+        const strokeFillStyle = this.strokeStyle;
+        const oldFillStyle = this.fillStyle;
+        this.fillStyle = strokeFillStyle;
+        this.fill();
+        this.fillStyle = oldFillStyle;
+    }
 
-    // Restore original path and fillStyle
+    // Restore original path
     this.path = originalPath;
-    this.fillStyle = this.stateStack.length > 0 ? this.stateStack[this.stateStack.length - 1].fillStyle : 'black';
   }
 
   fill() {

@@ -33,3 +33,28 @@ test('Stroking a line with lineWidth creates a fillable polygon', (t) => {
   assertPixelIsColor(ctx.getImageData(0, 0, 20, 20), 10, 7, white);
   assertPixelIsColor(ctx.getImageData(0, 0, 20, 20), 10, 13, white);
 });
+
+test('Stroking a polyline with a miter join works correctly', (t) => {
+    const ctx = new CanvasRenderingContext2D(30, 30);
+    ctx.strokeStyle = 'blue';
+    ctx.lineWidth = 4;
+
+    // Draw a V-shape
+    ctx.beginPath();
+    ctx.moveTo(5, 5);
+    ctx.lineTo(15, 20);
+    ctx.lineTo(25, 5);
+    ctx.stroke();
+
+    const blue = [0, 0, 255, 255];
+    const white = [0, 0, 0, 0];
+
+    // Check a point deep inside the miter join
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 18, blue);
+
+    // Check a point that would be empty without a miter join
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 13, 18, blue);
+
+    // Check a point just outside the join
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 22, white);
+});
