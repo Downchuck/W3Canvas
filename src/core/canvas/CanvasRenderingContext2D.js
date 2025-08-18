@@ -271,7 +271,42 @@ export class CanvasRenderingContext2D {
     this._strokePath();
   }
 
+  _legacyStroke() {
+      let currentX = 0;
+      let currentY = 0;
+      let startX = 0;
+      let startY = 0;
+      for (const command of this.path) {
+          switch (command.type) {
+              case 'move': currentX = command.x; currentY = command.y; startX = command.x; startY = command.y; break;
+              case 'line': this._drawLine(currentX, currentY, command.x, command.y); currentX = command.x; currentY = command.y; break;
+              case 'bezier': {
+                  const numPoints = getBezierPoints(currentX, currentY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+                  for (let i = 0; i < numPoints; i++) {
+                      this._drawLine(currentX, currentY, this.bezierPoints[i*2], this.bezierPoints[i*2+1]);
+                      currentX = this.bezierPoints[i*2];
+                      currentY = this.bezierPoints[i*2+1];
+                  }
+                  break;
+              }
+              case 'close': this._drawLine(currentX, currentY, startX, startY); currentX = startX; currentY = startY; break;
+              case 'arc': {
+                  const color = this._parseColor(this.strokeStyle);
+                  drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
+                  currentX = command.x + command.radius * Math.cos(command.endAngle);
+                  currentY = command.y + command.radius * Math.sin(command.endAngle);
+                  break;
+              }
+          }
+      }
+  }
+
   _strokePath() {
+    if (this.lineWidth === 1) {
+        this._legacyStroke();
+        return;
+    }
+
     const originalPath = this.path;
     const subPaths = [];
     let currentSubPath = [];
@@ -295,67 +330,57 @@ export class CanvasRenderingContext2D {
     this.beginPath();
 
     for (const subPath of subPaths) {
-        // For now, we only handle sub-paths of pure lines.
-        // If we find a curve, we fall back to the old method for that sub-path.
-        const hasCurves = subPath.some(cmd => cmd.type === 'bezier' || cmd.type === 'arc');
+        const points = [];
+        let currentX = 0;
+        let currentY = 0;
 
-        if (hasCurves) {
-            // Fallback for sub-paths with curves
-            let currentX = 0;
-            let currentY = 0;
-            for (const command of subPath) {
-                switch(command.type) {
-                    case 'move':
-                        currentX = command.x;
-                        currentY = command.y;
-                        break;
-                    case 'bezier': {
-                        const fromX = currentX;
-                        const fromY = currentY;
-                        const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
-                        for (let j = 0; j < numPoints; j++) {
-                            this._drawLine(currentX, currentY, this.bezierPoints[j*2], this.bezierPoints[j*2+1]);
-                            currentX = this.bezierPoints[j*2];
-                            currentY = this.bezierPoints[j*2+1];
-                        }
-                        break;
-                    }
-                    case 'arc': {
-                        const color = this._parseColor(this.strokeStyle);
-                        drawArc(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
-                        currentX = command.x + command.radius * Math.cos(command.endAngle);
-                        currentY = command.y + command.radius * Math.sin(command.endAngle);
-                        break;
-                    }
+        // First, convert the entire sub-path into a single polyline
+        for (const command of subPath) {
+            if (command.type === 'move') {
+                currentX = command.x;
+                currentY = command.y;
+                points.push({ x: currentX, y: currentY });
+            } else if (command.type === 'line') {
+                currentX = command.x;
+                currentY = command.y;
+                points.push({ x: currentX, y: currentY });
+            } else if (command.type === 'bezier') {
+                const fromX = currentX;
+                const fromY = currentY;
+                // We need to include the start point of the bezier curve
+                if (points.length === 0 || points[points.length-1].x !== fromX || points[points.length-1].y !== fromY) {
+                    points.push({x: fromX, y: fromY});
                 }
-            }
-        } else {
-            // This sub-path contains only lines. Convert to a polyline and stroke it.
-            const points = [];
-            let currentX, currentY;
-            for(const command of subPath) {
-                if (command.type === 'move') {
-                    points.push({x: command.x, y: command.y});
-                    currentX = command.x;
-                    currentY = command.y;
-                } else if (command.type === 'line') {
-                    points.push({x: command.x, y: command.y});
-                    currentX = command.x;
-                    currentY = command.y;
+                const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+                for (let i = 0; i < numPoints; i++) {
+                    points.push({ x: this.bezierPoints[i*2], y: this.bezierPoints[i*2+1] });
                 }
+                currentX = command.x;
+                currentY = command.y;
+            } else if (command.type === 'arc') {
+                const steps = 50; // Tessellation for arc in stroke
+                for (let i = 0; i <= steps; i++) {
+                    const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
+                    points.push({
+                        x: command.x + command.radius * Math.cos(angle),
+                        y: command.y + command.radius * Math.sin(angle)
+                    });
+                }
+                currentX = command.x + command.radius * Math.cos(command.endAngle);
+                currentY = command.y + command.radius * Math.sin(command.endAngle);
             }
+        }
 
-            const isClosed = subPath[subPath.length - 1].type === 'close';
-            // strokePolyline will return a polygon. Add it to the new path.
-            const polygon = strokePolyline(points, this.lineWidth, isClosed);
+        // Now that we have a polyline, stroke it.
+        const isClosed = subPath[subPath.length - 1].type === 'close';
+        const polygon = strokePolyline(points, this.lineWidth, isClosed);
 
-            if (polygon.length > 0) {
-                this.moveTo(polygon[0].x, polygon[0].y);
-                for (let i = 1; i < polygon.length; i++) {
-                    this.lineTo(polygon[i].x, polygon[i].y);
-                }
-                this.closePath();
+        if (polygon.length > 0) {
+            this.moveTo(polygon[0].x, polygon[0].y);
+            for (let i = 1; i < polygon.length; i++) {
+                this.lineTo(polygon[i].x, polygon[i].y);
             }
+            this.closePath();
         }
     }
 

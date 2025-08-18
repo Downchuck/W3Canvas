@@ -42,7 +42,7 @@ function drawArcWithMidpoint(ctx, color, cx, cy, radius, startAngle, endAngle) {
     }
 }
 
-function fillArcWithMidpoint(ctx, color, cx, cy, radius, startAngle, endAngle) {
+export function fillArcWithMidpoint(ctx, color, cx, cy, radius, startAngle, endAngle) {
     // For now, we will just fill a full circle.
     // The startAngle and endAngle are not yet supported.
 
@@ -82,9 +82,13 @@ function fillArcWithMidpoint(ctx, color, cx, cy, radius, startAngle, endAngle) {
 }
 
 
-export { drawArc, fillArcWithMidpoint, getArcScanlineIntersections };
+export function drawArc(ctx, color, cx, cy, radius, startAngle, endAngle) {
+    // For now, we will just call the new midpoint algorithm.
+    // The startAngle and endAngle are not yet supported.
+    drawArcWithMidpoint(ctx, color, cx, cy, radius, startAngle, endAngle);
+}
 
-function getArcScanlineIntersections(cx, cy, radius, startAngle, endAngle, y) {
+export function getArcScanlineIntersections(cx, cy, radius, startAngle, endAngle, y) {
     const intersections = [];
 
     const dy = y - cy;
@@ -125,10 +129,4 @@ function getArcScanlineIntersections(cx, cy, radius, startAngle, endAngle, y) {
     }
 
     return intersections;
-}
-
-function drawArc(ctx, color, cx, cy, radius, startAngle, endAngle) {
-    // For now, we will just call the new midpoint algorithm.
-    // The startAngle and endAngle are not yet supported.
-    drawArcWithMidpoint(ctx, color, cx, cy, radius, startAngle, endAngle);
 }

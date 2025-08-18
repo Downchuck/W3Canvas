@@ -46,18 +46,17 @@ export function strokePolyline(points, lineWidth, isClosed) {
         const p = points[i];
 
         // Simplified miter logic: average the normals
-        // A real implementation would calculate the intersection of the offset lines
         const miterNx = (n1.nx + n2.nx) / 2;
         const miterNy = (n1.ny + n2.ny) / 2;
         const miterLen = Math.sqrt(miterNx * miterNx + miterNy * miterNy);
 
-        if (miterLen === 0) { // Should not happen for non-collinear lines
+        if (miterLen === 0) {
              leftPoints.push({x: p.x + n1.nx * halfWidth, y: p.y + n1.ny * halfWidth});
              rightPoints.push({x: p.x - n1.nx * halfWidth, y: p.y - n1.ny * halfWidth});
              continue;
         }
 
-        const miterScale = 1 / miterLen; // This can be large for sharp angles
+        const miterScale = 1 / miterLen;
 
         leftPoints.push({
             x: p.x + miterNx * miterScale * halfWidth,

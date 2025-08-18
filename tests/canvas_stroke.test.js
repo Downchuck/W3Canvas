@@ -58,3 +58,44 @@ test('Stroking a polyline with a miter join works correctly', (t) => {
     // Check a point just outside the join
     assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 22, white);
 });
+
+test('Stroking a bezier curve with lineWidth works correctly', (t) => {
+    const ctx = new CanvasRenderingContext2D(50, 50);
+    ctx.strokeStyle = 'green';
+    ctx.lineWidth = 6;
+
+    // Draw a simple curve
+    ctx.beginPath();
+    ctx.moveTo(10, 40);
+    ctx.bezierCurveTo(20, 10, 30, 10, 40, 40);
+    ctx.stroke();
+
+    const green = [0, 255, 0, 255];
+    const white = [0, 0, 0, 0];
+
+    // Check a point near the apex of the curve's stroke
+    assertPixelIsColor(ctx.getImageData(0, 0, 50, 50), 25, 15, green);
+
+    // Check a point just outside the stroke
+    assertPixelIsColor(ctx.getImageData(0, 0, 50, 50), 25, 8, white);
+});
+
+test('Stroking an arc with lineWidth works correctly', (t) => {
+    const ctx = new CanvasRenderingContext2D(50, 50);
+    ctx.strokeStyle = '#FF00FF'; // Magenta
+    ctx.lineWidth = 4;
+
+    // Draw a semicircle
+    ctx.beginPath();
+    ctx.arc(25, 25, 20, Math.PI, 2 * Math.PI);
+    ctx.stroke();
+
+    const magenta = [255, 0, 255, 255];
+    const white = [0, 0, 0, 0];
+
+    // Check a point on the top of the arc's stroke
+    assertPixelIsColor(ctx.getImageData(0, 0, 50, 50), 25, 6, magenta);
+
+    // Check a point just inside the inner radius
+    assertPixelIsColor(ctx.getImageData(0, 0, 50, 50), 25, 9, white);
+});
