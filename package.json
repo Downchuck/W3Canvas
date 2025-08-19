@@ -18,6 +18,9 @@
     "url": "https://github.com/Downchuck/W3Canvas/issues"
   },
   "homepage": "https://github.com/Downchuck/W3Canvas#readme",
+  "scripts": {
+    "test": "node --test tests/"
+  },
   "devDependencies": {
     "typescript": "^5.9.2"
   },
