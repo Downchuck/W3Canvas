@@ -29,15 +29,44 @@ export function strokePolyline(points, lineWidth, lineJoin, isClosed) {
         }
     }
 
-    // Generate offset points for the start cap
-    leftPoints.push({
-        x: points[0].x + segments[0].nx * halfWidth,
-        y: points[0].y + segments[0].ny * halfWidth
-    });
-    rightPoints.push({
-        x: points[0].x - segments[0].nx * halfWidth,
-        y: points[0].y - segments[0].ny * halfWidth
-    });
+    // HACK: Extend the start cap slightly to deal with rasterization errors
+    if (points.length > 1) {
+        const p0 = points[0];
+        const p1 = points[1];
+        const dx = p1.x - p0.x;
+        const dy = p1.y - p0.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) {
+            const ex = -dx / len;
+            const ey = -dy / len;
+            leftPoints.push({
+                x: p0.x + segments[0].nx * halfWidth + ex * 0.5,
+                y: p0.y + segments[0].ny * halfWidth + ey * 0.5
+            });
+            rightPoints.push({
+                x: p0.x - segments[0].nx * halfWidth + ex * 0.5,
+                y: p0.y - segments[0].ny * halfWidth + ey * 0.5
+            });
+        } else {
+            leftPoints.push({
+                x: points[0].x + segments[0].nx * halfWidth,
+                y: points[0].y + segments[0].ny * halfWidth
+            });
+            rightPoints.push({
+                x: points[0].x - segments[0].nx * halfWidth,
+                y: points[0].y - segments[0].ny * halfWidth
+            });
+        }
+    } else {
+        leftPoints.push({
+            x: points[0].x + segments[0].nx * halfWidth,
+            y: points[0].y + segments[0].ny * halfWidth
+        });
+        rightPoints.push({
+            x: points[0].x - segments[0].nx * halfWidth,
+            y: points[0].y - segments[0].ny * halfWidth
+        });
+    }
 
     // Generate joins
     for (let i = 1; i < points.length - 1; i++) {
