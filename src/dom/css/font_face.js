@@ -10,7 +10,7 @@ export class FontFace {
         this.descriptors = descriptors;
         this.#fontData = null;
 
-        if (source instanceof ArrayBuffer) {
+        if (source instanceof Uint8Array) {
             this.#fontData = source;
         }
     }
@@ -20,8 +20,6 @@ export class FontFace {
     }
 
     load() {
-        // For now, we only support loading from an ArrayBuffer provided in the constructor.
-        // We will add network loading later.
         if (this.#fontData) {
             return Promise.resolve(this);
         } else {
@@ -45,19 +43,6 @@ class FontFaceSet {
         this.#faces.clear();
     }
 
-    // A very simplified `check()` that just sees if a font family is in the set.
-    // A real implementation would need to match descriptors.
-    check(font, text) {
-        const family = font.split(' ')[1]; // Super simple parsing
-        for (const face of this.#faces) {
-            if (face.family === family) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // A simplified `get()` to find a font face by family.
     get(family) {
         for (const face of this.#faces) {
             if (face.family === family) {
@@ -69,4 +54,9 @@ class FontFaceSet {
 }
 
 // This will act as the global `document.fonts` object.
-export const fontFaceSet = new FontFaceSet();
+// We attach it to the global object to ensure it's a singleton
+// across different module resolution contexts in our test environment.
+if (typeof global.fontFaceSet === 'undefined') {
+    global.fontFaceSet = new FontFaceSet();
+}
+export const fontFaceSet = global.fontFaceSet;

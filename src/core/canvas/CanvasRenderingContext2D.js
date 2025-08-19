@@ -89,12 +89,15 @@ export class CanvasRenderingContext2D {
 
   _getFontInfo() {
     const { family } = this._parseFont();
+    console.log(`Searching for font family: '${family}'`);
     const customFont = fontFaceSet.get(family);
     if (customFont && customFont.fontData) {
+        console.log(`Found custom font: '${family}'`);
         const fontInfo = new FontInfo();
         InitFont(fontInfo, new Uint8Array(customFont.fontData));
         return fontInfo;
     }
+    console.log(`Custom font not found, using default.`);
     return this.fontInfo; // Default font
   }
 
