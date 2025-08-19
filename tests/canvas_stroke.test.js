@@ -38,6 +38,7 @@ test('Stroking a polyline with a miter join works correctly', (t) => {
     const ctx = new CanvasRenderingContext2D(30, 30);
     ctx.strokeStyle = 'blue';
     ctx.lineWidth = 4;
+    ctx.lineJoin = 'miter';
 
     // Draw a V-shape
     ctx.beginPath();
@@ -48,6 +49,9 @@ test('Stroking a polyline with a miter join works correctly', (t) => {
 
     const blue = [0, 0, 255, 255];
     const white = [0, 0, 0, 0];
+
+    // Check a point on the first segment
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 8, 10, blue);
 
     // Check a point deep inside the miter join
     assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 18, blue);
@@ -98,4 +102,54 @@ test('Stroking an arc with lineWidth works correctly', (t) => {
 
     // Check a point just inside the inner radius
     assertPixelIsColor(ctx.getImageData(0, 0, 50, 50), 25, 9, white);
+});
+
+test('Stroking a polyline with a round join works correctly', (t) => {
+    const ctx = new CanvasRenderingContext2D(30, 30);
+    ctx.strokeStyle = 'blue'; // Use a known color
+    ctx.lineWidth = 4;
+    ctx.lineJoin = 'round';
+
+    // Draw a V-shape
+    ctx.beginPath();
+    ctx.moveTo(5, 5);
+    ctx.lineTo(15, 20);
+    ctx.lineTo(25, 5);
+    ctx.stroke();
+
+    const blue = [0, 0, 255, 255];
+    const white = [0, 0, 0, 0];
+
+    // Check a point on the first segment
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 8, 10, blue);
+
+    // Check a point on the rounded part of the join
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 21, blue);
+});
+
+test('Stroking a polyline with a bevel join works correctly', (t) => {
+    const ctx = new CanvasRenderingContext2D(30, 30);
+    ctx.strokeStyle = 'green';
+    ctx.lineWidth = 4;
+    ctx.lineJoin = 'bevel';
+
+    // Draw a V-shape
+    ctx.beginPath();
+    ctx.moveTo(5, 5);
+    ctx.lineTo(15, 20);
+    ctx.lineTo(25, 5);
+    ctx.stroke();
+
+    const green = [0, 255, 0, 255];
+    const white = [0, 0, 0, 0];
+
+    // Check a point on the first segment
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 8, 10, green);
+
+    // Check a point on the bevel itself
+    // The bevel should be a straight line connecting the outer corners.
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 18, green);
+
+    // Check a point that would be filled by a miter join, but should be empty for bevel
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 22, white);
 });

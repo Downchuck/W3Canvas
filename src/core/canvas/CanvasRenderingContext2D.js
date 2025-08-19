@@ -375,7 +375,7 @@ export class CanvasRenderingContext2D {
 
         // Now that we have a polyline, stroke it.
         const isClosed = subPath[subPath.length - 1].type === 'close';
-        const polygon = strokePolyline(points, this.lineWidth, isClosed);
+        const polygon = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed);
 
         if (polygon.length > 0) {
             this.moveTo(polygon[0].x, polygon[0].y);
@@ -634,14 +634,17 @@ export class CanvasRenderingContext2D {
   }
 
   _parseColor(colorStr) {
-    // This is a very simple color parser.
-    // It only handles a few named colors and hex codes.
+    // TODO: This is a very simple color parser. It needs to be expanded to
+    // support all CSS color formats, like rgb(), rgba(), hsl(), etc.
+    // It only handles a few named colors and hex codes, plus 'purple'
+    // for testing.
     const colorMap = {
       'black': { r: 0, g: 0, b: 0, a: 255 },
       'white': { r: 255, g: 255, b: 255, a: 255 },
       'red': { r: 255, g: 0, b: 0, a: 255 },
       'green': { r: 0, g: 255, b: 0, a: 255 },
       'blue': { r: 0, g: 0, b: 255, a: 255 },
+      'purple': { r: 128, g: 0, b: 128, a: 255 },
     };
 
     if (colorMap[colorStr]) {
