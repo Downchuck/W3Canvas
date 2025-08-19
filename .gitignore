@@ -1,3 +1,20 @@
-node_modules
-.pnp.cjs
-.yarn/install-state.gz
+# Environment (keeping .env since container-based)
+# .env is committed with actual keys
+.env.local
+
+# Yarn PnP (zero-install)
+# We commit .pnp.cjs, .pnp.loader.mjs and .pnp.data.json for zero-install to work correctly.
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# OS files
+.DS_Store
+*.log
+
+# Node modules (shouldn't exist with PnP)
+node_modules/
