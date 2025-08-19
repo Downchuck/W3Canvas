@@ -3,6 +3,7 @@ import { drawArc, fillArcWithMidpoint, getArcScanlineIntersections } from '../al
 import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algorithms/bezier.js';
 import { strokePolyline } from '../algorithms/stroke.js';
 import { CanvasGradient } from './CanvasGradient.js';
+import { fontFaceSet } from '../../dom/css/font_face.js';
 import fs from 'fs';
 import {
     FontInfo, InitFont, FindGlyphIndex, GetGlyphShape, GetCodepointHMetrics,
@@ -86,17 +87,29 @@ export class CanvasRenderingContext2D {
       return { size, family };
   }
 
+  _getFontInfo() {
+    const { family } = this._parseFont();
+    const customFont = fontFaceSet.get(family);
+    if (customFont && customFont.fontData) {
+        const fontInfo = new FontInfo();
+        InitFont(fontInfo, new Uint8Array(customFont.fontData));
+        return fontInfo;
+    }
+    return this.fontInfo; // Default font
+  }
+
   fillText(text, x, y) {
     const { size } = this._parseFont();
-    const scale = ScaleForPixelHeight(this.fontInfo, size);
-    const { ascent } = GetFontVMetrics(this.fontInfo);
+    const fontInfo = this._getFontInfo();
+    const scale = ScaleForPixelHeight(fontInfo, size);
+    const { ascent } = GetFontVMetrics(fontInfo);
     let currentX = x;
     const baseline = y + ascent * scale;
 
     for (let i = 0; i < text.length; i++) {
         const codepoint = text.charCodeAt(i);
-        const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
-        const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
+        const glyphIndex = FindGlyphIndex(fontInfo, codepoint);
+        const vertices = GetGlyphShape(fontInfo, glyphIndex);
 
         if (vertices) {
             this.beginPath();
@@ -117,11 +130,11 @@ export class CanvasRenderingContext2D {
             this.fill();
         }
 
-        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
+        const { advanceWidth } = GetCodepointHMetrics(fontInfo, codepoint);
         currentX += advanceWidth * scale;
 
         if (i < text.length - 1) {
-            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
+            const kern = GetCodepointKernAdvance(fontInfo, codepoint, text.charCodeAt(i + 1));
             currentX += kern * scale;
         }
     }
@@ -129,15 +142,16 @@ export class CanvasRenderingContext2D {
 
   strokeText(text, x, y) {
     const { size } = this._parseFont();
-    const scale = ScaleForPixelHeight(this.fontInfo, size);
-    const { ascent } = GetFontVMetrics(this.fontInfo);
+    const fontInfo = this._getFontInfo();
+    const scale = ScaleForPixelHeight(fontInfo, size);
+    const { ascent } = GetFontVMetrics(fontInfo);
     let currentX = x;
     const baseline = y + ascent * scale;
 
     for (let i = 0; i < text.length; i++) {
         const codepoint = text.charCodeAt(i);
-        const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
-        const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
+        const glyphIndex = FindGlyphIndex(fontInfo, codepoint);
+        const vertices = GetGlyphShape(fontInfo, glyphIndex);
 
         if (vertices) {
             this.beginPath();
@@ -158,11 +172,11 @@ export class CanvasRenderingContext2D {
             this.stroke();
         }
 
-        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
+        const { advanceWidth } = GetCodepointHMetrics(fontInfo, codepoint);
         currentX += advanceWidth * scale;
 
         if (i < text.length - 1) {
-            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
+            const kern = GetCodepointKernAdvance(fontInfo, codepoint, text.charCodeAt(i + 1));
             currentX += kern * scale;
         }
     }
@@ -170,14 +184,15 @@ export class CanvasRenderingContext2D {
 
   measureText(text) {
     const { size } = this._parseFont();
-    const scale = ScaleForPixelHeight(this.fontInfo, size);
+    const fontInfo = this._getFontInfo();
+    const scale = ScaleForPixelHeight(fontInfo, size);
     let width = 0;
     for (let i = 0; i < text.length; i++) {
         const codepoint = text.charCodeAt(i);
-        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
+        const { advanceWidth } = GetCodepointHMetrics(fontInfo, codepoint);
         width += advanceWidth * scale;
         if (i < text.length - 1) {
-            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
+            const kern = GetCodepointKernAdvance(fontInfo, codepoint, text.charCodeAt(i + 1));
             width += kern * scale;
         }
     }

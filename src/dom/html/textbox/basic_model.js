@@ -6,17 +6,23 @@ export class ContentFragment {
 	content;
 	style;
 	isImage;
+	isFont;
 	url;
 	width;
 	height;
 
-	constructor(content, fontStyle, imgUrl, width, height) {
+	constructor(content, fontStyle, imgUrl, width, height, isFont = false) {
 		this.content = content;
 		this.style = fontStyle;
+		this.isFont = isFont;
 
 		if (imgUrl!=null && imgUrl.length > 0) {
 			this.content = ' ';
-			this.isImage = true;
+			if (this.isFont) {
+				// We will handle font loading later
+			} else {
+				this.isImage = true;
+			}
 			this.url = imgUrl;
 			this.width = width;
 			this.height = height;
@@ -43,6 +49,7 @@ export class FragmentStyles {
 	width = 0;
 	height = 0;
 	isImage = false;
+	isFont = false;
 	url = "";
 	css;
 	content;
@@ -60,10 +67,18 @@ export class FragmentStyles {
 			if (groups) {
 				matched = true;
 				this.content = groups[1];
-				groups = /^\s*url\('(.*)'\)/.exec(this.content);
+				// Updated regex to handle data URLs
+                groups = /^\s*url\((['"]?)(.*?)\1\)/.exec(this.content);
 				if (groups) {
-					this.isImage = true;
-					this.url = groups[1];
+					const url = groups[2];
+					if (url.startsWith('data:')) {
+						// This is a data URL, we will handle it later
+						this.isFont = true; // A new flag to indicate this is a font
+						this.url = url;
+					} else {
+						this.isImage = true;
+						this.url = url;
+					}
 				}
 			}
 			if (!matched) {
@@ -231,7 +246,7 @@ export class BasicModel {
 						if (j>=0) fontStyle = this.styles[j].fontStyle;
 						else fontStyle = this.defaultFontStyle;
 					}
-					const frag = new ContentFragment(text, fontStyle, this.styles[i].url, this.styles[i].width, this.styles[i].height);
+					const frag = new ContentFragment(text, fontStyle, this.styles[i].url, this.styles[i].width, this.styles[i].height, this.styles[i].isFont);
 					fragments.push( frag);
 					exOffset+=frag.getCharsCount();
 				}
