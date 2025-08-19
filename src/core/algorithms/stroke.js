@@ -5,7 +5,7 @@
  * @param {boolean} isClosed Whether the polyline is closed (e.g., from closePath).
  * @returns {Array<{x: number, y: number}>} The vertices of the polygon.
  */
-export function strokePolyline(points, lineWidth, lineJoin, isClosed) {
+export function strokePolyline(points, lineWidth, isClosed) {
     if (points.length < 2) {
         return [];
     }
@@ -39,61 +39,44 @@ export function strokePolyline(points, lineWidth, lineJoin, isClosed) {
         y: points[0].y - segments[0].ny * halfWidth
     });
 
-    // Generate joins
+    // Generate miter joins
     for (let i = 1; i < points.length - 1; i++) {
-        const p_prev = points[i-1];
-        const p_curr = points[i];
-        const p_next = points[i+1];
         const n1 = segments[i - 1];
         const n2 = segments[i];
+        const p = points[i];
 
-        const v1x = p_curr.x - p_prev.x;
-        const v1y = p_curr.y - p_prev.y;
-        const v2x = p_next.x - p_curr.x;
-        const v2y = p_next.y - p_curr.y;
-        const cross_product_z = v1x * v2y - v1y * v2x;
-
+        // Simplified miter logic: average the normals
         const miterNx = (n1.nx + n2.nx) / 2;
         const miterNy = (n1.ny + n2.ny) / 2;
         const miterLen = Math.sqrt(miterNx * miterNx + miterNy * miterNy);
 
         if (miterLen === 0) {
-             leftPoints.push({x: p_curr.x + n1.nx * halfWidth, y: p_curr.y + n1.ny * halfWidth});
-             rightPoints.push({x: p_curr.x - n1.nx * halfWidth, y: p_curr.y - n1.ny * halfWidth});
+             leftPoints.push({x: p.x + n1.nx * halfWidth, y: p.y + n1.ny * halfWidth});
+             rightPoints.push({x: p.x - n1.nx * halfWidth, y: p.y - n1.ny * halfWidth});
              continue;
         }
 
         const miterScale = 1 / miterLen;
 
         leftPoints.push({
-            x: p_curr.x + miterNx * miterScale * halfWidth,
-            y: p_curr.y + miterNy * miterScale * halfWidth
+            x: p.x + miterNx * miterScale * halfWidth,
+            y: p.y + miterNy * miterScale * halfWidth
         });
         rightPoints.push({
-            x: p_curr.x - miterNx * miterScale * halfWidth,
-            y: p_curr.y - miterNy * miterScale * halfWidth
+            x: p.x - miterNx * miterScale * halfWidth,
+            y: p.y - miterNy * miterScale * halfWidth
         });
     }
 
     // Generate offset points for the end cap
     const lastSegment = segments[segments.length - 1];
-    const p_last = points[points.length - 1];
-
-    // HACK: Extend the cap slightly to deal with rasterization errors
-    const p_prev = points[points.length - 2];
-    const dx = p_last.x - p_prev.x;
-    const dy = p_last.y - p_prev.y;
-    const len = Math.sqrt(dx*dx + dy*dy);
-    const ex = dx/len;
-    const ey = dy/len;
-
     leftPoints.push({
-        x: p_last.x + lastSegment.nx * halfWidth + ex*0.5,
-        y: p_last.y + lastSegment.ny * halfWidth + ey*0.5
+        x: points[points.length - 1].x + lastSegment.nx * halfWidth,
+        y: points[points.length - 1].y + lastSegment.ny * halfWidth
     });
     rightPoints.push({
-        x: p_last.x - lastSegment.nx * halfWidth + ex*0.5,
-        y: p_last.y - lastSegment.ny * halfWidth + ey*0.5
+        x: points[points.length - 1].x - lastSegment.nx * halfWidth,
+        y: points[points.length - 1].y - lastSegment.ny * halfWidth
     });
 
     // Combine the paths: go down the left side, then back up the right side

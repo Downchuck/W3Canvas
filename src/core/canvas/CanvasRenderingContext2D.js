@@ -375,7 +375,7 @@ export class CanvasRenderingContext2D {
 
         // Now that we have a polyline, stroke it.
         const isClosed = subPath[subPath.length - 1].type === 'close';
-        const polygon = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed);
+        const polygon = strokePolyline(points, this.lineWidth, isClosed);
 
         if (polygon.length > 0) {
             this.moveTo(polygon[0].x, polygon[0].y);
