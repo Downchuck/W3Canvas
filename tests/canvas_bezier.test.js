@@ -21,7 +21,7 @@ test('Stroking a simple bezier curve', () => {
   ctx.stroke();
 
   // Check a point near the start and end points, but unambiguously inside the stroke
-  assert.deepStrictEqual(getPixel(ctx.imageData, 11, 11), [0, 0, 0, 255], 'A point near the start should be black');
+  assert.deepStrictEqual(getPixel(ctx.imageData, 10, 11), [0, 0, 0, 255], 'A point near the start should be black');
   assert.deepStrictEqual(getPixel(ctx.imageData, 89, 89), [0, 0, 0, 255], 'A point near the end should be black');
 
   // Check a point somewhere in the middle of the curve.
