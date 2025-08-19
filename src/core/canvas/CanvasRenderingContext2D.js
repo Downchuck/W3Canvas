@@ -360,19 +360,14 @@ export class CanvasRenderingContext2D {
                 currentX = command.x;
                 currentY = command.y;
             } else if (command.type === 'arc') {
-                const steps = 100; // Tessellation for arc in stroke
-                for (let i = 0; i < steps; i++) { // Use < to avoid floating point issues on the last step
+                const steps = 50; // Tessellation for arc in stroke
+                for (let i = 0; i <= steps; i++) {
                     const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
                     points.push({
                         x: command.x + command.radius * Math.cos(angle),
                         y: command.y + command.radius * Math.sin(angle)
                     });
                 }
-                // Manually push the exact last point
-                points.push({
-                    x: command.x + command.radius * Math.cos(command.endAngle),
-                    y: command.y + command.radius * Math.sin(command.endAngle)
-                });
                 currentX = command.x + command.radius * Math.cos(command.endAngle);
                 currentY = command.y + command.radius * Math.sin(command.endAngle);
             }
@@ -380,7 +375,7 @@ export class CanvasRenderingContext2D {
 
         // Now that we have a polyline, stroke it.
         const isClosed = subPath[subPath.length - 1].type === 'close';
-        const polygon = strokePolyline(points, this.lineWidth, isClosed);
+        const polygon = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed);
 
         if (polygon.length > 0) {
             this.moveTo(polygon[0].x, polygon[0].y);
@@ -422,119 +417,62 @@ export class CanvasRenderingContext2D {
     }
 
     const allEdges = [];
+    let currentX = 0;
+    let currentY = 0;
+    let startX = 0;
+    let startY = 0;
+
     const addEdge = (edge) => {
         if (edge.y_min === edge.y_max) return; // Ignore horizontal edges
         allEdges.push(edge);
     };
 
-    const subPaths = [];
-    let currentSubPath = [];
     for (const command of this.path) {
-        if (command.type === 'move') {
-            if (currentSubPath.length > 0) {
-                subPaths.push(currentSubPath);
+        switch (command.type) {
+            case 'move':
+                currentX = command.x;
+                currentY = command.y;
+                startX = command.x;
+                startY = command.y;
+                break;
+            case 'line': {
+                const y_min = Math.min(currentY, command.y);
+                const y_max = Math.max(currentY, command.y);
+                const x_at_ymin = currentY < command.y ? currentX : command.x;
+                const slope_inv = (command.x - currentX) / (command.y - currentY);
+                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
+                currentX = command.x;
+                currentY = command.y;
+                break;
             }
-            currentSubPath = [command];
-        } else {
-            currentSubPath.push(command);
-        }
-    }
-    if (currentSubPath.length > 0) {
-        subPaths.push(currentSubPath);
-    }
-
-    for (const subPath of subPaths) {
-        let currentX = 0;
-        let currentY = 0;
-        let startX = 0;
-        let startY = 0;
-        let isSubpathClosed = false;
-        let hasCurrentPoint = false;
-
-        for (const command of subPath) {
-            switch (command.type) {
-                case 'move':
-                    currentX = command.x;
-                    currentY = command.y;
-                    startX = command.x;
-                    startY = command.y;
-                    hasCurrentPoint = true;
-                    break;
-                case 'line': {
-                    if (!hasCurrentPoint) { // First command is a line, spec says start at (0,0)
-                        startX = 0; startY = 0; hasCurrentPoint = true;
-                    }
-                    const y_min = Math.min(currentY, command.y);
-                    const y_max = Math.max(currentY, command.y);
-                    const x_at_ymin = currentY < command.y ? currentX : command.x;
-                    const slope_inv = (command.x - currentX) / (command.y - currentY);
-                    addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
-                    currentX = command.x;
-                    currentY = command.y;
-                    break;
-                }
-                case 'bezier': {
-                     if (!hasCurrentPoint) { // First command is a bezier, spec says start at (0,0)
-                        startX = 0; startY = 0; hasCurrentPoint = true;
-                    }
-                    const p0 = { x: currentX, y: currentY };
-                    const p1 = { x: command.cp1x, y: command.cp1y };
-                    const p2 = { x: command.cp2x, y: command.cp2y };
-                    const p3 = { x: command.x, y: command.y };
-                    const y_min = Math.min(p0.y, p1.y, p2.y, p3.y);
-                    const y_max = Math.max(p0.y, p1.y, p2.y, p3.y);
-                    addEdge({ type: 'bezier', p0, p1, p2, p3, y_min, y_max });
-                    currentX = command.x;
-                    currentY = command.y;
-                    break;
-                }
-                case 'close':
-                    isSubpathClosed = true;
-                    if (hasCurrentPoint) {
-                        const y_min = Math.min(currentY, startY);
-                        const y_max = Math.max(currentY, startY);
-                        const x_at_ymin = currentY < startY ? currentX : startX;
-                        const slope_inv = (startX - currentX) / (startY - currentY);
-                        addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
-                    }
-                    currentX = startX;
-                    currentY = startY;
-                    break;
-                case 'arc': {
-                    const arcStartX = command.x + command.radius * Math.cos(command.startAngle);
-                    const arcStartY = command.y + command.radius * Math.sin(command.startAngle);
-                    if (hasCurrentPoint) {
-                         const y_min = Math.min(currentY, arcStartY);
-                         const y_max = Math.max(currentY, arcStartY);
-                         const x_at_ymin = currentY < arcStartY ? currentX : arcStartX;
-                         const slope_inv = (arcStartX - currentX) / (arcStartY - currentY);
-                         addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
-                    } else {
-                        startX = arcStartX;
-                        startY = arcStartY;
-                        currentX = arcStartX;
-                        currentY = arcStartY;
-                        hasCurrentPoint = true;
-                    }
-
-                    const y_min = command.y - command.radius;
-                    const y_max = command.y + command.radius;
-                    addEdge({ type: 'arc', ...command, y_min, y_max });
-                    currentX = command.x + command.radius * Math.cos(command.endAngle);
-                    currentY = command.y + command.radius * Math.sin(command.endAngle);
-                    break;
-                }
+            case 'bezier': {
+                const p0 = { x: currentX, y: currentY };
+                const p1 = { x: command.cp1x, y: command.cp1y };
+                const p2 = { x: command.cp2x, y: command.cp2y };
+                const p3 = { x: command.x, y: command.y };
+                const y_min = Math.min(p0.y, p1.y, p2.y, p3.y);
+                const y_max = Math.max(p0.y, p1.y, p2.y, p3.y);
+                addEdge({ type: 'bezier', p0, p1, p2, p3, y_min, y_max });
+                currentX = command.x;
+                currentY = command.y;
+                break;
             }
-        }
-
-        if (!isSubpathClosed && hasCurrentPoint) {
-            // Check if start and end points are different before closing
-            if (currentX !== startX || currentY !== startY) {
+            case 'close':
                 const y_min = Math.min(currentY, startY);
                 const y_max = Math.max(currentY, startY);
                 const x_at_ymin = currentY < startY ? currentX : startX;
                 const slope_inv = (startX - currentX) / (startY - currentY);
                 addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
+                currentX = startX;
+                currentY = startY;
+                break;
+            case 'arc': {
+                const y_min = command.y - command.radius;
+                const y_max = command.y + command.radius;
+                addEdge({ type: 'arc', ...command, y_min, y_max });
+                currentX = command.x + command.radius * Math.cos(command.endAngle);
+                currentY = command.y + command.radius * Math.sin(command.endAngle);
+                break;
             }
         }
     }
@@ -603,7 +541,7 @@ export class CanvasRenderingContext2D {
                 const x_end = Math.round(intersections[i + 1]);
                 for (let x = x_start; x < x_end; x++) {
                     if (x >= 0 && x < this.width) {
-                        if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
+                         if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
                             continue;
                         }
                         const index = (y * canvasWidth + x) * 4;
