@@ -70,13 +70,23 @@ export function strokePolyline(points, lineWidth, isClosed) {
 
     // Generate offset points for the end cap
     const lastSegment = segments[segments.length - 1];
+    const p_last = points[points.length - 1];
+
+    // HACK: Extend the cap slightly to deal with rasterization errors
+    const p_prev = points[points.length - 2];
+    const dx = p_last.x - p_prev.x;
+    const dy = p_last.y - p_prev.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const ex = dx/len;
+    const ey = dy/len;
+
     leftPoints.push({
-        x: points[points.length - 1].x + lastSegment.nx * halfWidth,
-        y: points[points.length - 1].y + lastSegment.ny * halfWidth
+        x: p_last.x + lastSegment.nx * halfWidth + ex*0.5,
+        y: p_last.y + lastSegment.ny * halfWidth + ey*0.5
     });
     rightPoints.push({
-        x: points[points.length - 1].x - lastSegment.nx * halfWidth,
-        y: points[points.length - 1].y - lastSegment.ny * halfWidth
+        x: p_last.x - lastSegment.nx * halfWidth + ex*0.5,
+        y: p_last.y - lastSegment.ny * halfWidth + ey*0.5
     });
 
     // Combine the paths: go down the left side, then back up the right side

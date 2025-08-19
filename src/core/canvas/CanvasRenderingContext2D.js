@@ -360,15 +360,15 @@ export class CanvasRenderingContext2D {
                 currentX = command.x;
                 currentY = command.y;
             } else if (command.type === 'arc') {
-                const steps = 150; // Tessellation for arc in stroke
-                for (let i = 0; i < steps; i++) {
+                const steps = 100; // Tessellation for arc in stroke
+                for (let i = 0; i < steps; i++) { // Use < to avoid floating point issues on the last step
                     const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
                     points.push({
                         x: command.x + command.radius * Math.cos(angle),
                         y: command.y + command.radius * Math.sin(angle)
                     });
                 }
-                // Manually push the exact last point to avoid floating point errors
+                // Manually push the exact last point
                 points.push({
                     x: command.x + command.radius * Math.cos(command.endAngle),
                     y: command.y + command.radius * Math.sin(command.endAngle)
@@ -603,7 +603,7 @@ export class CanvasRenderingContext2D {
                 const x_end = Math.round(intersections[i + 1]);
                 for (let x = x_start; x < x_end; x++) {
                     if (x >= 0 && x < this.width) {
-                         if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
+                        if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
                             continue;
                         }
                         const index = (y * canvasWidth + x) * 4;
