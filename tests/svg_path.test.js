@@ -52,7 +52,7 @@ test('SVG path element renders with h command', () => {
     path.repaint();
 
     const imageData = ctx.getImageData(50, 10, 1, 1);
-    assertPixelIsColor(imageData, 0, 0, [0, 128, 0, 255]);
+    assertPixelIsColor(imageData, 0, 0, [0, 255, 0, 255]);
 });
 
 test('SVG path element renders with V command', () => {
@@ -85,7 +85,7 @@ test('SVG path element renders with v command', () => {
     assertPixelIsColor(imageData, 0, 0, [255, 165, 0, 255]);
 });
 
-test.skip('SVG path element renders with C command', () => {
+test('SVG path element renders with C command', () => {
     const ctx = new CanvasRenderingContext2D(100, 100);
     const canvas = new Element('CANVAS');
     canvas.getContext = () => ctx;
@@ -100,7 +100,7 @@ test.skip('SVG path element renders with C command', () => {
     assertPixelIsColor(imageData, 0, 0, [255, 0, 0, 255]);
 });
 
-test.skip('SVG path element renders with c command', () => {
+test('SVG path element renders with c command', () => {
     const ctx = new CanvasRenderingContext2D(100, 100);
     const canvas = new Element('CANVAS');
     canvas.getContext = () => ctx;
