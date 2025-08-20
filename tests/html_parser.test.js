@@ -25,6 +25,18 @@ test('HTML Parser should correctly parse a simple HTML string', () => {
     assert.strictEqual(text.getData(), 'Hello', 'Text node should contain "Hello"');
 });
 
+test('HTML Parser should parse attributes', () => {
+    const html = '<p id="intro" class="main">Hello</p>';
+    const parser = new HTMLParser();
+    const doc = parser.parse(html);
+
+    const p = doc.getFirstChild();
+    assert.ok(p, 'Document should have a child');
+    assert.strictEqual(p.tagName, 'p', 'Element should be a <p>');
+    assert.strictEqual(p.id, 'intro', 'id attribute should be set correctly');
+    assert.strictEqual(p.attributes['class'], 'main', 'class attribute should be set correctly');
+});
+
 test('HTML Parser should handle nested elements', () => {
     const html = '<div><span>World</span></div>';
     const parser = new HTMLParser();

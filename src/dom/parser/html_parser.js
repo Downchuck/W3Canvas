@@ -26,6 +26,9 @@ export class HTMLParser {
         switch (token.type) {
             case 'StartTag':
                 const element = new Element(token.tagName);
+                for (const [name, value] of Object.entries(token.attributes)) {
+                    element.setAttribute(name, value);
+                }
                 currentNode.appendChild(element);
                 this.stack.push(element);
                 break;

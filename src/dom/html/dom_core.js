@@ -103,6 +103,14 @@ export class Element extends Node {
   style;
   boxModel;
   id = '';
+  attributes = {};
+
+  setAttribute(name, value) {
+    this.attributes[name] = value;
+    if (name === 'id') {
+      this.id = value;
+    }
+  }
 
   constructor(tag) {
     if (!tag) {
