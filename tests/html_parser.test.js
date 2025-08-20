@@ -103,3 +103,21 @@ test('HTML Parser should handle raw text elements like <style>', () => {
     assert.strictEqual(text.nodeType, NODE_TYPE_TEXT, 'Child should be a text node');
     assert.strictEqual(text.getData(), 'p { color: red; }', 'Text content should be correct');
 });
+
+test('HTML Parser should decode HTML entities', () => {
+    const html = '<p>Hello &amp; World &copy; &#8364; &#x20AC; &notanentity;</p>';
+    const parser = new HTMLParser();
+    const doc = parser.parse(html);
+
+    const p = doc.getFirstChild();
+    assert.ok(p, 'Document should have a child');
+    assert.strictEqual(p.tagName, 'p', 'Element should be a <p>');
+
+    let textData = '';
+    for (const child of p.children) {
+        if (child.nodeType === NODE_TYPE_TEXT) {
+            textData += child.getData();
+        }
+    }
+    assert.strictEqual(textData, 'Hello & World © € € &notanentity;', 'Text node should contain decoded entities');
+});

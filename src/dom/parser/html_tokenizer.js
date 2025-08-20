@@ -1,3 +1,5 @@
+import { NAMED_CHARACTER_REFERENCES } from './entities.js';
+
 const DATA_STATE = 'DataState';
 const TAG_OPEN_STATE = 'TagOpenState';
 const TAG_NAME_STATE = 'TagNameState';
@@ -11,6 +13,7 @@ const SELF_CLOSING_START_TAG_STATE = 'SelfClosingStartTagState';
 const COMMENT_STATE = 'CommentState';
 const DOCTYPE_STATE = 'DoctypeState';
 const RAWTEXT_STATE = 'RAWTEXTState';
+const CHARACTER_REFERENCE_STATE = 'CharacterReferenceState';
 
 export class HTMLTokenizer {
     constructor(html) {
@@ -33,20 +36,95 @@ export class HTMLTokenizer {
             switch (this.state) {
                 case DATA_STATE: {
                     const textEnd = this.html.indexOf('<', this.pos);
-                    if (textEnd === -1) {
+                    const ampEnd = this.html.indexOf('&', this.pos);
+
+                    let firstChar = -1;
+                    if (textEnd !== -1 && ampEnd !== -1) {
+                        firstChar = Math.min(textEnd, ampEnd);
+                    } else if (textEnd !== -1) {
+                        firstChar = textEnd;
+                    } else {
+                        firstChar = ampEnd;
+                    }
+
+                    if (firstChar === -1) {
                         const text = this.html.substring(this.pos);
                         this.pos = this.html.length;
                         if (text) return { type: 'Text', data: text };
                         break;
                     }
-                    if (textEnd > this.pos) {
-                        const text = this.html.substring(this.pos, textEnd);
-                        this.pos = textEnd;
+                    if (firstChar > this.pos) {
+                        const text = this.html.substring(this.pos, firstChar);
+                        this.pos = firstChar;
                         return { type: 'Text', data: text };
                     }
-                    this.state = TAG_OPEN_STATE;
-                    this.pos++; // Consume '<'
+
+                    if (this.html[this.pos] === '<') {
+                        this.state = TAG_OPEN_STATE;
+                        this.pos++; // Consume '<'
+                    } else if (this.html[this.pos] === '&') {
+                        this.state = CHARACTER_REFERENCE_STATE;
+                    }
                     break;
+                }
+
+                case CHARACTER_REFERENCE_STATE: {
+                    this.pos++; // consume '&'
+                    let consumed = '&';
+                    let result = '&';
+
+                    if (this.html[this.pos] === '#') {
+                        this.pos++;
+                        consumed += '#';
+                        let digits = '';
+                        let isHex = false;
+                        if (this.html[this.pos] === 'x' || this.html[this.pos] === 'X') {
+                            isHex = true;
+                            this.pos++;
+                            consumed += 'x';
+                            const hexMatch = this.html.substring(this.pos).match(/^[0-9a-fA-F]+/);
+                            if (hexMatch) {
+                                digits = hexMatch[0];
+                                this.pos += digits.length;
+                                consumed += digits;
+                            }
+                        } else {
+                            const decMatch = this.html.substring(this.pos).match(/^[0-9]+/);
+                            if (decMatch) {
+                                digits = decMatch[0];
+                                this.pos += digits.length;
+                                consumed += digits;
+                            }
+                        }
+
+                        if (this.html[this.pos] === ';') {
+                            this.pos++;
+                            consumed += ';';
+                        }
+
+                        if (digits) {
+                            const num = parseInt(digits, isHex ? 16 : 10);
+                            result = String.fromCodePoint(num);
+                        } else {
+                            result = consumed;
+                        }
+
+                    } else {
+                        const namedMatch = this.html.substring(this.pos).match(/^[a-zA-Z0-9]+;?/);
+                        if (namedMatch) {
+                            const entityName = namedMatch[0];
+                            if (NAMED_CHARACTER_REFERENCES.has(entityName)) {
+                                result = NAMED_CHARACTER_REFERENCES.get(entityName);
+                                this.pos += entityName.length;
+                            } else {
+                                result = consumed + entityName;
+                                this.pos += entityName.length;
+                            }
+                        }
+                    }
+
+                    this.state = DATA_STATE;
+                    return { type: 'Text', data: result };
                 }
 
                 case TAG_OPEN_STATE: {
