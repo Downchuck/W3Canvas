@@ -96,7 +96,7 @@ test('SVG path element renders with C command', () => {
     canvas.appendChild(path);
     path.repaint();
 
-    const imageData = ctx.getImageData(50, 25, 1, 1);
+    const imageData = ctx.getImageData(50, 20, 1, 1);
     assertPixelIsColor(imageData, 0, 0, [255, 0, 0, 255]);
 });
 
@@ -111,6 +111,6 @@ test('SVG path element renders with c command', () => {
     canvas.appendChild(path);
     path.repaint();
 
-    const imageData = ctx.getImageData(50, 25, 1, 1);
+    const imageData = ctx.getImageData(50, 20, 1, 1);
     assertPixelIsColor(imageData, 0, 0, [0, 0, 255, 255]);
 });
