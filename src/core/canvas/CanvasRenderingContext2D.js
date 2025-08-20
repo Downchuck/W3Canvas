@@ -260,6 +260,61 @@ export class CanvasRenderingContext2D {
     this.closePath();
   }
 
+  roundRect(x, y, w, h, radii) {
+    if (w < 0) {
+      x = x + w;
+      w = -w;
+    }
+    if (h < 0) {
+      y = y + h;
+      h = -h;
+    }
+
+    let r = [0, 0, 0, 0];
+    if (typeof radii === 'number') {
+      r = [radii, radii, radii, radii];
+    } else if (Array.isArray(radii)) {
+      if (radii.length === 1) {
+        r = [radii[0], radii[0], radii[0], radii[0]];
+      } else if (radii.length === 2) {
+        r = [radii[0], radii[1], radii[0], radii[1]];
+      } else if (radii.length === 3) {
+        r = [radii[0], radii[1], radii[2], radii[1]];
+      } else {
+        r = radii;
+      }
+    }
+
+    const [tl, tr, br, bl] = r.map(radius => Math.min(Math.max(0, radius), w / 2, h / 2));
+
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + tr);
+    this.lineTo(x + w, y + h - br);
+    this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+    this.lineTo(x + bl, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - bl);
+    this.lineTo(x, y + tl);
+    this.quadraticCurveTo(x, y, x + tl, y);
+    this.closePath();
+  }
+
+  quadraticCurveTo(cp1x, cp1y, x, y) {
+    const lastPoint = this.path.length > 0 ? this.path[this.path.length - 1] : { x: 0, y: 0 };
+    if (lastPoint.type === 'move' || lastPoint.type === 'line' || lastPoint.type === 'bezier' || lastPoint.type === 'arc') {
+      const startX = lastPoint.x;
+      const startY = lastPoint.y;
+      this.bezierCurveTo(
+        startX + 2/3 * (cp1x - startX),
+        startY + 2/3 * (cp1y - startY),
+        x + 2/3 * (cp1x - x),
+        y + 2/3 * (cp1y - y),
+        x,
+        y
+      );
+    }
+  }
+
   bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
     this.path.push({ type: 'bezier', cp1x, cp1y, cp2x, cp2y, x, y });
   }
