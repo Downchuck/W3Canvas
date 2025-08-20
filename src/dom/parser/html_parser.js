@@ -1,5 +1,5 @@
 import { HTMLTokenizer } from './html_tokenizer.js';
-import { Document, Element, TextNode } from '../html/dom_core.js';
+import { Document, Element, TextNode, NODE_TYPE_TEXT } from '../html/dom_core.js';
 
 export class HTMLParser {
     constructor() {
@@ -45,9 +45,15 @@ export class HTMLParser {
                 break;
 
             case 'Text':
-                if (token.data.trim().length > 0) {
-                    const textNode = new TextNode(token.data);
-                    currentNode.appendChild(textNode);
+                // Whitespace-only text nodes are significant in HTML.
+                if (token.data.length > 0) {
+                    const lastChild = currentNode.children[currentNode.children.length - 1];
+                    if (lastChild && lastChild.nodeType === NODE_TYPE_TEXT) {
+                        lastChild.setData(lastChild.getData() + token.data);
+                    } else {
+                        const textNode = new TextNode(token.data);
+                        currentNode.appendChild(textNode);
+                    }
                 }
                 break;
 
