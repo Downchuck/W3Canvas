@@ -8,6 +8,8 @@ const AFTER_ATTRIBUTE_NAME_STATE = 'AfterAttributeNameState';
 const BEFORE_ATTRIBUTE_VALUE_STATE = 'BeforeAttributeValueState';
 const ATTRIBUTE_VALUE_QUOTED_STATE = 'AttributeValueQuotedState';
 const SELF_CLOSING_START_TAG_STATE = 'SelfClosingStartTagState';
+const COMMENT_STATE = 'CommentState';
+const DOCTYPE_STATE = 'DoctypeState';
 
 export class HTMLTokenizer {
     constructor(html) {
@@ -19,11 +21,14 @@ export class HTMLTokenizer {
     }
 
     nextToken() {
-        while (this.pos < this.html.length) {
-            const char = this.html[this.pos];
+        console.log(`State: ${this.state}, Pos: ${this.pos}, Char: ${this.html[this.pos]}`);
+        if (this.pos >= this.html.length) {
+            return { type: 'EOF' };
+        }
 
+        while (this.pos < this.html.length) {
             switch (this.state) {
-                case DATA_STATE:
+                case DATA_STATE: {
                     const textEnd = this.html.indexOf('<', this.pos);
                     if (textEnd === -1) {
                         const text = this.html.substring(this.pos);
@@ -37,17 +42,55 @@ export class HTMLTokenizer {
                         return { type: 'Text', data: text };
                     }
                     this.state = TAG_OPEN_STATE;
-                    break;
-
-                case TAG_OPEN_STATE:
                     this.pos++; // Consume '<'
-                    if (this.html[this.pos] === '/') {
+                    break;
+                }
+
+                case TAG_OPEN_STATE: {
+                    if (this.html[this.pos] === '!') {
+                        this.pos++; // Consume '!'
+                        if (this.html.substring(this.pos, this.pos + 2) === '--') {
+                            this.pos += 2; // Consume '--'
+                            this.state = COMMENT_STATE;
+                        } else if (this.html.substring(this.pos, this.pos + 7).toUpperCase() === 'DOCTYPE') {
+                            this.pos += 7; // Consume 'DOCTYPE'
+                            this.state = DOCTYPE_STATE;
+                        } else {
+                            this.state = DATA_STATE; // Error
+                        }
+                    } else if (this.html[this.pos] === '/') {
                         this.pos++; // Consume '/'
                         this.state = END_TAG_OPEN_STATE;
                     } else {
                         this.state = TAG_NAME_STATE;
                     }
                     break;
+                }
+
+                case COMMENT_STATE: {
+                    const commentEnd = this.html.indexOf('-->', this.pos);
+                    if (commentEnd === -1) {
+                        const comment = this.html.substring(this.pos);
+                        this.pos = this.html.length;
+                        return { type: 'Comment', data: comment };
+                    }
+                    const comment = this.html.substring(this.pos, commentEnd);
+                    this.pos = commentEnd + 3; // Consume '-->'
+                    this.state = DATA_STATE;
+                    return { type: 'Comment', data: comment };
+                }
+
+                case DOCTYPE_STATE: {
+                    const doctypeEnd = this.html.indexOf('>', this.pos);
+                    if (doctypeEnd === -1) {
+                        this.state = DATA_STATE; // Error
+                        break;
+                    }
+                    const doctype = this.html.substring(this.pos, doctypeEnd).trim();
+                    this.pos = doctypeEnd + 1;
+                    this.state = DATA_STATE;
+                    return { type: 'Doctype', data: doctype };
+                }
 
                 case TAG_NAME_STATE:
                 case END_TAG_OPEN_STATE: {
@@ -57,9 +100,11 @@ export class HTMLTokenizer {
                         const tagName = tagEndMatch[0].toLowerCase();
                         this.pos += tagName.length;
                         if (isEndTag) {
-                            this.state = DATA_STATE;
+                            // Simplified: does not handle attributes on end tags, just finds the >
                             const tagEnd = this.html.indexOf('>', this.pos);
-                            this.pos = tagEnd + 1;
+                            if (tagEnd !== -1) this.pos = tagEnd;
+                            this.state = DATA_STATE;
+                            this.pos++; // Consume '>'
                             return { type: 'EndTag', tagName };
                         } else {
                             this.currentToken = { type: 'StartTag', tagName, attributes: {}, selfClosing: false };
@@ -71,7 +116,8 @@ export class HTMLTokenizer {
                     break;
                 }
 
-                case BEFORE_ATTRIBUTE_NAME_STATE:
+                case BEFORE_ATTRIBUTE_NAME_STATE: {
+                    const char = this.html[this.pos];
                     if (/\s/.test(char)) {
                         this.pos++;
                     } else if (char === '/') {
@@ -80,15 +126,18 @@ export class HTMLTokenizer {
                     } else if (char === '>') {
                         this.pos++;
                         this.state = DATA_STATE;
-                        return this.currentToken;
+                        const token = this.currentToken;
+                        this.currentToken = null;
+                        return token;
                     } else {
                         this.state = ATTRIBUTE_NAME_STATE;
                         this.currentAttribute = { name: '', value: '' };
                     }
                     break;
+                }
 
-                case ATTRIBUTE_NAME_STATE:
-                    const nameMatch = this.html.substring(this.pos).match(/^([^=\s>]+)/);
+                case ATTRIBUTE_NAME_STATE: {
+                    const nameMatch = this.html.substring(this.pos).match(/^([^=\s/>]+)/);
                     if (nameMatch) {
                         this.currentAttribute.name = nameMatch[0].toLowerCase();
                         this.pos += this.currentAttribute.name.length;
@@ -97,8 +146,10 @@ export class HTMLTokenizer {
                         this.state = DATA_STATE;
                     }
                     break;
+                }
 
-                case AFTER_ATTRIBUTE_NAME_STATE:
+                case AFTER_ATTRIBUTE_NAME_STATE: {
+                    const char = this.html[this.pos];
                     if (/\s/.test(char)) {
                         this.pos++;
                     } else if (char === '=') {
@@ -109,8 +160,10 @@ export class HTMLTokenizer {
                         this.state = BEFORE_ATTRIBUTE_NAME_STATE;
                     }
                     break;
+                }
 
-                case BEFORE_ATTRIBUTE_VALUE_STATE:
+                case BEFORE_ATTRIBUTE_VALUE_STATE: {
+                    const char = this.html[this.pos];
                     if (/\s/.test(char)) {
                         this.pos++;
                     } else if (char === '"' || char === "'") {
@@ -121,8 +174,9 @@ export class HTMLTokenizer {
                         this.state = DATA_STATE;
                     }
                     break;
+                }
 
-                case ATTRIBUTE_VALUE_QUOTED_STATE:
+                case ATTRIBUTE_VALUE_QUOTED_STATE: {
                     const valueEnd = this.html.indexOf(this.quoteChar, this.pos);
                     if (valueEnd === -1) {
                         this.state = DATA_STATE;
@@ -133,17 +187,21 @@ export class HTMLTokenizer {
                         this.state = BEFORE_ATTRIBUTE_NAME_STATE;
                     }
                     break;
+                }
 
-                case SELF_CLOSING_START_TAG_STATE:
-                    if (char === '>') {
+                case SELF_CLOSING_START_TAG_STATE: {
+                    if (this.html[this.pos] === '>') {
                         this.currentToken.selfClosing = true;
                         this.pos++;
                         this.state = DATA_STATE;
-                        return this.currentToken;
+                        const token = this.currentToken;
+                        this.currentToken = null;
+                        return token;
                     } else {
                         this.state = DATA_STATE; // Error
                     }
                     break;
+                }
 
                 default:
                     throw new Error(`Unknown tokenizer state: ${this.state}`);

@@ -51,6 +51,15 @@ export class HTMLParser {
                 }
                 break;
 
+            case 'Comment':
+                const commentNode = this.doc.createComment(token.data);
+                currentNode.appendChild(commentNode);
+                break;
+
+            case 'Doctype':
+                this.doc.doctype = token.data;
+                break;
+
             case 'EOF':
                 // End of file, do nothing
                 break;

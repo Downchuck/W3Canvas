@@ -193,13 +193,37 @@ export class TextNode extends Node {
   getData() { return this.data; }
 }
 
+export const NODE_TYPE_COMMENT = 8;
+
+export class Comment extends Node {
+    data;
+
+    constructor(content) {
+        super(NODE_TYPE_COMMENT);
+        this.data = (content === undefined) ? "" : content;
+    }
+
+    setData(c) { this.data = c; }
+    getData() { return this.data; }
+}
+
 export class Document extends Node {
+  doctype = null;
+
   constructor() {
     super(NODE_TYPE_DOCUMENT);
   }
 
   createElement(tag) { return new Element(tag); }
   createTextNode(content) { return new TextNode(content); }
+  createComment(data) { return new CommentNode(data); }
+}
+
+export class CommentNode extends Node {
+    constructor(data) {
+        super(8); // NODE_TYPE_COMMENT
+        this.data = data;
+    }
 }
 
 export class NodeIterator {
