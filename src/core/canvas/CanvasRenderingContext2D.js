@@ -640,6 +640,7 @@ export class CanvasRenderingContext2D {
       'green': { r: 0, g: 255, b: 0, a: 255 },
       'blue': { r: 0, g: 0, b: 255, a: 255 },
       'purple': { r: 128, g: 0, b: 128, a: 255 },
+      'orange': { r: 255, g: 165, b: 0, a: 255 },
     };
 
     if (colorMap[colorStr]) {
