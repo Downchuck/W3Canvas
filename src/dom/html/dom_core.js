@@ -185,7 +185,11 @@ export class TextNode extends Node {
   getData() { return this.data; }
 }
 
-export class Document {
+export class Document extends Node {
+  constructor() {
+    super(NODE_TYPE_DOCUMENT);
+  }
+
   createElement(tag) { return new Element(tag); }
   createTextNode(content) { return new TextNode(content); }
 }
