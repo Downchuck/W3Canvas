@@ -30,6 +30,7 @@ export class CanvasRenderingContext2D {
     this.textAlign = 'start';
     this.stateStack = [];
     this.textBaseline = 'alphabetic';
+    this.transformMatrix = [1, 0, 0, 1, 0, 0]; // a, b, c, d, e, f
     this.path = [];
     this.clippingPath = null;
     this.clippingPathAsVertices = null;
@@ -54,6 +55,7 @@ export class CanvasRenderingContext2D {
       font: this.font,
       textAlign: this.textAlign,
       textBaseline: this.textBaseline,
+      transformMatrix: [...this.transformMatrix],
     });
   }
 
@@ -68,15 +70,61 @@ export class CanvasRenderingContext2D {
       this.font = state.font;
       this.textAlign = state.textAlign;
       this.textBaseline = state.textBaseline;
+      this.transformMatrix = state.transformMatrix;
     }
   }
 
   translate(x, y) {
-    // TODO: Implement transformations
+    this.transform(1, 0, 0, 1, x, y);
   }
 
   scale(x, y) {
-    // TODO: Implement transformations
+    this.transform(x, 0, 0, y, 0, 0);
+  }
+
+  rotate(angle) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    this.transform(cos, sin, -sin, cos, 0, 0);
+  }
+
+  transform(a, b, c, d, e, f) {
+    const m = this.transformMatrix;
+    const m0 = m[0];
+    const m1 = m[1];
+    const m2 = m[2];
+    const m3 = m[3];
+    const m4 = m[4];
+    const m5 = m[5];
+
+    m[0] = m0 * a + m2 * b;
+    m[1] = m1 * a + m3 * b;
+    m[2] = m0 * c + m2 * d;
+    m[3] = m1 * c + m3 * d;
+    m[4] = m0 * e + m2 * f + m4;
+    m[5] = m1 * e + m3 * f + m5;
+  }
+
+  setTransform(a, b, c, d, e, f) {
+    this.transformMatrix = [a, b, c, d, e, f];
+  }
+
+  resetTransform() {
+    this.transformMatrix = [1, 0, 0, 1, 0, 0];
+  }
+
+  getTransform() {
+    // This should return a DOMMatrix object in a real browser.
+    // For now, we return a copy of the matrix array.
+    return [...this.transformMatrix];
+  }
+
+  _transformPoint(x, y) {
+    const m = this.transformMatrix;
+    return {
+        x: m[0] * x + m[2] * y + m[4],
+        y: m[1] * x + m[3] * y + m[5]
+    };
   }
 
   _parseFont() {
@@ -391,21 +439,21 @@ export class CanvasRenderingContext2D {
             if (command.type === 'move') {
                 currentX = command.x;
                 currentY = command.y;
-                points.push({ x: currentX, y: currentY });
+                points.push(this._transformPoint(currentX, currentY));
             } else if (command.type === 'line') {
                 currentX = command.x;
                 currentY = command.y;
-                points.push({ x: currentX, y: currentY });
+                points.push(this._transformPoint(currentX, currentY));
             } else if (command.type === 'bezier') {
                 const fromX = currentX;
                 const fromY = currentY;
                 // We need to include the start point of the bezier curve
-                if (points.length === 0 || points[points.length-1].x !== fromX || points[points.length-1].y !== fromY) {
-                    points.push({x: fromX, y: fromY});
+                if (points.length === 0) {
+                    points.push(this._transformPoint(fromX, fromY));
                 }
                 const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
                 for (let i = 0; i < numPoints; i++) {
-                    points.push({ x: this.bezierPoints[i*2], y: this.bezierPoints[i*2+1] });
+                    points.push(this._transformPoint(this.bezierPoints[i*2], this.bezierPoints[i*2+1]));
                 }
                 currentX = command.x;
                 currentY = command.y;
@@ -413,10 +461,10 @@ export class CanvasRenderingContext2D {
                 const steps = 50; // Tessellation for arc in stroke
                 for (let i = 0; i <= steps; i++) {
                     const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
-                    points.push({
-                        x: command.x + command.radius * Math.cos(angle),
-                        y: command.y + command.radius * Math.sin(angle)
-                    });
+                    points.push(this._transformPoint(
+                        command.x + command.radius * Math.cos(angle),
+                        command.y + command.radius * Math.sin(angle)
+                    ));
                 }
                 currentX = command.x + command.radius * Math.cos(command.endAngle);
                 currentY = command.y + command.radius * Math.sin(command.endAngle);
@@ -440,9 +488,12 @@ export class CanvasRenderingContext2D {
     if (this.path.length > 0) {
         const strokeFillStyle = this.strokeStyle;
         const oldFillStyle = this.fillStyle;
+        const oldTransform = this.transformMatrix;
+        this.resetTransform();
         this.fillStyle = strokeFillStyle;
         this.fill();
         this.fillStyle = oldFillStyle;
+        this.transformMatrix = oldTransform;
     }
 
     // Restore original path
@@ -457,8 +508,10 @@ export class CanvasRenderingContext2D {
   }
 
   _scanlineFill() {
+    const isIdentity = this.transformMatrix.every((val, i) => val === [1, 0, 0, 1, 0, 0][i]);
+
     // Optimization: if the path is a single full circle, use a specialized fill algorithm.
-    if (this.path.length === 1 && this.path[0].type === 'arc' && this.path[0].endAngle - this.path[0].startAngle >= 2 * Math.PI) {
+    if (isIdentity && this.path.length === 1 && this.path[0].type === 'arc' && this.path[0].endAngle - this.path[0].startAngle >= 2 * Math.PI) {
         const command = this.path[0];
         const color = this._parseColor(this.fillStyle);
         fillArcWithMidpoint(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
@@ -480,31 +533,33 @@ export class CanvasRenderingContext2D {
     for (const command of this.path) {
         switch (command.type) {
             case 'move':
-                currentX = command.x;
-                currentY = command.y;
-                startX = command.x;
-                startY = command.y;
+                const pt_move = this._transformPoint(command.x, command.y);
+                currentX = pt_move.x;
+                currentY = pt_move.y;
+                startX = pt_move.x;
+                startY = pt_move.y;
                 break;
             case 'line': {
-                const y_min = Math.min(currentY, command.y);
-                const y_max = Math.max(currentY, command.y);
-                const x_at_ymin = currentY < command.y ? currentX : command.x;
-                const slope_inv = (command.x - currentX) / (command.y - currentY);
+                const pt_line = this._transformPoint(command.x, command.y);
+                const y_min = Math.min(currentY, pt_line.y);
+                const y_max = Math.max(currentY, pt_line.y);
+                const x_at_ymin = currentY < pt_line.y ? currentX : pt_line.x;
+                const slope_inv = (pt_line.x - currentX) / (pt_line.y - currentY);
                 addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
-                currentX = command.x;
-                currentY = command.y;
+                currentX = pt_line.x;
+                currentY = pt_line.y;
                 break;
             }
             case 'bezier': {
                 const p0 = { x: currentX, y: currentY };
-                const p1 = { x: command.cp1x, y: command.cp1y };
-                const p2 = { x: command.cp2x, y: command.cp2y };
-                const p3 = { x: command.x, y: command.y };
+                const p1 = this._transformPoint(command.cp1x, command.cp1y);
+                const p2 = this._transformPoint(command.cp2x, command.cp2y);
+                const p3 = this._transformPoint(command.x, command.y);
                 const y_min = Math.min(p0.y, p1.y, p2.y, p3.y);
                 const y_max = Math.max(p0.y, p1.y, p2.y, p3.y);
                 addEdge({ type: 'bezier', p0, p1, p2, p3, y_min, y_max });
-                currentX = command.x;
-                currentY = command.y;
+                currentX = p3.x;
+                currentY = p3.y;
                 break;
             }
             case 'close':
@@ -517,11 +572,18 @@ export class CanvasRenderingContext2D {
                 currentY = startY;
                 break;
             case 'arc': {
-                const y_min = command.y - command.radius;
-                const y_max = command.y + command.radius;
-                addEdge({ type: 'arc', ...command, y_min, y_max });
-                currentX = command.x + command.radius * Math.cos(command.endAngle);
-                currentY = command.y + command.radius * Math.sin(command.endAngle);
+                // TODO: Arcs are not transformed correctly. They are only translated.
+                const pt_arc = this._transformPoint(command.x, command.y);
+                const y_min = pt_arc.y - command.radius;
+                const y_max = pt_arc.y + command.radius;
+                const transformedCommand = {...command, x: pt_arc.x, y: pt_arc.y, y_min, y_max};
+                addEdge({ type: 'arc', ...transformedCommand });
+                const endPoint = this._transformPoint(
+                    command.x + command.radius * Math.cos(command.endAngle),
+                    command.y + command.radius * Math.sin(command.endAngle)
+                );
+                currentX = endPoint.x;
+                currentY = endPoint.y;
                 break;
             }
         }
@@ -791,51 +853,13 @@ export class CanvasRenderingContext2D {
   }
 
   fillRect(x, y, width, height) {
-    if (this.fillStyle instanceof CanvasGradient) {
-      const { data, width: canvasWidth } = this.imageData;
-      const xStart = Math.max(0, x);
-      const yStart = Math.max(0, y);
-      const xEnd = Math.min(this.width, x + width);
-      const yEnd = Math.min(this.height, y + height);
-      for (let j = yStart; j < yEnd; j++) {
-        for (let i = xStart; i < xEnd; i++) {
-        if (this.clippingPath && !this._isPointInPath(i, j, this.clippingPathAsVertices)) {
-            continue;
-        }
-          const color = this._getColorFromGradientAtPoint(i, j, this.fillStyle);
-          const index = (j * canvasWidth + i) * 4;
-          data[index] = color.r;
-          data[index + 1] = color.g;
-          data[index + 2] = color.b;
-          data[index + 3] = color.a;
-        }
-      }
-      return;
-    }
-
-    const color = this._parseColor(this.fillStyle);
-    const { data, width: canvasWidth } = this.imageData;
-
-    const xStart = Math.max(0, x);
-    const yStart = Math.max(0, y);
-    const xEnd = Math.min(this.width, x + width);
-    const yEnd = Math.min(this.height, y + height);
-
-    for (let j = yStart; j < yEnd; j++) {
-      for (let i = xStart; i < xEnd; i++) {
-        if (this.clippingPath && !this._isPointInPath(i, j, this.clippingPathAsVertices)) {
-            continue;
-        }
-        const index = (j * canvasWidth + i) * 4;
-        data[index] = color.r;
-        data[index + 1] = color.g;
-        data[index + 2] = color.b;
-        data[index + 3] = color.a;
-      }
-    }
+    this.beginPath();
+    this.rect(x, y, width, height);
+    this.fill();
   }
 
   clearRect(x, y, width, height) {
+    // clearRect is not affected by the current transformation matrix.
     const { data, width: canvasWidth } = this.imageData;
 
     const xStart = Math.max(0, x);
@@ -855,15 +879,9 @@ export class CanvasRenderingContext2D {
   }
 
   strokeRect(x, y, width, height) {
-    const x0 = x;
-    const y0 = y;
-    const x1 = x + width;
-    const y1 = y + height;
-
-    this._drawLine(x0, y0, x1, y0); // top
-    this._drawLine(x1, y0, x1, y1); // right
-    this._drawLine(x1, y1, x0, y1); // bottom
-    this._drawLine(x0, y1, x0, y0); // left
+    this.beginPath();
+    this.rect(x, y, width, height);
+    this.stroke();
   }
 
   _drawLine(x0, y0, x1, y1) {
