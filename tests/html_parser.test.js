@@ -88,3 +88,18 @@ test('HTML Parser should handle comments and doctypes', () => {
     assert.ok(p, 'Comment should have a sibling');
     assert.strictEqual(p.tagName, 'p', 'Second child should be a <p> element');
 });
+
+test('HTML Parser should handle raw text elements like <style>', () => {
+    const html = '<style>p { color: red; }</style>';
+    const parser = new HTMLParser();
+    const doc = parser.parse(html);
+
+    const style = doc.getFirstChild();
+    assert.ok(style, 'Document should have a child');
+    assert.strictEqual(style.tagName, 'style', 'Element should be a <style>');
+    assert.strictEqual(style.children.length, 1, '<style> should have one child');
+
+    const text = style.getFirstChild();
+    assert.strictEqual(text.nodeType, NODE_TYPE_TEXT, 'Child should be a text node');
+    assert.strictEqual(text.getData(), 'p { color: red; }', 'Text content should be correct');
+});

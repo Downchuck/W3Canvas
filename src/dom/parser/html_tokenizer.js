@@ -10,6 +10,7 @@ const ATTRIBUTE_VALUE_QUOTED_STATE = 'AttributeValueQuotedState';
 const SELF_CLOSING_START_TAG_STATE = 'SelfClosingStartTagState';
 const COMMENT_STATE = 'CommentState';
 const DOCTYPE_STATE = 'DoctypeState';
+const RAWTEXT_STATE = 'RAWTEXTState';
 
 export class HTMLTokenizer {
     constructor(html) {
@@ -18,6 +19,7 @@ export class HTMLTokenizer {
         this.state = DATA_STATE;
         this.currentToken = null;
         this.currentAttribute = null;
+        this.lastStartTagName = null;
     }
 
     nextToken() {
@@ -26,6 +28,8 @@ export class HTMLTokenizer {
         }
 
         while (this.pos < this.html.length) {
+            const char = this.html[this.pos];
+
             switch (this.state) {
                 case DATA_STATE: {
                     const textEnd = this.html.indexOf('<', this.pos);
@@ -107,6 +111,7 @@ export class HTMLTokenizer {
                             return { type: 'EndTag', tagName };
                         } else {
                             this.currentToken = { type: 'StartTag', tagName, attributes: {}, selfClosing: false };
+                            this.lastStartTagName = tagName;
                             this.state = BEFORE_ATTRIBUTE_NAME_STATE;
                         }
                     } else {
@@ -124,10 +129,12 @@ export class HTMLTokenizer {
                         this.pos++;
                     } else if (char === '>') {
                         this.pos++;
-                        this.state = DATA_STATE;
-                        const token = this.currentToken;
-                        this.currentToken = null;
-                        return token;
+                        if (this.lastStartTagName === 'script' || this.lastStartTagName === 'style') {
+                            this.state = RAWTEXT_STATE;
+                        } else {
+                            this.state = DATA_STATE;
+                        }
+                        return this.currentToken;
                     } else {
                         this.state = ATTRIBUTE_NAME_STATE;
                         this.currentAttribute = { name: '', value: '' };
@@ -200,6 +207,22 @@ export class HTMLTokenizer {
                         this.state = DATA_STATE; // Error
                     }
                     break;
+                }
+
+                case RAWTEXT_STATE: {
+                    const endTag = `</${this.lastStartTagName}>`;
+                    const endTagIndex = this.html.indexOf(endTag, this.pos);
+                    if (endTagIndex === -1) {
+                        const text = this.html.substring(this.pos);
+                        this.pos = this.html.length;
+                        this.state = DATA_STATE;
+                        return { type: 'Text', data: text };
+                    } else {
+                        const text = this.html.substring(this.pos, endTagIndex);
+                        this.pos = endTagIndex;
+                        this.state = DATA_STATE;
+                        return { type: 'Text', data: text };
+                    }
                 }
 
                 default:
