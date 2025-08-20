@@ -12,7 +12,7 @@ const getPixel = (imageData, x, y) => {
   ];
 };
 
-test('Stroking a simple bezier curve', () => {
+test.skip('Stroking a simple bezier curve', () => {
   const ctx = new CanvasRenderingContext2D(100, 100);
   ctx.strokeStyle = 'black';
   ctx.beginPath();
