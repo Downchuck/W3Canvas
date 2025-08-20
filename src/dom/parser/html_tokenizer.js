@@ -21,7 +21,6 @@ export class HTMLTokenizer {
     }
 
     nextToken() {
-        console.log(`State: ${this.state}, Pos: ${this.pos}, Char: ${this.html[this.pos]}`);
         if (this.pos >= this.html.length) {
             return { type: 'EOF' };
         }
