@@ -1,5 +1,16 @@
 # Work in Progress
 
+*   **DOM and Parser Implementation:**
+    *   **TODO:** Implement a standards-compliant HTML parser to replace `jsdom` for testing.
+    *   **TODO:** Extend the custom DOM implementation to support all features required by the test suite.
+
+*   **Font Rendering:**
+    *   **IN PROGRESS:** Implement the `@font-face` rule to allow loading of custom fonts.
+        *   **DONE:** Created `FontFace` and `FontFaceSet` objects.
+        *   **DONE:** Implemented a basic parser for `@font-face` rules that handles `file:///` URIs.
+        *   **DONE:** Integrated with the rendering engine to use loaded fonts for text rendering.
+        *   **TODO:** Expand parser and loading mechanism to support remote URLs and other font formats.
+
 *   **Implement CSS Box Model and SVG DOM:**
     *   **CSS Box Model:**
         *   Enabled and fixed layout tests.
@@ -9,7 +20,4 @@
     *   **SVG DOM:**
         *   Expanded SVG path parser to handle `H`, `h`, `V`, `v`, `C`, and `c` commands.
         *   **DONE:** Optimized `fill()` for Beziers and arcs, and refactored the scanline filler to use an Active Edge Table, fixing the memory leak and significantly improving performance.
-        *   **TODO:** There is a regression in `stroke()` for 1px-wide Bézier curves. The start pixel of the curve is not drawn. This is a subtle bug in the legacy stroking path that needs further investigation.
-
-*   **Font Rendering:**
-    *   **TODO:** Implement the `@font-face` rule to allow loading of custom fonts.
+        *   **DONE:** Fixed a regression in `stroke()` for 1px-wide Bézier curves where the start pixel was not being drawn. This involved removing a legacy stroking path and correcting the start cap geometry in the modern stroking algorithm.

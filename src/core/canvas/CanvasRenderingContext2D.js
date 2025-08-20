@@ -304,11 +304,6 @@ export class CanvasRenderingContext2D {
   }
 
   _strokePath() {
-    if (this.lineWidth === 1) {
-        this._legacyStroke();
-        return;
-    }
-
     const originalPath = this.path;
     const subPaths = [];
     let currentSubPath = [];
