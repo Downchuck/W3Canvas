@@ -53,3 +53,26 @@ test('HTML Parser should handle nested elements', () => {
     assert.ok(text, '<span> should have a child');
     assert.strictEqual(text.getData(), 'World', 'Text node should contain "World"');
 });
+
+test('HTML Parser should handle self-closing tags', () => {
+    const html = '<p>Hello<br/>World</p>';
+    const parser = new HTMLParser();
+    const doc = parser.parse(html);
+
+    const p = doc.getFirstChild();
+    assert.strictEqual(p.tagName, 'p', 'First element should be a <p>');
+    assert.strictEqual(p.children.length, 3, '<p> should have three children');
+
+    const text1 = p.children[0];
+    assert.strictEqual(text1.nodeType, NODE_TYPE_TEXT, 'First child should be a text node');
+    assert.strictEqual(text1.getData(), 'Hello', 'First text node should be "Hello"');
+
+    const br = p.children[1];
+    assert.strictEqual(br.nodeType, NODE_TYPE_ELEMENT, 'Second child should be an element');
+    assert.strictEqual(br.tagName, 'br', 'Second element should be a <br>');
+    assert.strictEqual(br.hasChildNodes(), false, '<br> should have no children');
+
+    const text2 = p.children[2];
+    assert.strictEqual(text2.nodeType, NODE_TYPE_TEXT, 'Third child should be a text node');
+    assert.strictEqual(text2.getData(), 'World', 'Third text node should be "World"');
+});

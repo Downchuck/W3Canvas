@@ -30,7 +30,9 @@ export class HTMLParser {
                     element.setAttribute(name, value);
                 }
                 currentNode.appendChild(element);
-                this.stack.push(element);
+                if (!token.selfClosing) {
+                    this.stack.push(element);
+                }
                 break;
 
             case 'EndTag':

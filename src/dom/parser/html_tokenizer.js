@@ -7,6 +7,7 @@ const ATTRIBUTE_NAME_STATE = 'AttributeNameState';
 const AFTER_ATTRIBUTE_NAME_STATE = 'AfterAttributeNameState';
 const BEFORE_ATTRIBUTE_VALUE_STATE = 'BeforeAttributeValueState';
 const ATTRIBUTE_VALUE_QUOTED_STATE = 'AttributeValueQuotedState';
+const SELF_CLOSING_START_TAG_STATE = 'SelfClosingStartTagState';
 
 export class HTMLTokenizer {
     constructor(html) {
@@ -27,7 +28,8 @@ export class HTMLTokenizer {
                     if (textEnd === -1) {
                         const text = this.html.substring(this.pos);
                         this.pos = this.html.length;
-                        return { type: 'Text', data: text };
+                        if (text) return { type: 'Text', data: text };
+                        break;
                     }
                     if (textEnd > this.pos) {
                         const text = this.html.substring(this.pos, textEnd);
@@ -55,13 +57,12 @@ export class HTMLTokenizer {
                         const tagName = tagEndMatch[0].toLowerCase();
                         this.pos += tagName.length;
                         if (isEndTag) {
-                            this.state = DATA_STATE; // Simplified: No attributes on end tags
-                            // find closing >
+                            this.state = DATA_STATE;
                             const tagEnd = this.html.indexOf('>', this.pos);
-                            this.pos = tagEnd +1;
+                            this.pos = tagEnd + 1;
                             return { type: 'EndTag', tagName };
                         } else {
-                            this.currentToken = { type: 'StartTag', tagName, attributes: {} };
+                            this.currentToken = { type: 'StartTag', tagName, attributes: {}, selfClosing: false };
                             this.state = BEFORE_ATTRIBUTE_NAME_STATE;
                         }
                     } else {
@@ -72,7 +73,10 @@ export class HTMLTokenizer {
 
                 case BEFORE_ATTRIBUTE_NAME_STATE:
                     if (/\s/.test(char)) {
-                        this.pos++; // consume whitespace
+                        this.pos++;
+                    } else if (char === '/') {
+                        this.state = SELF_CLOSING_START_TAG_STATE;
+                        this.pos++;
                     } else if (char === '>') {
                         this.pos++;
                         this.state = DATA_STATE;
@@ -90,7 +94,7 @@ export class HTMLTokenizer {
                         this.pos += this.currentAttribute.name.length;
                         this.state = AFTER_ATTRIBUTE_NAME_STATE;
                     } else {
-                        this.state = DATA_STATE; // Error
+                        this.state = DATA_STATE;
                     }
                     break;
 
@@ -101,7 +105,6 @@ export class HTMLTokenizer {
                         this.pos++;
                         this.state = BEFORE_ATTRIBUTE_VALUE_STATE;
                     } else {
-                        // Attribute with no value
                         this.currentToken.attributes[this.currentAttribute.name] = "";
                         this.state = BEFORE_ATTRIBUTE_NAME_STATE;
                     }
@@ -115,7 +118,6 @@ export class HTMLTokenizer {
                         this.quoteChar = char;
                         this.pos++;
                     } else {
-                        // Unquoted attribute value not supported for simplicity
                         this.state = DATA_STATE;
                     }
                     break;
@@ -123,12 +125,23 @@ export class HTMLTokenizer {
                 case ATTRIBUTE_VALUE_QUOTED_STATE:
                     const valueEnd = this.html.indexOf(this.quoteChar, this.pos);
                     if (valueEnd === -1) {
-                        this.state = DATA_STATE; // Error: unclosed attribute
+                        this.state = DATA_STATE;
                     } else {
                         this.currentAttribute.value = this.html.substring(this.pos, valueEnd);
                         this.pos = valueEnd + 1;
                         this.currentToken.attributes[this.currentAttribute.name] = this.currentAttribute.value;
                         this.state = BEFORE_ATTRIBUTE_NAME_STATE;
+                    }
+                    break;
+
+                case SELF_CLOSING_START_TAG_STATE:
+                    if (char === '>') {
+                        this.currentToken.selfClosing = true;
+                        this.pos++;
+                        this.state = DATA_STATE;
+                        return this.currentToken;
+                    } else {
+                        this.state = DATA_STATE; // Error
                     }
                     break;
 
