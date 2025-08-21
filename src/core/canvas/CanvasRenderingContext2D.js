@@ -305,6 +305,20 @@ export class CanvasRenderingContext2D {
     this.closePath();
   }
 
+  roundRect(x, y, w, h, radii) {
+    this.beginPath();
+    this.moveTo(x + radii, y);
+    this.lineTo(x + w - radii, y);
+    this.arc(x + w - radii, y + radii, radii, -Math.PI / 2, 0);
+    this.lineTo(x + w, y + h - radii);
+    this.arc(x + w - radii, y + h - radii, radii, 0, Math.PI / 2);
+    this.lineTo(x + radii, y + h);
+    this.arc(x + radii, y + h - radii, radii, Math.PI / 2, Math.PI);
+    this.lineTo(x, y + radii);
+    this.arc(x + radii, y + radii, radii, Math.PI, Math.PI * 1.5);
+    this.closePath();
+  }
+
   bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
     this.path.push({ type: 'bezier', cp1x, cp1y, cp2x, cp2y, x, y });
   }
@@ -841,20 +855,19 @@ export class CanvasRenderingContext2D {
     const t1 = (-b + sqrt_discriminant) / (2 * a);
     const t2 = (-b - sqrt_discriminant) / (2 * a);
 
-    let t = -1;
-    const r_t1 = r0 + t1 * dr;
-    const r_t2 = r0 + t2 * dr;
-
-    if (r_t1 >= 0 && r_t2 >= 0) {
-      t = Math.min(t1, t2);
-    } else if (r_t1 >= 0) {
-      t = t1;
-    } else if (r_t2 >= 0) {
-      t = t2;
-    } else {
-      return { r: 0, g: 0, b: 0, a: 0 };
+    const candidates = [];
+    if (t1 >= 0 && (r0 + t1 * dr) >= 0) {
+        candidates.push(t1);
+    }
+    if (t2 >= 0 && (r0 + t2 * dr) >= 0) {
+        candidates.push(t2);
     }
 
+    if (candidates.length === 0) {
+        return { r: 0, g: 0, b: 0, a: 0 };
+    }
+
+    const t = Math.min(...candidates);
     const clampedT = Math.max(0, Math.min(1, t));
     return this._getColorFromGradient(gradient, clampedT);
   }
