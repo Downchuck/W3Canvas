@@ -5,6 +5,8 @@ const workerBootstrapPath = path.resolve(process.cwd(), 'src/worker/worker_boots
 
 export class Worker {
     #nodeWorker;
+    #isReady = false;
+    #messageQueue = [];
 
     constructor(scriptURL, options = {}) {
         this.#nodeWorker = new NodeWorker(workerBootstrapPath, {
@@ -15,6 +17,11 @@ export class Worker {
         });
 
         this.#nodeWorker.on('message', (message) => {
+            if (message && message.type === '__worker_ready__') {
+                this.#isReady = true;
+                this.#flushMessageQueue();
+                return;
+            }
             if (this.onmessage) {
                 this.onmessage({ data: message });
             }
@@ -33,8 +40,19 @@ export class Worker {
         });
     }
 
+    #flushMessageQueue() {
+        for (const message of this.#messageQueue) {
+            this.#nodeWorker.postMessage(message);
+        }
+        this.#messageQueue = [];
+    }
+
     postMessage(message) {
-        this.#nodeWorker.postMessage(message);
+        if (this.#isReady) {
+            this.#nodeWorker.postMessage(message);
+        } else {
+            this.#messageQueue.push(message);
+        }
     }
 
     terminate() {

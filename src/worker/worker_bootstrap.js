@@ -31,6 +31,10 @@ const scriptPath = path.resolve(process.cwd(), scriptURL);
 
 // Execute the worker script using a file URL.
 import(pathToFileURL(scriptPath).href)
+    .then(() => {
+        // Signal to the main thread that the worker script has loaded and is ready.
+        parentPort.postMessage({ type: '__worker_ready__' });
+    })
     .catch(err => {
         console.error(`Error in worker script: ${scriptURL}`, err);
         // We could also post an error message back to the main thread.

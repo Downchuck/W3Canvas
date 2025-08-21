@@ -20,9 +20,22 @@ export class SharedWorker {
 
             workerInfo = {
                 worker: worker,
-                refCount: 0
+                refCount: 0,
+                isReady: false,
+                connectionQueue: []
             };
             activeWorkers.set(scriptURL, workerInfo);
+
+            worker.on('message', (message) => {
+                if (message && message.type === '__worker_ready__') {
+                    workerInfo.isReady = true;
+                    // Process any pending connections
+                    for (const msg of workerInfo.connectionQueue) {
+                        workerInfo.worker.postMessage(msg.message, msg.transfer);
+                    }
+                    workerInfo.connectionQueue = [];
+                }
+            });
 
             worker.on('exit', () => {
                 activeWorkers.delete(scriptURL);
@@ -33,11 +46,18 @@ export class SharedWorker {
 
         const { port1, port2 } = new MessageChannel();
         this.port = port1;
-        this.port.start(); // Start the port to allow message processing.
+        this.port.start();
 
-        // The worker needs to know about the new connection.
-        // We send one of the ports to the worker thread.
-        workerInfo.worker.postMessage({ type: 'connect', port: port2 }, [port2]);
+        const connectMessage = {
+            message: { type: 'connect', port: port2 },
+            transfer: [port2]
+        };
+
+        if (workerInfo.isReady) {
+            workerInfo.worker.postMessage(connectMessage.message, connectMessage.transfer);
+        } else {
+            workerInfo.connectionQueue.push(connectMessage);
+        }
 
         this.port.on('close', () => {
             workerInfo.refCount--;
