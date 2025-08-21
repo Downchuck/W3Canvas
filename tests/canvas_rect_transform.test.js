@@ -1,40 +1,40 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { CanvasRenderingContext2D } from '../src/core/canvas/CanvasRenderingContext2D.js';
-import { createCanvas } from 'canvas';
-import fs from 'fs';
-
-test('fillText with identity transform', async (t) => {
+test('fillText with identity transform', (t) => {
     const ctx = new CanvasRenderingContext2D(100, 100);
     ctx.fillStyle = 'green';
     ctx.font = '20px sans-serif';
     ctx.fillText('Hi', 10, 20);
 
-    const imageData = ctx.getImageData(0, 0, 100, 100);
-
-    const canvas = createCanvas(100, 100);
-    const canvasCtx = canvas.getContext('2d');
-    const newImageData = canvasCtx.createImageData(100, 100);
-    newImageData.data.set(imageData.data);
-    canvasCtx.putImageData(newImageData, 0, 0);
-
-    const out = fs.createWriteStream('test_output.png');
-    const stream = canvas.createPNGStream();
-    stream.pipe(out);
-    await new Promise((resolve) => out.on('finish', resolve));
-    console.log('The PNG file was created.');
-
-    assert.strictEqual(imageData.data[1*4+1], 255, 'Green channel should be 255');
+    // Scan a 20x20 area where the 'H' should be.
+    const imageData = ctx.getImageData(10, 15, 20, 20).data;
+    let foundPixel = false;
+    for (let i = 0; i < imageData.length; i += 4) {
+        if (imageData[i] === 0 && imageData[i+1] === 255 && imageData[i+2] === 0) {
+            foundPixel = true;
+            break;
+        }
+    }
+    assert.ok(foundPixel, 'At least one pure green pixel should be drawn for the text');
 });
 
-test.skip('strokeText with identity transform', (t) => {
+test('strokeText with identity transform', (t) => {
     const ctx = new CanvasRenderingContext2D(100, 100);
     ctx.strokeStyle = 'blue';
     ctx.font = '20px sans-serif';
     ctx.strokeText('Hi', 10, 50);
 
-    const imageData = ctx.getImageData(15, 55, 1, 1).data;
-    assert.strictEqual(imageData[2], 255, 'Blue channel should be 255');
+    // Scan a 20x20 area where the 'H' should be.
+    const imageData = ctx.getImageData(10, 45, 20, 20).data;
+    let foundPixel = false;
+    for (let i = 0; i < imageData.length; i += 4) {
+        if (imageData[i] === 0 && imageData[i+1] === 0 && imageData[i+2] === 255) {
+            foundPixel = true;
+            break;
+        }
+    }
+    assert.ok(foundPixel, 'At least one pure blue pixel should be drawn for the stroked text');
 });
 
 test('fillRect with translation', (t) => {
