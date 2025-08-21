@@ -131,86 +131,65 @@ export class CanvasRenderingContext2D {
       return { size, family };
   }
 
+  _renderText(text, x, y, action) {
+      const { size } = this._parseFont();
+      if (size <= 0) return;
+
+      const scale = ScaleForPixelHeight(this.fontInfo, size);
+      const { ascent } = GetFontVMetrics(this.fontInfo);
+      let currentX = x;
+      const baseline = y + ascent * scale;
+
+      this.beginPath();
+
+      for (let i = 0; i < text.length; i++) {
+          const codepoint = text.charCodeAt(i);
+          const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
+          const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
+
+          if (vertices) {
+              for (const v of vertices) {
+                  const vx = currentX + v.x * scale;
+                  const vy = baseline - v.y * scale;
+                  const vcx = currentX + v.cx * scale;
+                  const vcy = baseline - v.cy * scale;
+
+                  // Apply transformation
+                  const p = this._transformPoint(vx, vy);
+                  const cp = this._transformPoint(vcx, vcy);
+
+                  if (v.type === STBTT_vmove) {
+                      this.moveTo(p.x, p.y);
+                  } else if (v.type === STBTT_vline) {
+                      this.lineTo(p.x, p.y);
+                  } else if (v.type === STBTT_vcurve) {
+                      this.quadraticCurveTo(cp.x, cp.y, p.x, p.y);
+                  }
+              }
+          }
+
+          const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
+          currentX += advanceWidth * scale;
+
+          if (i < text.length - 1) {
+              const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
+              currentX += kern * scale;
+          }
+      }
+
+      if (action === 'fill') {
+          this.fill();
+      } else if (action === 'stroke') {
+          this.stroke();
+      }
+  }
+
   fillText(text, x, y) {
-    const { size } = this._parseFont();
-    const scale = ScaleForPixelHeight(this.fontInfo, size);
-    const { ascent } = GetFontVMetrics(this.fontInfo);
-    let currentX = x;
-    const baseline = y + ascent * scale;
-
-    for (let i = 0; i < text.length; i++) {
-        const codepoint = text.charCodeAt(i);
-        const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
-        const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
-
-        if (vertices) {
-            this.beginPath();
-            for (const v of vertices) {
-                const vx = currentX + v.x * scale;
-                const vy = baseline - v.y * scale;
-                const vcx = currentX + v.cx * scale;
-                const vcy = baseline - v.cy * scale;
-
-                if (v.type === STBTT_vmove) {
-                    this.moveTo(vx, vy);
-                } else if (v.type === STBTT_vline) {
-                    this.lineTo(vx, vy);
-                } else if (v.type === STBTT_vcurve) {
-                    this.bezierCurveTo(vcx, vcy, vcx, vcy, vx, vy);
-                }
-            }
-            this.fill();
-        }
-
-        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
-        currentX += advanceWidth * scale;
-
-        if (i < text.length - 1) {
-            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
-            currentX += kern * scale;
-        }
-    }
+    this._renderText(text, x, y, 'fill');
   }
 
   strokeText(text, x, y) {
-    const { size } = this._parseFont();
-    const scale = ScaleForPixelHeight(this.fontInfo, size);
-    const { ascent } = GetFontVMetrics(this.fontInfo);
-    let currentX = x;
-    const baseline = y + ascent * scale;
-
-    for (let i = 0; i < text.length; i++) {
-        const codepoint = text.charCodeAt(i);
-        const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
-        const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
-
-        if (vertices) {
-            this.beginPath();
-            for (const v of vertices) {
-                const vx = currentX + v.x * scale;
-                const vy = baseline - v.y * scale;
-                const vcx = currentX + v.cx * scale;
-                const vcy = baseline - v.cy * scale;
-
-                if (v.type === STBTT_vmove) {
-                    this.moveTo(vx, vy);
-                } else if (v.type === STBTT_vline) {
-                    this.lineTo(vx, vy);
-                } else if (v.type === STBTT_vcurve) {
-                    this.bezierCurveTo(vcx, vcy, vcx, vcy, vx, vy);
-                }
-            }
-            this.stroke();
-        }
-
-        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
-        currentX += advanceWidth * scale;
-
-        if (i < text.length - 1) {
-            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
-            currentX += kern * scale;
-        }
-    }
+    this._renderText(text, x, y, 'stroke');
   }
 
   measureText(text) {
@@ -348,6 +327,39 @@ export class CanvasRenderingContext2D {
 
   bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
     this.path.push({ type: 'bezier', cp1x, cp1y, cp2x, cp2y, x, y });
+  }
+
+  quadraticCurveTo(cpx, cpy, x, y) {
+    // Find the last point in the path to use as the starting point.
+    let x0 = 0;
+    let y0 = 0;
+    if (this.path.length > 0) {
+        // Find the last point with coordinates in the path
+        for (let i = this.path.length - 1; i >= 0; i--) {
+            if (this.path[i].x !== undefined && this.path[i].y !== undefined) {
+                 // Check for 'move' or 'line' or 'bezier' end points
+                if(this.path[i].type === 'move' || this.path[i].type === 'line' || this.path[i].type === 'bezier') {
+                    x0 = this.path[i].x;
+                    y0 = this.path[i].y;
+                    break;
+                }
+                 // For arcs, the last point is more complex, but we can approximate
+                 if(this.path[i].type === 'arc') {
+                    x0 = this.path[i].x + this.path[i].radius * Math.cos(this.path[i].endAngle);
+                    y0 = this.path[i].y + this.path[i].radius * Math.sin(this.path[i].endAngle);
+                    break;
+                 }
+            }
+        }
+    }
+
+    // Convert quadratic to cubic
+    const cp1x = x0 + 2/3 * (cpx - x0);
+    const cp1y = y0 + 2/3 * (cpy - y0);
+    const cp2x = x + 2/3 * (cpx - x);
+    const cp2y = y + 2/3 * (cpy - y);
+
+    this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
   }
 
   stroke() {
@@ -504,7 +516,7 @@ export class CanvasRenderingContext2D {
     let startY = 0;
 
     const addEdge = (edge) => {
-        if (edge.y_min === edge.y_max) return; // Ignore horizontal edges
+        if (Math.abs(edge.y_min - edge.y_max) < 1e-9) return; // Ignore horizontal edges with a tolerance
         allEdges.push(edge);
     };
 
