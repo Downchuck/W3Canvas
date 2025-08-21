@@ -9,7 +9,6 @@ self.onmessage = async (e) => {
     }
 
     if (command === 'loadFont') {
-        // self.fonts is an instance of FontFaceSet, and self.FontFace is the class.
         const fontFace = new self.FontFace(family, fontPath);
         self.fonts.add(fontFace);
 

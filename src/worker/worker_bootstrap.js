@@ -2,6 +2,7 @@ import { parentPort, workerData } from 'worker_threads';
 import { GlobalScope } from '../dom/globals.js';
 import { FontFace } from '../dom/css/font_face.js';
 import path from 'path';
+import { pathToFileURL } from 'url';
 
 // Create the worker's global scope. This is the `self` object in a worker.
 const self = new GlobalScope();
@@ -28,8 +29,8 @@ global.self = self;
 const { scriptURL } = workerData;
 const scriptPath = path.resolve(process.cwd(), scriptURL);
 
-// Execute the worker script.
-import(scriptPath)
+// Execute the worker script using a file URL.
+import(pathToFileURL(scriptPath).href)
     .catch(err => {
         console.error(`Error in worker script: ${scriptURL}`, err);
         // We could also post an error message back to the main thread.

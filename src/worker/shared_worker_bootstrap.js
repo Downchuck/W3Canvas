@@ -2,6 +2,7 @@ import { parentPort, workerData } from 'worker_threads';
 import { GlobalScope } from '../dom/globals.js';
 import { FontFace } from '../dom/css/font_face.js';
 import path from 'path';
+import { pathToFileURL } from 'url';
 
 // Create the worker's global scope.
 const self = new GlobalScope();
@@ -9,20 +10,41 @@ const self = new GlobalScope();
 // Expose FontFace class to the worker scope
 self.FontFace = FontFace;
 
-// The `onconnect` event handler will be set by the user's script.
-self.onconnect = null;
+// --- Robust onconnect handling to prevent race conditions ---
+const queuedPorts = [];
+let onconnectHandler = null;
+
+Object.defineProperty(self, 'onconnect', {
+    enumerable: true,
+    configurable: true,
+    get() {
+        return onconnectHandler;
+    },
+    set(handler) {
+        onconnectHandler = handler;
+        // If a handler is set, immediately process any ports that were queued
+        // before the handler was assigned.
+        if (typeof handler === 'function') {
+            while (queuedPorts.length > 0) {
+                const port = queuedPorts.shift();
+                const event = { ports: [port] };
+                handler(event);
+            }
+        }
+    }
+});
 
 // Listen for messages from the main thread.
 parentPort.on('message', (message) => {
     // A 'connect' message indicates a new client has connected.
     if (message.type === 'connect' && message.port) {
         if (self.onconnect) {
+            // If the handler is already set, use it.
             const event = { ports: [message.port] };
             self.onconnect(event);
         } else {
-            // If onconnect is not yet set, queue the port. A more robust implementation
-            // might handle this more gracefully.
-            console.warn('SharedWorker received a connection before onconnect was set.');
+            // If onconnect is not yet set, queue the port.
+            queuedPorts.push(message.port);
         }
     }
 });
@@ -34,7 +56,8 @@ global.self = self;
 const { scriptURL } = workerData;
 const scriptPath = path.resolve(process.cwd(), scriptURL);
 
-import(scriptPath)
+// Execute the worker script using a file URL.
+import(pathToFileURL(scriptPath).href)
     .catch(err => {
         console.error(`Error in shared worker script: ${scriptURL}`, err);
     });

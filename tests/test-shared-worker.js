@@ -6,6 +6,7 @@ const ports = new Set();
 self.onconnect = (e) => {
     const port = e.ports[0];
     ports.add(port);
+    port.start(); // Start the port to allow message processing.
 
     port.onmessage = async (event) => {
         if (typeof event.data === 'string' && event.data === 'ping') {

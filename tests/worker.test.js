@@ -1,8 +1,7 @@
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert';
 import { Worker } from '../src/worker/Worker.js';
-import { SharedWorker } from '../src/worker/SharedWorker.js';
-import { FontFace } from '../src/dom/css/font_face.js';
+import { SharedWorker, shutdownAllSharedWorkers } from '../src/worker/SharedWorker.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -49,31 +48,25 @@ test('Web Worker font loading', async () => {
 test('SharedWorker basic communication', async () => {
     const scriptURL = path.join(__dirname, 'test-shared-worker.js');
 
-    // Create two clients for the same shared worker
     const client1 = new SharedWorker(scriptURL);
     const client2 = new SharedWorker(scriptURL);
 
-    // Promise for receiving a message on client1
     const messagePromise1 = new Promise(resolve => {
         client1.port.onmessage = e => resolve(e.data);
     });
 
-    // Promise for receiving a message on client2
     const messagePromise2 = new Promise(resolve => {
         client2.port.onmessage = e => resolve(e.data);
     });
 
-    // Send a message from client1 to broadcast
     client1.port.postMessage('ping');
 
-    // Both clients should receive the broadcasted "pong"
     const response1 = await messagePromise1;
     const response2 = await messagePromise2;
 
     assert.strictEqual(response1, 'pong', 'Client 1 should receive "pong"');
     assert.strictEqual(response2, 'pong', 'Client 2 should also receive "pong"');
 
-    // Close the ports, which should eventually terminate the worker
     client1.port.close();
     client2.port.close();
 });
@@ -97,4 +90,8 @@ test('SharedWorker font loading', async () => {
     assert.ok(isLoaded, 'Font should be loaded inside the shared worker');
 
     worker.port.close();
+});
+
+after(() => {
+    shutdownAllSharedWorkers();
 });

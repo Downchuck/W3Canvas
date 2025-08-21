@@ -33,6 +33,7 @@ export class SharedWorker {
 
         const { port1, port2 } = new MessageChannel();
         this.port = port1;
+        this.port.start(); // Start the port to allow message processing.
 
         // The worker needs to know about the new connection.
         // We send one of the ports to the worker thread.
@@ -46,4 +47,15 @@ export class SharedWorker {
             }
         });
     }
+}
+
+/**
+ * Forcefully terminates all active shared workers.
+ * This is useful for cleaning up at the end of a process, like in tests.
+ */
+export function shutdownAllSharedWorkers() {
+    for (const workerInfo of activeWorkers.values()) {
+        workerInfo.worker.terminate();
+    }
+    activeWorkers.clear();
 }
