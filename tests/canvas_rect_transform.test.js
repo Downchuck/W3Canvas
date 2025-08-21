@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { CanvasRenderingContext2D } from '../src/core/canvas/CanvasRenderingContext2D.js';
 
-test.skip('fillText with identity transform', (t) => {
+test('fillText with identity transform', (t) => {
     const ctx = new CanvasRenderingContext2D(100, 100);
     ctx.fillStyle = 'green';
     ctx.font = '20px sans-serif';

@@ -3,6 +3,9 @@ import { drawArc, fillArcWithMidpoint, getArcScanlineIntersections } from '../al
 import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algorithms/bezier.js';
 import { strokePolyline } from '../algorithms/stroke.js';
 import { CanvasGradient } from './CanvasGradient.js';
+import { CanvasPattern } from './CanvasPattern.js';
+import { Path2D } from './Path2D.js';
+import { drawShadow } from './Shadow.js';
 import fs from 'fs';
 import {
     FontInfo, InitFont, FindGlyphIndex, GetGlyphShape, GetCodepointHMetrics,
@@ -12,7 +15,8 @@ import {
 
 
 export class CanvasRenderingContext2D {
-  constructor(width, height) {
+  constructor(width, height, options = {}) {
+    this.isShadowContext = !!options.isShadowContext;
     this.canvas = { width, height };
     this.width = width;
     this.height = height;
@@ -28,18 +32,28 @@ export class CanvasRenderingContext2D {
     this.lineCap = 'butt';
     this.font = '10px sans-serif';
     this.textAlign = 'start';
-    this.stateStack = [];
     this.textBaseline = 'alphabetic';
+    this.shadowBlur = 0;
+    this.shadowColor = 'rgba(0, 0, 0, 0)';
+    this.shadowOffsetX = 0;
+    this.shadowOffsetY = 0;
+    this.globalAlpha = 1.0;
+    this.miterLimit = 10;
+    this.lineDashOffset = 0.0;
+    this.lineDashList = [];
+    this.stateStack = [];
     this.path = [];
     this.clippingPath = null;
     this.clippingPathAsVertices = null;
     this.transformMatrix = [1, 0, 0, 1, 0, 0]; // [a, b, c, d, e, f]
 
-    // Load font
-    this.fontInfo = new FontInfo();
-    const fontBuffer = fs.readFileSync('fonts/DejaVuSans.ttf');
-    const fontData = new Uint8Array(fontBuffer);
-    InitFont(this.fontInfo, fontData);
+    // Load font, but not for shadow contexts, to avoid recursion
+    if (!options.isShadowContext) {
+      this.fontInfo = new FontInfo();
+      const fontBuffer = fs.readFileSync('fonts/DejaVuSans.ttf');
+      const fontData = new Uint8Array(fontBuffer);
+      InitFont(this.fontInfo, fontData);
+    }
 
     this.bezierStack = new Float64Array(1000 * 8);
     this.bezierPoints = new Float64Array(10000 * 2);
@@ -55,6 +69,14 @@ export class CanvasRenderingContext2D {
       font: this.font,
       textAlign: this.textAlign,
       textBaseline: this.textBaseline,
+      shadowBlur: this.shadowBlur,
+      shadowColor: this.shadowColor,
+      shadowOffsetX: this.shadowOffsetX,
+      shadowOffsetY: this.shadowOffsetY,
+      globalAlpha: this.globalAlpha,
+      miterLimit: this.miterLimit,
+      lineDashOffset: this.lineDashOffset,
+      lineDashList: [...this.lineDashList],
       transformMatrix: [...this.transformMatrix],
     });
   }
@@ -70,6 +92,14 @@ export class CanvasRenderingContext2D {
       this.font = state.font;
       this.textAlign = state.textAlign;
       this.textBaseline = state.textBaseline;
+      this.shadowBlur = state.shadowBlur;
+      this.shadowColor = state.shadowColor;
+      this.shadowOffsetX = state.shadowOffsetX;
+      this.shadowOffsetY = state.shadowOffsetY;
+      this.globalAlpha = state.globalAlpha;
+      this.miterLimit = state.miterLimit;
+      this.lineDashOffset = state.lineDashOffset;
+      this.lineDashList = state.lineDashList;
       if (state.transformMatrix) {
         this.transformMatrix = state.transformMatrix;
       }
@@ -131,85 +161,82 @@ export class CanvasRenderingContext2D {
       return { size, family };
   }
 
+  _renderText(text, x, y, action) {
+      const { size } = this._parseFont();
+      if (size <= 0) return;
+
+      const scale = ScaleForPixelHeight(this.fontInfo, size);
+      const { ascent } = GetFontVMetrics(this.fontInfo);
+      let currentX = x;
+      const baseline = y + ascent * scale;
+
+      this.beginPath();
+
+      for (let i = 0; i < text.length; i++) {
+          const codepoint = text.charCodeAt(i);
+          const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
+          const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
+
+          if (vertices) {
+              for (const v of vertices) {
+                  const vx = currentX + v.x * scale;
+                  const vy = baseline - v.y * scale;
+                  const vcx = currentX + v.cx * scale;
+                  const vcy = baseline - v.cy * scale;
+
+                  // Apply transformation
+                  const p = this._transformPoint(vx, vy);
+                  const cp = this._transformPoint(vcx, vcy);
+
+                  if (v.type === STBTT_vmove) {
+                      this.moveTo(p.x, p.y);
+                  } else if (v.type === STBTT_vline) {
+                      this.lineTo(p.x, p.y);
+                  } else if (v.type === STBTT_vcurve) {
+                      this.quadraticCurveTo(cp.x, cp.y, p.x, p.y);
+                  }
+              }
+          }
+
+          const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
+          currentX += advanceWidth * scale;
+
+          if (i < text.length - 1) {
+              const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
+              currentX += kern * scale;
+          }
+      }
+
+      if (action === 'fill') {
+          this.fill();
+      } else if (action === 'stroke') {
+          this.stroke();
+      }
+  }
+
   fillText(text, x, y) {
-    const { size } = this._parseFont();
-    const scale = ScaleForPixelHeight(this.fontInfo, size);
-    const { ascent } = GetFontVMetrics(this.fontInfo);
-    let currentX = x;
-    const baseline = y + ascent * scale;
-
-    for (let i = 0; i < text.length; i++) {
-        const codepoint = text.charCodeAt(i);
-        const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
-        const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
-
-        if (vertices) {
-            this.beginPath();
-            for (const v of vertices) {
-                const vx = currentX + v.x * scale;
-                const vy = baseline - v.y * scale;
-                const vcx = currentX + v.cx * scale;
-                const vcy = baseline - v.cy * scale;
-
-                if (v.type === STBTT_vmove) {
-                    this.moveTo(vx, vy);
-                } else if (v.type === STBTT_vline) {
-                    this.lineTo(vx, vy);
-                } else if (v.type === STBTT_vcurve) {
-                    this.bezierCurveTo(vcx, vcy, vcx, vcy, vx, vy);
-                }
-            }
-            this.fill();
-        }
-
-        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
-        currentX += advanceWidth * scale;
-
-        if (i < text.length - 1) {
-            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
-            currentX += kern * scale;
-        }
-    }
+    this._renderText(text, x, y, 'fill');
   }
 
   strokeText(text, x, y) {
-    const { size } = this._parseFont();
-    const scale = ScaleForPixelHeight(this.fontInfo, size);
-    const { ascent } = GetFontVMetrics(this.fontInfo);
-    let currentX = x;
-    const baseline = y + ascent * scale;
+    this._renderText(text, x, y, 'stroke');
+  }
 
-    for (let i = 0; i < text.length; i++) {
-        const codepoint = text.charCodeAt(i);
-        const glyphIndex = FindGlyphIndex(this.fontInfo, codepoint);
-        const vertices = GetGlyphShape(this.fontInfo, glyphIndex);
+  getLineDash() {
+    return [...this.lineDashList];
+  }
 
-        if (vertices) {
-            this.beginPath();
-            for (const v of vertices) {
-                const vx = currentX + v.x * scale;
-                const vy = baseline - v.y * scale;
-                const vcx = currentX + v.cx * scale;
-                const vcy = baseline - v.cy * scale;
+  setLineDash(segments) {
+    // Basic validation: must be a sequence of numbers
+    if (!Array.isArray(segments) || segments.some(isNaN)) {
+        return;
+    }
 
-                if (v.type === STBTT_vmove) {
-                    this.moveTo(vx, vy);
-                } else if (v.type === STBTT_vline) {
-                    this.lineTo(vx, vy);
-                } else if (v.type === STBTT_vcurve) {
-                    this.bezierCurveTo(vcx, vcy, vcx, vcy, vx, vy);
-                }
-            }
-            this.stroke();
-        }
-
-        const { advanceWidth } = GetCodepointHMetrics(this.fontInfo, codepoint);
-        currentX += advanceWidth * scale;
-
-        if (i < text.length - 1) {
-            const kern = GetCodepointKernAdvance(this.fontInfo, codepoint, text.charCodeAt(i + 1));
-            currentX += kern * scale;
-        }
+    // If the number of segments is odd, duplicate it
+    if (segments.length % 2 !== 0) {
+        this.lineDashList = [...segments, ...segments];
+    } else {
+        this.lineDashList = [...segments];
     }
   }
 
@@ -239,8 +266,17 @@ export class CanvasRenderingContext2D {
     }
   }
 
-  clip() {
-    this.clippingPath = [...this.path];
+  clip(pathOrFillRule, fillRule) {
+    let path;
+    if (pathOrFillRule instanceof Path2D) {
+      path = pathOrFillRule.path;
+      // TODO: Handle fillRule
+    } else {
+      path = this.path;
+      // TODO: Handle pathOrFillRule as fillRule
+    }
+
+    this.clippingPath = [...path];
 
     // Convert path to vertices for _isPointInPath
     const vertices = [];
@@ -350,11 +386,49 @@ export class CanvasRenderingContext2D {
     this.path.push({ type: 'bezier', cp1x, cp1y, cp2x, cp2y, x, y });
   }
 
-  stroke() {
-    if (this.path.length === 0) {
-      return;
+  quadraticCurveTo(cpx, cpy, x, y) {
+    // Find the last point in the path to use as the starting point.
+    let x0 = 0;
+    let y0 = 0;
+    if (this.path.length > 0) {
+        // Find the last point with coordinates in the path
+        for (let i = this.path.length - 1; i >= 0; i--) {
+            if (this.path[i].x !== undefined && this.path[i].y !== undefined) {
+                 // Check for 'move' or 'line' or 'bezier' end points
+                if(this.path[i].type === 'move' || this.path[i].type === 'line' || this.path[i].type === 'bezier') {
+                    x0 = this.path[i].x;
+                    y0 = this.path[i].y;
+                    break;
+                }
+                 // For arcs, the last point is more complex, but we can approximate
+                 if(this.path[i].type === 'arc') {
+                    x0 = this.path[i].x + this.path[i].radius * Math.cos(this.path[i].endAngle);
+                    y0 = this.path[i].y + this.path[i].radius * Math.sin(this.path[i].endAngle);
+                    break;
+                 }
+            }
+        }
     }
-    this._strokePath();
+
+    // Convert quadratic to cubic
+    const cp1x = x0 + 2/3 * (cpx - x0);
+    const cp1y = y0 + 2/3 * (cpy - y0);
+    const cp2x = x + 2/3 * (cpx - x);
+    const cp2y = y + 2/3 * (cpy - y);
+
+    this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
+  }
+
+  stroke(path) {
+    if (path instanceof Path2D) {
+      if (path.path.length > 0) {
+        this._strokePath(path.path);
+      }
+    } else {
+      if (this.path.length > 0) {
+        this._strokePath(this.path);
+      }
+    }
   }
 
   _legacyStroke() {
@@ -389,13 +463,17 @@ export class CanvasRenderingContext2D {
       }
   }
 
-  _strokePath() {
-    const originalPath = this.path;
+  _strokePath(pathCommands) {
+    if (!this.isShadowContext) {
+        drawShadow(this, pathCommands, true);
+    }
+
+    const originalPath = this.path; // Save the context's current default path
     const subPaths = [];
     let currentSubPath = [];
 
-    // First, split the path into sub-paths
-    for (const command of originalPath) {
+    // First, split the given path into sub-paths
+    for (const command of pathCommands) {
         if (command.type === 'move') {
             if (currentSubPath.length > 0) {
                 subPaths.push(currentSubPath);
@@ -409,7 +487,7 @@ export class CanvasRenderingContext2D {
         subPaths.push(currentSubPath);
     }
 
-    // Clear the current path to build the new stroke path
+    // Temporarily clear the context's default path to build the new stroke outline path
     this.beginPath();
 
     for (const subPath of subPaths) {
@@ -454,46 +532,68 @@ export class CanvasRenderingContext2D {
             }
         }
 
-        // Now that we have a polyline, stroke it.
+        // Now that we have a polyline, stroke it by creating a new path that is the outline
         const isClosed = subPath[subPath.length - 1].type === 'close';
-        const polygon = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed);
+        const polygons = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed, this.lineDashList, this.lineDashOffset, this.miterLimit);
 
-        if (polygon.length > 0) {
-            this.moveTo(polygon[0].x, polygon[0].y);
-            for (let i = 1; i < polygon.length; i++) {
-                this.lineTo(polygon[i].x, polygon[i].y);
+        for (const polygon of polygons) {
+            if (polygon.length > 0) {
+                this.moveTo(polygon[0].x, polygon[0].y);
+                for (let i = 1; i < polygon.length; i++) {
+                    this.lineTo(polygon[i].x, polygon[i].y);
+                }
+                this.closePath();
             }
-            this.closePath();
         }
     }
 
-    // If we built a new path to fill, fill it.
+    // If we built a new path to fill, fill it using the stroke style.
     if (this.path.length > 0) {
         const strokeFillStyle = this.strokeStyle;
         const oldFillStyle = this.fillStyle;
         this.fillStyle = strokeFillStyle;
-        this.fill();
+        this._scanlineFill(this.path); // Fill the new path
         this.fillStyle = oldFillStyle;
     }
 
-    // Restore original path
+    // Restore original default path
     this.path = originalPath;
   }
 
-  fill() {
-    if (this.path.length === 0) {
+  fill(pathOrFillRule, fillRule) {
+    let path;
+    // Overload: fill(fillRule)
+    if (typeof pathOrFillRule === 'string') {
+      // TODO: handle fillRule
+      path = this.path;
+    }
+    // Overload: fill(path, fillRule)
+    else if (pathOrFillRule instanceof Path2D) {
+      path = pathOrFillRule.path;
+      // TODO: handle fillRule
+    }
+    // Overload: fill()
+    else {
+      path = this.path;
+    }
+
+    if (path.length === 0) {
       return;
     }
-    this._scanlineFill();
+    this._scanlineFill(path);
   }
 
-  _scanlineFill() {
+  _scanlineFill(pathCommands) {
+    if (!this.isShadowContext) {
+        drawShadow(this, pathCommands, false);
+    }
+
     // Optimization: if the path is a single full circle, use a specialized fill algorithm.
-    if (this.path.length === 1 && this.path[0].type === 'arc' && this.path[0].endAngle - this.path[0].startAngle >= 2 * Math.PI) {
-        const command = this.path[0];
+    if (pathCommands.length === 1 && pathCommands[0].type === 'arc' && pathCommands[0].endAngle - pathCommands[0].startAngle >= 2 * Math.PI) {
+        const command = pathCommands[0];
         const color = this._parseColor(this.fillStyle);
         fillArcWithMidpoint(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
-        this.path = []; // Clear the path after filling
+        // Do not clear the path here, the caller is responsible.
         return;
     }
 
@@ -504,11 +604,11 @@ export class CanvasRenderingContext2D {
     let startY = 0;
 
     const addEdge = (edge) => {
-        if (edge.y_min === edge.y_max) return; // Ignore horizontal edges
+        if (Math.abs(edge.y_min - edge.y_max) < 1e-9) return; // Ignore horizontal edges with a tolerance
         allEdges.push(edge);
     };
 
-    for (const command of this.path) {
+    for (const command of pathCommands) {
         switch (command.type) {
             case 'move':
                 currentX = command.x;
@@ -565,6 +665,7 @@ export class CanvasRenderingContext2D {
     const { data, width: canvasWidth } = this.imageData;
     let color;
     const isGradient = this.fillStyle instanceof CanvasGradient;
+    const isPattern = this.fillStyle instanceof CanvasPattern;
 
     let minY = Infinity;
     let maxY = -Infinity;
@@ -628,13 +729,18 @@ export class CanvasRenderingContext2D {
                         const index = (y * canvasWidth + x) * 4;
                         if (isGradient) {
                             color = this._getColorFromGradientAtPoint(x, y, this.fillStyle);
+                        } else if (isPattern) {
+                            color = this._getColorFromPatternAtPoint(x, y, this.fillStyle);
                         } else {
                             color = this._parseColor(this.fillStyle);
                         }
-                        data[index] = color.r;
-                        data[index + 1] = color.g;
-                        data[index + 2] = color.b;
-                        data[index + 3] = color.a;
+                        const finalColor = { ...color };
+                        finalColor.a = Math.round(finalColor.a * this.globalAlpha);
+
+                        data[index] = finalColor.r;
+                        data[index + 1] = finalColor.g;
+                        data[index + 2] = finalColor.b;
+                        data[index + 3] = finalColor.a;
                     }
                 }
             }
@@ -715,10 +821,11 @@ export class CanvasRenderingContext2D {
   }
 
   _parseColor(colorStr) {
+    if (typeof colorStr !== 'string') {
+        return { r: 0, g: 0, b: 0, a: 0 };
+    }
     // TODO: This is a very simple color parser. It needs to be expanded to
-    // support all CSS color formats, like rgb(), rgba(), hsl(), etc.
-    // It only handles a few named colors and hex codes, plus 'purple'
-    // for testing.
+    // support all CSS color formats, like hsl(), etc.
     const colorMap = {
       'black': { r: 0, g: 0, b: 0, a: 255 },
       'white': { r: 255, g: 255, b: 255, a: 255 },
@@ -728,12 +835,14 @@ export class CanvasRenderingContext2D {
       'purple': { r: 128, g: 0, b: 128, a: 255 },
       'orange': { r: 255, g: 165, b: 0, a: 255 },
       'yellow': { r: 255, g: 255, b: 0, a: 255 },
+      'transparent': { r: 0, g: 0, b: 0, a: 0 },
     };
 
     if (colorMap[colorStr]) {
       return colorMap[colorStr];
     }
 
+    // Handle hex
     if (colorStr.startsWith('#')) {
       const hex = colorStr.slice(1);
       if (hex.length === 3) {
@@ -750,6 +859,17 @@ export class CanvasRenderingContext2D {
       }
     }
 
+    // Handle rgba(r, g, b, a)
+    let match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if (match) {
+        return {
+            r: parseInt(match[1]),
+            g: parseInt(match[2]),
+            b: parseInt(match[3]),
+            a: match[4] !== undefined ? Math.round(parseFloat(match[4]) * 255) : 255,
+        };
+    }
+
     // Default to black if color is not recognized
     return colorMap['black'];
   }
@@ -764,6 +884,10 @@ export class CanvasRenderingContext2D {
 
   createConicGradient(startAngle, x, y) {
     return new CanvasGradient({ type: 'conic', startAngle, x, y });
+  }
+
+  createPattern(image, repetition) {
+    return new CanvasPattern(image, repetition);
   }
 
   _getColorFromGradient(gradient, t) {
@@ -820,6 +944,41 @@ export class CanvasRenderingContext2D {
     return { r: 0, g: 0, b: 0, a: 0 }; // Should not happen
   }
 
+  _getColorFromPatternAtPoint(x, y, pattern) {
+    const { image, repetition } = pattern;
+    const { width, height, data } = image;
+
+    let sx = x;
+    let sy = y;
+
+    if (repetition === 'repeat') {
+        sx = sx % width;
+        sy = sy % height;
+        if (sx < 0) sx += width;
+        if (sy < 0) sy += height;
+    } else if (repetition === 'repeat-x') {
+        if (y < 0 || y >= height) return { r: 0, g: 0, b: 0, a: 0 };
+        sx = sx % width;
+        if (sx < 0) sx += width;
+    } else if (repetition === 'repeat-y') {
+        if (x < 0 || x >= width) return { r: 0, g: 0, b: 0, a: 0 };
+        sy = sy % height;
+        if (sy < 0) sy += height;
+    } else { // no-repeat
+        if (x < 0 || x >= width || y < 0 || y >= height) {
+            return { r: 0, g: 0, b: 0, a: 0 };
+        }
+    }
+
+    const index = (Math.floor(sy) * width + Math.floor(sx)) * 4;
+    return {
+        r: data[index],
+        g: data[index + 1],
+        b: data[index + 2],
+        a: data[index + 3],
+    };
+  }
+
   _getColorFromConicGradientAtPoint(x, y, gradient) {
     const { startAngle, x: gx, y: gy } = gradient;
     let angle = Math.atan2(y - gy, x - gx);
@@ -855,45 +1014,39 @@ export class CanvasRenderingContext2D {
 
   _getColorFromRadialGradientAtPoint(x, y, gradient) {
     const { x0, y0, r0, x1, y1, r1 } = gradient;
+
     const dx = x1 - x0;
     const dy = y1 - y0;
     const dr = r1 - r0;
 
-    if (dx === 0 && dy === 0) { // Concentric circles
+    const a = dx * dx + dy * dy - dr * dr;
+
+    // If the circles are concentric or have the same radius and position
+    if (a === 0) {
         const dist = Math.sqrt((x - x0) ** 2 + (y - y0) ** 2);
-        if (dr === 0) { // Both circles have same radius
-             return this._getColorFromGradient(gradient, dist <= r0 ? 0 : 1);
-        }
         const t = (dist - r0) / dr;
         const clampedT = Math.max(0, Math.min(1, t));
         return this._getColorFromGradient(gradient, clampedT);
     }
 
-    const px = x - x0;
-    const py = y - y0;
-
-    const a = dx * dx + dy * dy - dr * dr;
-    const b = 2 * (px * dx + py * dy + r0 * dr);
-    const c = px * px + py * py - r0 * r0;
-
-    if (Math.abs(a) < 1e-6) { // Essentially a linear gradient
-        if (Math.abs(b) < 1e-6) return {r:0,g:0,b:0,a:0};
-        const t = -c / b;
-        return this._getColorFromGradient(gradient, t);
-    }
+    const b = 2 * ((x - x0) * dx + (y - y0) * dy - r0 * dr);
+    const c = (x - x0) ** 2 + (y - y0) ** 2 - r0 * r0;
 
     const discriminant = b * b - 4 * a * c;
+
     if (discriminant < 0) {
-        return { r: 0, g: 0, b: 0, a: 0 };
+      return { r: 0, g: 0, b: 0, a: 0 }; // Outside the gradient
     }
 
-    const sqrt_discriminant = Math.sqrt(discriminant);
+    const t1 = (-b + Math.sqrt(discriminant)) / (2 * a);
+    const t2 = (-b - Math.sqrt(discriminant)) / (2 * a);
 
-    const t1 = (-b + sqrt_discriminant) / (2 * a);
-    const t2 = (-b - sqrt_discriminant) / (2 * a);
-
+    // The spec requires using the solution for t that results in the smallest positive radius.
+    // However, a simpler interpretation that works for most cases is to pick the
+    // t value that is between 0 and 1. If both are, we need to decide which one.
+    // For now, we will prefer the smaller positive t.
     let t = -1;
-    if (t1 >=0 && t1 <= 1) {
+    if (t1 >= 0 && t1 <= 1) {
         t = t1;
     }
     if (t2 >= 0 && t2 <= 1) {
@@ -907,6 +1060,7 @@ export class CanvasRenderingContext2D {
     }
 
     const clampedT = Math.max(0, Math.min(1, t));
+    console.log(`RADIAL GRADIENT: x=${x}, y=${y}, dist=${dist}, t=${t}, clampedT=${clampedT}`);
     return this._getColorFromGradient(gradient, clampedT);
   }
 
@@ -925,7 +1079,7 @@ export class CanvasRenderingContext2D {
     this.lineTo(p4.x, p4.y);
     this.closePath();
 
-    this.fill();
+    this._scanlineFill(this.path);
 
     this.path = oldPath;
   }

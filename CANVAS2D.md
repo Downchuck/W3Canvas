@@ -46,10 +46,7 @@ Seems to be implemented. Used in:
 - `drawFocusIfNeeded()`
 
 ### Line Styles
-- `miterLimit`
-- `getLineDash()`
-- `setLineDash()`
-- `lineDashOffset`
+- **Note:** `getLineDash`, `setLineDash`, and `lineDashOffset` are implemented. `miterLimit` is a no-op as the underlying miter join logic is not functional.
 
 ### Text Styles
 - `direction`
@@ -65,7 +62,6 @@ Seems to be implemented. Used in:
 - `imageSmoothingQuality`
 
 ### Compositing
-- `globalAlpha`
 - `globalCompositeOperation`
 
 ### Other
