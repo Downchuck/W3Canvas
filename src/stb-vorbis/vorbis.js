@@ -988,17 +988,6 @@ Object.assign(Vorbis.prototype, {
                     }
                 }
             }
-            // precompute classdata
-            const codebook = this.codebooks[r.classbook];
-            r.classdata = Array(codebook.entries).fill(null).map(() => new Uint8Array(codebook.dimensions));
-            for (let j = 0; j < codebook.entries; j++) {
-                let temp = j;
-                let classwords = codebook.dimensions;
-                for (let k = classwords - 1; k >= 0; k--) {
-                    r.classdata[j][k] = temp % r.classifications;
-                    temp = Math.floor(temp / r.classifications);
-                }
-            }
         }
 
         // time domain transfers (not used)
@@ -1092,6 +1081,19 @@ Object.assign(Vorbis.prototype, {
             r.classifications = this.get_bits(6) + 1;
             r.classbook = this.get_bits(8);
             if (r.classbook >= this.codebook_count) { this.error = STBVorbisError.VORBIS_invalid_setup; return false; }
+
+            // precompute classdata
+            const codebook = this.codebooks[r.classbook];
+            r.classdata = Array(codebook.entries).fill(null).map(() => new Uint8Array(codebook.dimensions));
+            for (let j = 0; j < codebook.entries; j++) {
+                let temp = j;
+                let classwords = codebook.dimensions;
+                for (let k = classwords - 1; k >= 0; k--) {
+                    r.classdata[j][k] = temp % r.classifications;
+                    temp = Math.floor(temp / r.classifications);
+                }
+            }
+
             const residue_cascade = new Uint8Array(64);
             for (let j = 0; j < r.classifications; j++) {
                 const low_bits = this.get_bits(3);
@@ -1139,6 +1141,11 @@ Object.assign(Vorbis.prototype, {
                     if (!m.chan[j]) m.chan[j] = new MappingChannel();
                     m.chan[j].mux = this.get_bits(4);
                     if (m.chan[j].mux >= m.submaps) { this.error = STBVorbisError.VORBIS_invalid_setup; return false; }
+                }
+            } else {
+                for (let j = 0; j < this.channels; j++) {
+                    if (!m.chan[j]) m.chan[j] = new MappingChannel();
+                    m.chan[j].mux = 0;
                 }
             }
             for (let j = 0; j < m.submaps; j++) {
@@ -1411,7 +1418,7 @@ Object.assign(Vorbis.prototype, {
         const n_read = r.end - r.begin;
         const part_read = n_read / r.part_size;
 
-        const part_classdata = Array(ch).fill(null).map(() => new Uint8Array(part_read));
+        const part_classdata = Array(ch).fill(null).map(() => new Array(part_read));
 
         for (let i = 0; i < ch; i++) {
             if (!do_not_decode[i]) {
