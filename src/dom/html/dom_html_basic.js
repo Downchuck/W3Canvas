@@ -80,3 +80,19 @@ registerElement("TEXTAREA", "HTMLTextAreaElement", HTMLTextAreaElement);
 registerElement("IMG", "HTMLImageElement", HTMLImageElement);
 registerElement("BUTTON", "HTMLButtonElement", HTMLButtonElement);
 registerElement("A", "HTMLLinkElement", HTMLLinkElement);
+
+class HTMLArticleElement extends HTMLElement { constructor() { super("ARTICLE"); this.style.style.setProperty('display', 'block'); } }
+class HTMLSectionElement extends HTMLElement { constructor() { super("SECTION"); this.style.style.setProperty('display', 'block'); } }
+class HTMLNavElement extends HTMLElement { constructor() { super("NAV"); this.style.style.setProperty('display', 'block'); } }
+class HTMLAsideElement extends HTMLElement { constructor() { super("ASIDE"); this.style.style.setProperty('display', 'block'); } }
+class HTMLHeaderElement extends HTMLElement { constructor() { super("HEADER"); this.style.style.setProperty('display', 'block'); } }
+class HTMLFooterElement extends HTMLElement { constructor() { super("FOOTER"); this.style.style.setProperty('display', 'block'); } }
+class HTMLMainElement extends HTMLElement { constructor() { super("MAIN"); this.style.style.setProperty('display', 'block'); } }
+
+registerElement("ARTICLE", "HTMLArticleElement", HTMLArticleElement);
+registerElement("SECTION", "HTMLSectionElement", HTMLSectionElement);
+registerElement("NAV", "HTMLNavElement", HTMLNavElement);
+registerElement("ASIDE", "HTMLAsideElement", HTMLAsideElement);
+registerElement("HEADER", "HTMLHeaderElement", HTMLHeaderElement);
+registerElement("FOOTER", "HTMLFooterElement", HTMLFooterElement);
+registerElement("MAIN", "HTMLMainElement", HTMLMainElement);

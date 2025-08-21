@@ -3,7 +3,7 @@ import { registerElement } from '../html/dom_html_basic.js';
 
 export class SVGRectElement extends SVGElement {
 	constructor() {
-		super('svg:rect');
+		super('rect');
 		this.width = 0;
 		this.height = 0;
 		this.x = 0;

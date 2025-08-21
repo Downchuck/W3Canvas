@@ -6,7 +6,7 @@ export class HTMLParser {
     constructor() {
         this.stack = [];
         this.doc = new HTMLDocument();
-        this.stack.push(this.doc);
+        this.stack.push(this.doc.body);
         this.namespace = null;
     }
 
@@ -27,6 +27,10 @@ export class HTMLParser {
 
         switch (token.type) {
             case 'StartTag':
+                if (token.tagName.toLowerCase() === 'svg' && !this.namespace) {
+                    this.namespace = 'http://www.w3.org/2000/svg';
+                }
+
                 let element;
                 if (this.namespace) {
                     element = this.doc.createElementNS(this.namespace, token.tagName);
@@ -41,9 +45,6 @@ export class HTMLParser {
 
                 if (!token.selfClosing) {
                     this.stack.push(element);
-                    if (token.tagName.toLowerCase() === 'svg') {
-                        this.namespace = 'http://www.w3.org/2000/svg';
-                    }
                 }
                 break;
 
