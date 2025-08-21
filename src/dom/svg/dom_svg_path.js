@@ -12,23 +12,26 @@ export class SVGPathElement extends SVGElement {
     getD() { return this.d; }
 
     repaint(ctx) {
-        this.ctx = ctx || this.ctx;
-        if (!this.ctx) {
-            let parent = this.getParent();
-            while(parent && parent.tagName !== 'CANVAS') {
-                parent = parent.getParent();
-            }
-            if (parent && parent.tagName === 'CANVAS') {
-                this.ctx = parent.getContext('2d');
-            }
-        }
-
-        if (!this.ctx) {
+        if (!ctx) {
+			// Fallback for tests that don't pass a context
+			let parent = this.getParent();
+			while(parent && parent.tagName !== 'CANVAS') {
+				parent = parent.getParent();
+			}
+			if (parent && parent.tagName === 'CANVAS') {
+				ctx = parent.getContext('2d');
+			}
+		}
+        if (!ctx) {
             console.error("Could not find canvas context to repaint path.");
             return;
         }
+        this.ctx = ctx;
 
-        const pathCommands = parsePath(this.d);
+        ctx.save();
+        this.applyTransform(ctx);
+
+        const pathCommands = parsePath(this.getD());
 
         this.ctx.beginPath();
 
@@ -43,6 +46,12 @@ export class SVGPathElement extends SVGElement {
                 case 'C':
                     this.ctx.bezierCurveTo(command.x1, command.y1, command.x2, command.y2, command.x, command.y);
                     break;
+                case 'Q':
+                    this.ctx.quadraticCurveTo(command.x1, command.y1, command.x, command.y);
+                    break;
+                case 'A':
+                    this.ctx.ellipse(command.cx, command.cy, command.rx, command.ry, command.rotation, command.startAngle, command.endAngle, command.anticlockwise);
+                    break;
                 case 'Z':
                     this.ctx.closePath();
                     break;
@@ -51,6 +60,7 @@ export class SVGPathElement extends SVGElement {
 
         const fill = this.getFill();
         const stroke = this.getStroke();
+        const strokeWidth = this.getStrokeWidth();
 
         if (fill) {
             this.ctx.fillStyle = fill;
@@ -58,9 +68,12 @@ export class SVGPathElement extends SVGElement {
         }
 
         if (stroke) {
+            this.ctx.lineWidth = strokeWidth;
             this.ctx.strokeStyle = stroke;
             this.ctx.stroke();
         }
+
+        ctx.restore();
     }
 }
 

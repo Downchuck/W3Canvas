@@ -26,21 +26,25 @@ export class Line extends SVGLineElement {
 		this.ctx = null;
 	}
 
-	repaint() {
-		if (!this.ctx) {
+	repaint(ctx) {
+		if (!ctx) {
+			// Fallback for tests that don't pass a context
 			let parent = this.getParent();
 			while(parent && parent.tagName !== 'CANVAS') {
 				parent = parent.getParent();
 			}
 			if (parent && parent.tagName === 'CANVAS') {
-				this.ctx = parent.getContext('2d');
+				ctx = parent.getContext('2d');
 			}
 		}
-
-		if (!this.ctx) {
+		if (!ctx) {
 			console.error("Could not find canvas context to repaint line.");
 			return;
 		}
+		this.ctx = ctx;
+
+		ctx.save();
+		this.applyTransform(ctx);
 
 		const x1 = this.getX1() || 0;
 		const y1 = this.getY1() || 0;
@@ -57,6 +61,8 @@ export class Line extends SVGLineElement {
 			this.ctx.lineWidth = strokeWidth;
 			this.ctx.stroke();
 		}
+
+		ctx.restore();
 	}
 }
 
