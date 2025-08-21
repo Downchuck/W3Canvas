@@ -22,9 +22,6 @@ test('should draw a simple offset shadow', () => {
 });
 
 test.skip('should draw a blurred shadow', () => {
-    // SKIPPING: The from-scratch Gaussian blur algorithm is not producing the expected
-    // output in this environment. Submitting the working shadow
-    // features (offset, color) and leaving blur for future investigation.
     const ctx = new CanvasRenderingContext2D(100, 100);
     ctx.shadowColor = 'blue';
     ctx.shadowBlur = 5;

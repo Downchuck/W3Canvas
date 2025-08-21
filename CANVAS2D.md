@@ -57,7 +57,7 @@ The following properties and methods are missing from the `CanvasRenderingContex
 - `imageSmoothingQuality`
 
 ### Compositing
-- `globalCompositeOperation`
+- `globalCompositeOperation`: Implemented, but only `source-over` is supported.
 
 ### Other
 - `getContextAttributes()`
