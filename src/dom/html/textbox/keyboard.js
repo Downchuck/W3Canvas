@@ -21,7 +21,10 @@ export class Keyboard {
 				visualSelection = vars.visualSelection;
 				visualTextBox = vars.visualTextBox;
 				debug.checkNull("Keyboard", [cursor, textModel, visualSelection, visualTextBox, keyEditor, navig]);
-				onkey(document);
+
+                const textDomElement = vars.textDomElement;
+                textDomElement.addEventListener('keydown', this.handleKeyDown);
+                textDomElement.addEventListener('keypress', this.handleKeyPress);
 			}
 			catch (e) {
 				debug.programmerPanic("Keyboard. Initialization error: " + e.name + " = " + e.message);
@@ -51,7 +54,6 @@ export class Keyboard {
 		const CTRL_Z = 90;
 
 		this.handleKeyPress = (e) => {
-			e = window.event? event : e;
 			if (e.altKey || e.ctrlKey) {
 				return;
 			}
@@ -69,7 +71,6 @@ export class Keyboard {
 		};
 
 		this.handleKeyDown = (e) => {
-			e = window.event? event : e;
 			if (e.keyCode in keys) {
 				e.preventDefault();
 				return keys[e.keyCode](e);
@@ -107,25 +108,7 @@ export class Keyboard {
 			}
 		};
 
-		const onkey = (doc) => {
-			doc.onkeypress = (e) => {
-				const comp = textFocusManager.getCurrentTextBox();
-				if (comp !== null) {
-					const kb = comp.getKeyboard();
-					kb.handleKeyPress(e);
-				}
-			};
-			doc.onkeydown = (e) => {
-				const comp = textFocusManager.getCurrentTextBox();
-				if (comp !== null) {
-					const kb = comp.getKeyboard();
-					return kb.handleKeyDown(e);
-				}
-			};
-		};
-
 		this.keyEditor = keyEditor;
 		this.keyNavigator = navig;
-		this.bindKeyboard = (doc) => { onkey(doc); };
 	}
 }
