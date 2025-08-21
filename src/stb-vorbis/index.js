@@ -3,19 +3,20 @@ import { Vorbis, STBVorbisError } from './vorbis.js';
 
 function pump_first_frame(f) {
     const len = { value: 0 };
-    const left = { value: 0 };
-    const right = { value: 0 };
+    const left_start = { value: 0 };
+    const left_end = { value: 0 };
+    const right_start = { value: 0 };
+    const right_end = { value: 0 };
     const mode = { value: 0 };
 
-    if (!f.decode_initial(left, {value:0}, right, {value:0}, mode)) {
+    if (!f.decode_initial(left_start, left_end, right_start, right_end, mode)) {
         return 0;
     }
     const m = f.mode_config[mode.value];
-    // This is a simplified version of the decode_packet call
-    if (!f.decode_packet_rest(len, m, left.value, 0, right.value, 0, left)) {
+    if (!f.decode_packet_rest(len, m, left_start.value, left_end.value, right_start.value, right_end.value, left_start)) {
         return 0;
     }
-    f.finish_frame(len.value, left.value, right.value);
+    f.finish_frame(len.value, left_start.value, right_start.value);
     return 1;
 }
 
@@ -36,29 +37,31 @@ export function stb_vorbis_open_memory(buffer) {
 
 export function stb_vorbis_get_frame_float(f) {
     const len = { value: 0 };
-    const left = { value: 0 };
-    const right = { value: 0 };
+    const left_start = { value: 0 };
+    const left_end = { value: 0 };
+    const right_start = { value: 0 };
+    const right_end = { value: 0 };
     const mode = { value: 0 };
 
-    if (!f.decode_initial(left, {value:0}, right, {value:0}, mode)) {
+    if (!f.decode_initial(left_start, left_end, right_start, right_end, mode)) {
         f.channel_buffer_start = f.channel_buffer_end = 0;
-        return 0;
+        return { samples: 0 };
     }
 
     const m = f.mode_config[mode.value];
-    if (!f.decode_packet_rest(len, m, left.value, 0, right.value, 0, left)) {
-        return 0;
+    if (!f.decode_packet_rest(len, m, left_start.value, left_end.value, right_start.value, right_end.value, left_start)) {
+        return { samples: 0 };
     }
 
-    const frame_len = f.finish_frame(len.value, left.value, right.value);
+    const frame_len = f.finish_frame(len.value, left_start.value, right_start.value);
 
     const outputs = [];
     for (let i = 0; i < f.channels; ++i) {
-        outputs[i] = f.channel_buffers[i].subarray(left.value, left.value + frame_len);
+        outputs[i] = f.channel_buffers[i].subarray(left_start.value, left_start.value + frame_len);
     }
 
-    f.channel_buffer_start = left.value;
-    f.channel_buffer_end = left.value + frame_len;
+    f.channel_buffer_start = left_start.value;
+    f.channel_buffer_end = left_start.value + frame_len;
 
     return {
         channels: f.channels,
