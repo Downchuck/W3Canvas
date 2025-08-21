@@ -14,15 +14,8 @@ export class HTMLCollection {
   length;
   options = [];
 
-  constructor(firstChild) {
-    if (firstChild == null) {
-      throw new ReferenceError("HTMLCollection(): Missing firstChild parameter");
-    }
-    let node = firstChild;
-    while (node !== null) {
-      this.options.push(node);
-      node = node.getNextSibling();
-    }
+  constructor(nodes = []) {
+    this.options = nodes;
     this.length = this.options.length;
   }
 
