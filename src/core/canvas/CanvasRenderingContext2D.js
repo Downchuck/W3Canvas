@@ -306,16 +306,43 @@ export class CanvasRenderingContext2D {
   }
 
   roundRect(x, y, w, h, radii) {
+    // Normalize radii
+    if (typeof radii === 'undefined') {
+      radii = 0;
+    }
+    if (typeof radii === 'number') {
+      radii = [radii];
+    }
+    if (radii.some(r => r < 0)) {
+        throw new RangeError('Radii must be non-negative');
+    }
+
+    let r1, r2, r3, r4;
+    if (radii.length === 1) {
+        r1 = r2 = r3 = r4 = radii[0];
+    } else if (radii.length === 2) {
+        r1 = r3 = radii[0];
+        r2 = r4 = radii[1];
+    } else if (radii.length === 3) {
+        r1 = radii[0];
+        r2 = r4 = radii[1];
+        r3 = radii[2];
+    } else if (radii.length === 4) {
+        [r1, r2, r3, r4] = radii;
+    } else {
+        return;
+    }
+
     this.beginPath();
-    this.moveTo(x + radii, y);
-    this.lineTo(x + w - radii, y);
-    this.arc(x + w - radii, y + radii, radii, -Math.PI / 2, 0);
-    this.lineTo(x + w, y + h - radii);
-    this.arc(x + w - radii, y + h - radii, radii, 0, Math.PI / 2);
-    this.lineTo(x + radii, y + h);
-    this.arc(x + radii, y + h - radii, radii, Math.PI / 2, Math.PI);
-    this.lineTo(x, y + radii);
-    this.arc(x + radii, y + radii, radii, Math.PI, Math.PI * 1.5);
+    this.moveTo(x + r1, y);
+    this.lineTo(x + w - r2, y);
+    this.arc(x + w - r2, y + r2, r2, -Math.PI / 2, 0);
+    this.lineTo(x + w, y + h - r3);
+    this.arc(x + w - r3, y + h - r3, r3, 0, Math.PI / 2);
+    this.lineTo(x + r4, y + h);
+    this.arc(x + r4, y + h - r4, r4, Math.PI / 2, Math.PI);
+    this.lineTo(x, y + r1);
+    this.arc(x + r1, y + r1, r1, Math.PI, Math.PI * 1.5);
     this.closePath();
   }
 
@@ -700,6 +727,7 @@ export class CanvasRenderingContext2D {
       'blue': { r: 0, g: 0, b: 255, a: 255 },
       'purple': { r: 128, g: 0, b: 128, a: 255 },
       'orange': { r: 255, g: 165, b: 0, a: 255 },
+      'yellow': { r: 255, g: 255, b: 0, a: 255 },
     };
 
     if (colorMap[colorStr]) {
@@ -831,18 +859,27 @@ export class CanvasRenderingContext2D {
     const dy = y1 - y0;
     const dr = r1 - r0;
 
+    if (dx === 0 && dy === 0) { // Concentric circles
+        const dist = Math.sqrt((x - x0) ** 2 + (y - y0) ** 2);
+        if (dr === 0) { // Both circles have same radius
+             return this._getColorFromGradient(gradient, dist <= r0 ? 0 : 1);
+        }
+        const t = (dist - r0) / dr;
+        const clampedT = Math.max(0, Math.min(1, t));
+        return this._getColorFromGradient(gradient, clampedT);
+    }
+
     const px = x - x0;
     const py = y - y0;
 
     const a = dx * dx + dy * dy - dr * dr;
-    const b = -2 * (px * dx + py * dy + r0 * dr);
+    const b = 2 * (px * dx + py * dy + r0 * dr);
     const c = px * px + py * py - r0 * r0;
 
-    if (a === 0) {
-        if (b === 0) return { r: 0, g: 0, b: 0, a: 0 };
+    if (Math.abs(a) < 1e-6) { // Essentially a linear gradient
+        if (Math.abs(b) < 1e-6) return {r:0,g:0,b:0,a:0};
         const t = -c / b;
-        const clampedT = Math.max(0, Math.min(1, t));
-        return this._getColorFromGradient(gradient, clampedT);
+        return this._getColorFromGradient(gradient, t);
     }
 
     const discriminant = b * b - 4 * a * c;
@@ -855,19 +892,20 @@ export class CanvasRenderingContext2D {
     const t1 = (-b + sqrt_discriminant) / (2 * a);
     const t2 = (-b - sqrt_discriminant) / (2 * a);
 
-    const candidates = [];
-    if (t1 >= 0 && (r0 + t1 * dr) >= 0) {
-        candidates.push(t1);
+    let t = -1;
+    if (t1 >=0 && t1 <= 1) {
+        t = t1;
     }
-    if (t2 >= 0 && (r0 + t2 * dr) >= 0) {
-        candidates.push(t2);
+    if (t2 >= 0 && t2 <= 1) {
+        if (t === -1 || t2 < t) {
+            t = t2;
+        }
     }
 
-    if (candidates.length === 0) {
+    if (t === -1) {
         return { r: 0, g: 0, b: 0, a: 0 };
     }
 
-    const t = Math.min(...candidates);
     const clampedT = Math.max(0, Math.min(1, t));
     return this._getColorFromGradient(gradient, clampedT);
   }
@@ -967,17 +1005,11 @@ export class CanvasRenderingContext2D {
   }
 
   drawImage(image, ...args) {
-    console.log('drawImage called with image:', image.width, 'x', image.height);
     if (!image || !image.data) {
-      // If the image is not loaded yet, do nothing.
-      console.log('Image not loaded yet.');
       return;
     }
 
-    let sx = 0;
-    let sy = 0;
-    let sWidth = image.width;
-    let sHeight = image.height;
+    let sx = 0, sy = 0, sWidth = image.width, sHeight = image.height;
     let dx, dy, dWidth, dHeight;
 
     if (args.length === 2) {
@@ -992,30 +1024,52 @@ export class CanvasRenderingContext2D {
       throw new Error(`Invalid number of arguments for drawImage: ${args.length + 1}`);
     }
 
+    const p1 = this._transformPoint(dx, dy);
+    const p2 = this._transformPoint(dx + dWidth, dy);
+    const p3 = this._transformPoint(dx + dWidth, dy + dHeight);
+    const p4 = this._transformPoint(dx, dy + dHeight);
+
+    const minX = Math.floor(Math.min(p1.x, p2.x, p3.x, p4.x));
+    const minY = Math.floor(Math.min(p1.y, p2.y, p3.y, p4.y));
+    const maxX = Math.ceil(Math.max(p1.x, p2.x, p3.x, p4.x));
+    const maxY = Math.ceil(Math.max(p1.y, p2.y, p3.y, p4.y));
+
     const { data: sourceData, width: sourceWidth } = image;
     const { data: destData, width: destWidth } = this.imageData;
 
-    // sx, sy, sWidth, sHeight define the source rectangle in the source image.
-    // dx, dy, dWidth, dHeight define the destination rectangle in the canvas.
+    const inv = this.getTransform();
+    const det = inv[0] * inv[3] - inv[1] * inv[2];
+    if (det === 0) return; // Non-invertible matrix
 
-    for (let j = 0; j < dHeight; j++) {
-      for (let i = 0; i < dWidth; i++) {
-        // Find the corresponding pixel in the source image
-        const sourceX = Math.floor(sx + (i / dWidth) * sWidth);
-        const sourceY = Math.floor(sy + (j / dHeight) * sHeight);
+    const invDet = 1 / det;
+    const inv_a = inv[3] * invDet;
+    const inv_b = -inv[1] * invDet;
+    const inv_c = -inv[2] * invDet;
+    const inv_d = inv[0] * invDet;
+    const inv_e = (inv[2] * inv[5] - inv[3] * inv[4]) * invDet;
+    const inv_f = (inv[1] * inv[4] - inv[0] * inv[5]) * invDet;
 
-        const destX = dx + i;
-        const destY = dy + j;
+    for (let j = minY; j < maxY; j++) {
+      for (let i = minX; i < maxX; i++) {
+        const orig_x = i * inv_a + j * inv_c + inv_e;
+        const orig_y = i * inv_b + j * inv_d + inv_f;
 
-        if (destX >= 0 && destX < this.width && destY >= 0 && destY < this.height) {
-          const sourceIndex = (sourceY * sourceWidth + sourceX) * 4;
-          const destIndex = (destY * destWidth + destX) * 4;
+        const u = (orig_x - dx) / dWidth;
+        const v = (orig_y - dy) / dHeight;
 
-          // Copy RGBA values
-          destData[destIndex]     = sourceData[sourceIndex];
-          destData[destIndex + 1] = sourceData[sourceIndex + 1];
-          destData[destIndex + 2] = sourceData[sourceIndex + 2];
-          destData[destIndex + 3] = sourceData[sourceIndex + 3];
+        if (u >= 0 && u < 1 && v >= 0 && v < 1) {
+          const sourceX = Math.floor(sx + u * sWidth);
+          const sourceY = Math.floor(sy + v * sHeight);
+
+          if (i >= 0 && i < this.width && j >= 0 && j < this.height) {
+            const sourceIndex = (sourceY * sourceWidth + sourceX) * 4;
+            const destIndex = (j * destWidth + i) * 4;
+
+            destData[destIndex]     = sourceData[sourceIndex];
+            destData[destIndex + 1] = sourceData[sourceIndex + 1];
+            destData[destIndex + 2] = sourceData[sourceIndex + 2];
+            destData[destIndex + 3] = sourceData[sourceIndex + 3];
+          }
         }
       }
     }
