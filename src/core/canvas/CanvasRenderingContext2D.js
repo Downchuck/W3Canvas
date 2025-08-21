@@ -37,6 +37,7 @@ export class CanvasRenderingContext2D {
     this.shadowColor = 'rgba(0, 0, 0, 0)';
     this.shadowOffsetX = 0;
     this.shadowOffsetY = 0;
+    this.globalAlpha = 1.0;
     this.miterLimit = 10;
     this.lineDashOffset = 0.0;
     this.lineDashList = [];
@@ -72,6 +73,7 @@ export class CanvasRenderingContext2D {
       shadowColor: this.shadowColor,
       shadowOffsetX: this.shadowOffsetX,
       shadowOffsetY: this.shadowOffsetY,
+      globalAlpha: this.globalAlpha,
       miterLimit: this.miterLimit,
       lineDashOffset: this.lineDashOffset,
       lineDashList: [...this.lineDashList],
@@ -94,6 +96,7 @@ export class CanvasRenderingContext2D {
       this.shadowColor = state.shadowColor;
       this.shadowOffsetX = state.shadowOffsetX;
       this.shadowOffsetY = state.shadowOffsetY;
+      this.globalAlpha = state.globalAlpha;
       this.miterLimit = state.miterLimit;
       this.lineDashOffset = state.lineDashOffset;
       this.lineDashList = state.lineDashList;
@@ -731,10 +734,13 @@ export class CanvasRenderingContext2D {
                         } else {
                             color = this._parseColor(this.fillStyle);
                         }
-                        data[index] = color.r;
-                        data[index + 1] = color.g;
-                        data[index + 2] = color.b;
-                        data[index + 3] = color.a;
+                        const finalColor = { ...color };
+                        finalColor.a = Math.round(finalColor.a * this.globalAlpha);
+
+                        data[index] = finalColor.r;
+                        data[index + 1] = finalColor.g;
+                        data[index + 2] = finalColor.b;
+                        data[index + 3] = finalColor.a;
                     }
                 }
             }

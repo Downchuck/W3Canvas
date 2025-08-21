@@ -62,7 +62,6 @@ Seems to be implemented. Used in:
 - `imageSmoothingQuality`
 
 ### Compositing
-- `globalAlpha`
 - `globalCompositeOperation`
 
 ### Other
