@@ -33,21 +33,24 @@ export class Rectangle extends SVGRectElement {
 	}
 
 	repaint(ctx) {
-		this.ctx = ctx || this.ctx;
-		if (!this.ctx) {
+		if (!ctx) {
+			// Fallback for tests that don't pass a context
 			let parent = this.getParent();
 			while(parent && parent.tagName !== 'CANVAS') {
 				parent = parent.getParent();
 			}
 			if (parent && parent.tagName === 'CANVAS') {
-				this.ctx = parent.getContext('2d');
+				ctx = parent.getContext('2d');
 			}
 		}
-
-		if (!this.ctx) {
+		if (!ctx) {
 			console.error("Could not find canvas context to repaint rectangle.");
 			return;
 		}
+		this.ctx = ctx;
+
+		ctx.save();
+		this.applyTransform(ctx);
 
 		const x = this.getX() || 0;
 		const y = this.getY() || 0;
@@ -73,6 +76,8 @@ export class Rectangle extends SVGRectElement {
 			this.ctx.strokeStyle = stroke;
 			this.ctx.stroke();
 		}
+
+		ctx.restore();
 	}
 
 	rectPainter(x,y,w,h,rx,ry) {

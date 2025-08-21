@@ -10,6 +10,8 @@ const createMockContext = () => ({
     lineWidth: 1, // Default value
     fillStyle: '',
     strokeStyle: '',
+    textAlign: 'start',
+    font: '',
     beginPath: () => {},
     moveTo: () => {},
     lineTo: () => {},
@@ -17,9 +19,19 @@ const createMockContext = () => ({
     ellipse: () => {},
     rect: () => {},
     bezierCurveTo: () => {},
+    quadraticCurveTo: () => {},
     closePath: () => {},
     fill: () => {},
-    stroke: () => {}
+    stroke: () => {},
+    save: () => {},
+    restore: () => {},
+    transform: () => {},
+    translate: () => {},
+    scale: () => {},
+    rotate: () => {},
+    fillText: () => {},
+    strokeText: () => {},
+    measureText: () => ({ width: 50 }), // Mock measureText
 });
 
 const createMockCanvas = (context) => ({

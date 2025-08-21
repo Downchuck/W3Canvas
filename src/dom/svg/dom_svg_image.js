@@ -56,7 +56,7 @@ export class SVGImageElement extends SVGElement {
                 throw new Error('Failed to decode image');
             }
         } catch (error) {
-            console.error(`Error loading SVG image ${url}:`, error);
+            console.error(`Error loading SVG image:`, error);
         }
     }
 }
@@ -72,24 +72,28 @@ export class Image extends SVGImageElement {
         };
     }
 
-    repaint() {
-        if (!this.ctx) {
-            let parent = this.getParent();
-            while(parent && parent.tagName !== 'CANVAS') {
-                parent = parent.getParent();
-            }
-            if (parent && parent.tagName === 'CANVAS') {
-                this.ctx = parent.getContext('2d');
-            }
-        }
-
-        if (!this.ctx) {
+    repaint(ctx) {
+        if (!ctx) {
+			// Fallback for tests that don't pass a context
+			let parent = this.getParent();
+			while(parent && parent.tagName !== 'CANVAS') {
+				parent = parent.getParent();
+			}
+			if (parent && parent.tagName === 'CANVAS') {
+				ctx = parent.getContext('2d');
+			}
+		}
+        if (!ctx) {
             // Can't repaint yet, but don't log an error as the canvas might just not be ready.
-            // It will be called again.
+            // It will be called again when the parent repaints.
             return;
         }
+        this.ctx = ctx;
 
         if (this.imgData) {
+            ctx.save();
+            this.applyTransform(ctx);
+
             // Adapt the stb-image object to what drawImage expects
             const imageForCanvas = {
                 data: this.imgData.data,
@@ -103,6 +107,8 @@ export class Image extends SVGImageElement {
             const height = this.getHeight() || imageForCanvas.height;
 
             this.ctx.drawImage(imageForCanvas, x, y, width, height);
+
+            ctx.restore();
         }
     }
 }
