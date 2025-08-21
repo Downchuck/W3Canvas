@@ -37,6 +37,9 @@ export class CanvasRenderingContext2D {
     this.shadowColor = 'rgba(0, 0, 0, 0)';
     this.shadowOffsetX = 0;
     this.shadowOffsetY = 0;
+    this.miterLimit = 10;
+    this.lineDashOffset = 0.0;
+    this.lineDashList = [];
     this.stateStack = [];
     this.path = [];
     this.clippingPath = null;
@@ -69,6 +72,9 @@ export class CanvasRenderingContext2D {
       shadowColor: this.shadowColor,
       shadowOffsetX: this.shadowOffsetX,
       shadowOffsetY: this.shadowOffsetY,
+      miterLimit: this.miterLimit,
+      lineDashOffset: this.lineDashOffset,
+      lineDashList: [...this.lineDashList],
       transformMatrix: [...this.transformMatrix],
     });
   }
@@ -88,6 +94,9 @@ export class CanvasRenderingContext2D {
       this.shadowColor = state.shadowColor;
       this.shadowOffsetX = state.shadowOffsetX;
       this.shadowOffsetY = state.shadowOffsetY;
+      this.miterLimit = state.miterLimit;
+      this.lineDashOffset = state.lineDashOffset;
+      this.lineDashList = state.lineDashList;
       if (state.transformMatrix) {
         this.transformMatrix = state.transformMatrix;
       }
@@ -208,6 +217,24 @@ export class CanvasRenderingContext2D {
 
   strokeText(text, x, y) {
     this._renderText(text, x, y, 'stroke');
+  }
+
+  getLineDash() {
+    return [...this.lineDashList];
+  }
+
+  setLineDash(segments) {
+    // Basic validation: must be a sequence of numbers
+    if (!Array.isArray(segments) || segments.some(isNaN)) {
+        return;
+    }
+
+    // If the number of segments is odd, duplicate it
+    if (segments.length % 2 !== 0) {
+        this.lineDashList = [...segments, ...segments];
+    } else {
+        this.lineDashList = [...segments];
+    }
   }
 
   measureText(text) {
@@ -504,14 +531,16 @@ export class CanvasRenderingContext2D {
 
         // Now that we have a polyline, stroke it by creating a new path that is the outline
         const isClosed = subPath[subPath.length - 1].type === 'close';
-        const polygon = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed);
+        const polygons = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed, this.lineDashList, this.lineDashOffset, this.miterLimit);
 
-        if (polygon.length > 0) {
-            this.moveTo(polygon[0].x, polygon[0].y);
-            for (let i = 1; i < polygon.length; i++) {
-                this.lineTo(polygon[i].x, polygon[i].y);
+        for (const polygon of polygons) {
+            if (polygon.length > 0) {
+                this.moveTo(polygon[0].x, polygon[0].y);
+                for (let i = 1; i < polygon.length; i++) {
+                    this.lineTo(polygon[i].x, polygon[i].y);
+                }
+                this.closePath();
             }
-            this.closePath();
         }
     }
 

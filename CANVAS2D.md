@@ -6,23 +6,47 @@ This document provides an analysis of the current Canvas 2D implementation, high
 
 The following properties and methods are missing from the `CanvasRenderingContext2D` implementation, based on the MDN documentation.
 
+### Transformations
+- `rotate()`
+- `scale()` (stubbed)
+- `translate()` (stubbed)
+- `transform()`
+- `setTransform()`
+- `resetTransform()`
+- `getTransform()`
+- **Note:** There are `TODO` comments for these in `src/core/canvas/CanvasRenderingContext2D.js`.
+
 ### Gradients and Patterns
+- `createRadialGradient()`
+- `createConicGradient()`
+- `createConicGradient()`
+
+#### `createPattern()`
+Seems to be implemented. Used in:
+- `src/dom/html/combobox_control.js`
+- `examples/text_path.html`
+- Legacy code: `examples/Z_testing_select_old/combo_blue.js`, `src/legacy/style/combo_blue.js`
 
 ### Shadows
-- **Note:** `shadowColor`, `shadowOffsetX`, and `shadowOffsetY` are implemented. `shadowBlur` is a no-op as the underlying blur algorithm is not functional in the current environment.
+- `shadowBlur`
+- `shadowColor`
+- `shadowOffsetX`
+- `shadowOffsetY`
+- **Note:** There is some commented-out code related to shadows in `src/dom/css/box_paint.js`.
 
 ### Paths
+- `roundRect()`
+  - **Note:** There are existing `round_rectangle` implementations in `src/dom/css/box_paint.js` and `examples/Z_testing_select_old/all.select.yui.js` that are not exposed on the `CanvasRenderingContext2D`.
 - `arcTo()`
+- `quadraticCurveTo()`
+  - **Note:** Used in the `round_rectangle` implementations mentioned above.
 
 ### Path Drawing
 - `isPointInStroke()`
 - `drawFocusIfNeeded()`
 
 ### Line Styles
-- `miterLimit`
-- `getLineDash()`
-- `setLineDash()`
-- `lineDashOffset`
+- **Note:** `getLineDash`, `setLineDash`, and `lineDashOffset` are implemented. `miterLimit` is a no-op as the underlying miter join logic is not functional.
 
 ### Text Styles
 - `direction`
@@ -58,6 +82,12 @@ The following supporting APIs and features are either missing or incomplete.
 - **`FontFaceSet.ready` Promise:** The `ready` promise is not implemented.
 - **Extended Descriptors:** Support for `unicodeRange`, `featureSettings`, and `variationSettings` is missing.
 
+### Path2D API
+The `Path2D` object is not implemented. This includes the `Path2D` constructor and methods that accept a `Path2D` object, such as:
+- `fill(path)`
+- `stroke(path)`
+- `clip(path)`
+
 ### OffscreenCanvas
 The `OffscreenCanvas` API is not implemented. This would allow for canvas rendering in Web Workers.
 
@@ -68,7 +98,8 @@ There is no support for using the Canvas API within Web Workers (e.g., via `Offs
 
 Based on this analysis, we recommend the following priorities for future development:
 
-1.  **Implement `createPattern()`:** This is a core feature for creating repeating patterns. (DONE)
-2.  **Implement the `Path2D` API:** This will allow for more complex and reusable path objects. (DONE)
-3.  **Implement Shadows:** Adding shadow effects is a common requirement for rich graphics. (DONE, with note about blur)
-4.  **Investigate `OffscreenCanvas` and Web Worker Support:** To improve performance and enable multi-threading, support for `OffscreenCanvas` should be a long-term goal.
+1.  **Implement `roundRect()`:** This is a new and frequently requested feature.
+2.  **Complete the Transformations API:** Implementing `translate()`, `scale()`, `rotate()`, and the other transform methods is crucial for basic canvas functionality.
+3.  **Expand Gradient and Pattern Support:** Adding support for radial and conic gradients, as well as patterns, will significantly improve the rendering capabilities.
+4.  **Implement the `Path2D` API:** This will allow for more complex and reusable path objects.
+5.  **Investigate `OffscreenCanvas` and Web Worker Support:** To improve performance and enable multi-threading, support for `OffscreenCanvas` should be a long-term goal.
