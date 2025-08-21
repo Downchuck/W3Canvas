@@ -1,8 +1,12 @@
-import { FontFace, fontFaceSet } from './font_face.js';
-import fs from 'fs';
+import { FontFace } from './font_face.js';
 import path from 'path';
 
-export function parseFontFaceRules(cssText) {
+/**
+ * Parses @font-face rules from a CSS text and adds them to the given scope's FontFaceSet.
+ * @param {string} cssText - The CSS text to parse.
+ * @param {GlobalScope} scope - The global scope whose FontFaceSet will be used.
+ */
+export function parseFontFaceRules(cssText, scope) {
     const fontFaceRegex = /@font-face\s*\{([^}]+)\}/g;
     let match;
     while ((match = fontFaceRegex.exec(cssText)) !== null) {
@@ -10,24 +14,20 @@ export function parseFontFaceRules(cssText) {
 
         const fontFamilyMatch = /font-family:\s*['"]?([^;'"]+)['"]?/.exec(ruleBlock);
         const srcMatch = /src:\s*url\((['"]?)(.*?)\1\)/.exec(ruleBlock);
+        // A real implementation would parse other descriptors too (weight, style, etc.)
 
         if (fontFamilyMatch && srcMatch) {
             const fontFamily = fontFamilyMatch[1];
             const url = srcMatch[2];
 
-            // For now, we only support file:/// URIs
-            if (url.startsWith('file:///')) {
-                try {
-                    // Convert file:/// URI to a local path
-                    const filePath = path.normalize(url.substring(7)); // 7 chars for "file://"
-                    const fontData = fs.readFileSync(filePath);
-                    const fontFace = new FontFace(fontFamily, fontData);
-                    fontFaceSet.add(fontFace);
-                    console.log(`Loaded font: ${fontFamily} from ${filePath}`);
-                } catch (e) {
-                    console.error(`Failed to load font from ${url}: ${e.message}`);
-                }
-            }
+            // Create a new FontFace object. The source is the URL.
+            const fontFace = new FontFace(fontFamily, url);
+
+            // Add it to the FontFaceSet of the provided scope.
+            // The `add` method will automatically trigger the `load()` method.
+            scope.fonts.add(fontFace);
+
+            console.log(`Scheduled loading of font: ${fontFamily} from ${url}`);
         }
     }
 }

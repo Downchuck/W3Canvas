@@ -1,3 +1,5 @@
+import fs from 'fs/promises';
+
 export class FontFace {
     family;
     source;
@@ -6,7 +8,8 @@ export class FontFace {
     stretch;
     display;
     descriptors;
-    #fontData; // Private field for the ArrayBuffer
+    status;
+    #fontData = null; // Private field for the ArrayBuffer
 
     constructor(family, source, descriptors = {}) {
         this.family = family;
@@ -17,76 +20,104 @@ export class FontFace {
         this.weight = descriptors.weight || 'normal';
         this.stretch = descriptors.stretch || 'normal';
         this.display = descriptors.display || 'auto';
-        this.status = 'unloaded';
+        this.status = 'unloaded'; // Initial status is always 'unloaded'
 
-        this.#fontData = null;
-
-        if (source instanceof Uint8Array) {
-            this.#fontData = source;
-            this.status = 'loaded';
-        }
+        // We no longer automatically load data here. The `load()` method is responsible for that.
     }
 
     get fontData() {
         return this.#fontData;
     }
 
-    load() {
+    async load() {
         if (this.status === 'loaded') {
-            return Promise.resolve(this);
+            return this;
         }
         if (this.status === 'loading') {
-            // This would be more complex in a real implementation
-            return Promise.reject(new Error("Already loading."));
+            // In a real implementation, we would wait for the existing load to complete.
+            // For now, we'll just throw an error.
+            throw new Error("Already loading.");
         }
 
-        // For now, we only support ArrayBuffer sources which are loaded instantly.
-        // A real implementation would handle URL fetching here.
         this.status = 'loading';
-        if (this.#fontData) {
+
+        try {
+            if (typeof this.source === 'string') {
+                // Isomorphic fetch: in Node, we can use fs.readFile. In a browser, this would be fetch().
+                // For this project, we'll assume file paths for now.
+                if (this.source.startsWith('file:///')) {
+                    const filePath = new URL(this.source).pathname;
+                    this.#fontData = await fs.readFile(filePath);
+                } else {
+                    // Assuming it's a local path for the Node.js environment
+                    this.#fontData = await fs.readFile(this.source);
+                }
+            } else if (this.source instanceof ArrayBuffer || this.source instanceof Uint8Array) {
+                this.#fontData = this.source;
+            } else {
+                throw new Error("Unsupported font source type.");
+            }
+
             this.status = 'loaded';
-            return Promise.resolve(this);
-        } else {
+            return this;
+        } catch (e) {
             this.status = 'error';
-            return Promise.reject(new Error("Loading from URL not yet implemented."));
+            console.error(`Failed to load font ${this.family}: ${e.message}`);
+            throw e;
         }
     }
 }
 
-class FontFaceSet {
+export class FontFaceSet {
     #faces = new Set();
+    #loading = new Set();
+
+    constructor() {
+        this.ready = Promise.resolve(); // Initially, there's nothing to wait for.
+    }
 
     add(fontFace) {
         this.#faces.add(fontFace);
+        // When a font is added, we might need to update the 'ready' promise
+        // if the font is not already loaded.
+        if (fontFace.status !== 'loaded') {
+            const loadingPromise = fontFace.load().catch(err => {
+                // Don't let a single font failure reject the whole `ready` promise
+                console.error(`Font failed to load: ${fontFace.family}`, err);
+            });
+            this.#loading.add(loadingPromise);
+            this.ready = Promise.allSettled([...this.#loading]).then(() => {});
+        }
     }
 
     delete(fontFace) {
         this.#faces.delete(fontFace);
+        // Note: For simplicity, we don't remove from `#loading`.
+        // A more robust implementation might handle this.
     }
 
     clear() {
         this.#faces.clear();
+        this.#loading.clear();
+        this.ready = Promise.resolve();
     }
 
-    // A very simplified `check()` method. A real implementation is much more complex.
     check(font, text) {
-        // Improved parsing for font string
         const fontRegex = /(italic|normal|oblique)?\s*(bold|normal|\d+)?\s*(\d+px)\s*(.*)/;
         const match = font.match(fontRegex);
         if (!match) return false;
 
         const style = match[1] || 'normal';
         const weight = match[2] || 'normal';
-        let family = match[4];
+        let family = match[4].replace(/['"]/g, ''); // Simplified family parsing
 
-        // Remove quotes from family name
-        if (family.startsWith('"') && family.endsWith('"')) {
-            family = family.substring(1, family.length - 1);
-        } else if (family.startsWith("'") && family.endsWith("'")) {
-            family = family.substring(1, family.length - 1);
+        for (const face of this.#faces) {
+            if (face.family === family && face.status === 'loaded') {
+                // This is a simplified check. A real implementation would consider weight/style matching more carefully.
+                return true;
+            }
         }
-
-        return !!this.find(family, { weight, style });
+        return false;
     }
 
     find(family, options = {}) {
@@ -98,22 +129,11 @@ class FontFaceSet {
                 return face;
             }
         }
-
-        // Basic fallback: ignore weight and style if no exact match is found
         for (const face of this.#faces) {
             if (face.family === family) {
                 return face;
             }
         }
-
         return null;
     }
 }
-
-// This will act as the global `document.fonts` object.
-// We attach it to the global object to ensure it's a singleton
-// across different module resolution contexts in our test environment.
-if (typeof global.fontFaceSet === 'undefined') {
-    global.fontFaceSet = new FontFaceSet();
-}
-export const fontFaceSet = global.fontFaceSet;
