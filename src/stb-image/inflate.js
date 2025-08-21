@@ -148,6 +148,23 @@ InflateState.prototype.zlib_header = function() {
     const flg = this.get_bits(8);
 }
 
+InflateState.prototype.uncompressed = function() {
+    // align to byte
+    this.bits = 0;
+    this.bit_len = 0;
+
+    let len = this.get_bits(16);
+    let nlen = this.get_bits(16);
+
+    while (len-- > 0) {
+        if (this.out_off < this.out_cap) {
+            this.out_buffer[this.out_off] = this.in_buffer[this.in_off];
+        }
+        this.out_off++;
+        this.in_off++;
+    }
+}
+
 InflateState.prototype.decode_block = function(lt, dst) {
     while (true) {
         let val = this.huff_decode(lt);
@@ -208,6 +225,7 @@ InflateState.prototype.build_sym_table = function() {
             let len = 0;
             let cnt = 0;
             if (val === 16) {
+                if (n === 0) { this.stop = 1; return; }
                 len = bit_len[n - 1];
                 cnt = 3 + this.get_bits(2);
             } else if (val === 17) {
@@ -244,7 +262,7 @@ export function inflate(in_buffer, out_buffer, parse_header = true) {
             const type = s.get_bits(2);
             switch (type) {
                 case 0: // uncompressed
-                    s.stop = 1;
+                    s.uncompressed();
                     break;
                 case 1: // fixed
                     s.fixed();
