@@ -45,18 +45,18 @@ test('radial gradient with r0 > r1', (t) => {
     // The radius is 50, which corresponds to t=0.
     const centerImageData = ctx.getImageData(50, 50, 1, 1);
     const centerData = centerImageData.data;
-    assert.strictEqual(centerData[0], 255, 'Red channel at center should be 255');
-    assert.strictEqual(centerData[1], 0, 'Green channel at center should be 0');
-    assert.strictEqual(centerData[2], 0, 'Blue channel at center should be 0');
+    assert.strictEqual(centerData[0], 0, 'Red channel at center should be 0 for blue');
+    assert.strictEqual(centerData[1], 0, 'Green channel at center should be 0 for blue');
+    assert.strictEqual(centerData[2], 255, 'Blue channel at center should be 255 for blue');
 
     // At (50, 60), which is 10px away from the center.
     // The gradient goes from r=50 (t=0) to r=10 (t=1).
     // A distance of 10px from the center corresponds to r=40.
-    // (r - r0) / (r1 - r0) = (40 - 50) / (10 - 50) = -10 / -40 = 0.25
-    // So the color should be 75% red, 25% blue.
+    // (dist - r0) / (r1 - r0) = (10 - 50) / (10 - 50) = 1
+    // So the color should be blue.
     const pointImageData = ctx.getImageData(50, 60, 1, 1);
     const pointData = pointImageData.data;
-    assert.strictEqual(pointData[0], 191, 'Red channel at (50,60) should be ~191');
-    assert.strictEqual(pointData[1], 0, 'Green channel at (50,60) should be 0');
-    assert.strictEqual(pointData[2], 64, 'Blue channel at (50,60) should be ~64');
+    assert.strictEqual(pointData[0], 0, 'Red channel at (50,60) should be 0 for blue');
+    assert.strictEqual(pointData[1], 0, 'Green channel at (50,60) should be 0 for blue');
+    assert.strictEqual(pointData[2], 255, 'Blue channel at (50,60) should be 255 for blue');
 });
