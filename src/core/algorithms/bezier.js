@@ -77,60 +77,16 @@ export function solveCubic(a, b, c, d) {
 }
 
 // For a cubic bezier curve defined by p0, p1, p2, p3, find the t values
-// where the curve intersects the horizontal line y.
-// This implementation uses a stack-based recursive subdivision algorithm, which is
-// more numerically stable for rendering than the analytic cubic solver.
+// where the curve intersects the horizontal line y
 export function getBezierYIntercepts(p0, p1, p2, p3, y) {
-    const roots = [];
-    const stack = [{p0, p1, p2, p3, t0: 0, t1: 1, level: 0}];
-    const MAX_DEPTH = 12; // Prevents infinite recursion
-    const TOLERANCE = 0.5; // Flatness tolerance, half a pixel
+    const y0 = p0.y, y1 = p1.y, y2 = p2.y, y3 = p3.y;
 
-    while (stack.length > 0) {
-        const curve = stack.pop();
-        const { p0, p1, p2, p3, t0, t1, level } = curve;
+    const a = -y0 + 3*y1 - 3*y2 + y3;
+    const b = 3*y0 - 6*y1 + 3*y2;
+    const c = -3*y0 + 3*y1;
+    const d = y0 - y;
 
-        if (level > MAX_DEPTH) {
-            continue;
-        }
-
-        const y_min = Math.min(p0.y, p1.y, p2.y, p3.y);
-        const y_max = Math.max(p0.y, p1.y, p2.y, p3.y);
-
-        if (y < y_min - TOLERANCE || y > y_max + TOLERANCE) {
-            continue;
-        }
-
-        // A curve is considered flat if its y-range is smaller than the tolerance
-        if (y_max - y_min < TOLERANCE) {
-            // Intersect the line p0-p3 with the scanline y
-            const dy03 = p3.y - p0.y;
-            if (Math.abs(dy03) > 1e-6) {
-                const t = (y - p0.y) / dy03;
-                if (t >= 0 && t <= 1) {
-                    const final_t = t0 + t * (t1 - t0);
-                    roots.push(final_t);
-                }
-            }
-            continue;
-        }
-
-        // Subdivide using De Casteljau's algorithm
-        const p01 = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
-        const p12 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-        const p23 = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
-        const p012 = { x: (p01.x + p12.x) / 2, y: (p01.y + p12.y) / 2 };
-        const p123 = { x: (p12.x + p23.x) / 2, y: (p12.y + p23.y) / 2 };
-        const p0123 = { x: (p012.x + p123.x) / 2, y: (p012.y + p123.y) / 2 };
-
-        const t_mid = (t0 + t1) / 2;
-
-        // Push the second half first so we process the first half next
-        stack.push({ p0: p0123, p1: p123, p2: p23, p3: p3, t0: t_mid, t1: t1, level: level + 1 });
-        stack.push({ p0: p0, p1: p01, p2: p012, p3: p0123, t0: t0, t1: t_mid, level: level + 1 });
-    }
-
-    return roots;
+    return solveCubic(a, b, c, d);
 }
 
 // For a cubic bezier curve defined by p0, p1, p2, p3, find the x value at t

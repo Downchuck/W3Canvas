@@ -656,20 +656,11 @@ export class CanvasRenderingContext2D {
                 startY = command.y;
                 break;
             case 'line': {
-                const dy = command.y - currentY;
-                if (Math.abs(dy) < 1e-9) {
-                    // This is a horizontal line, which is ignored by the scanline algorithm.
-                    // We still need to update the current position.
-                    currentX = command.x;
-                    currentY = command.y;
-                    break;
-                }
                 const y_min = Math.min(currentY, command.y);
                 const y_max = Math.max(currentY, command.y);
                 const x_at_ymin = currentY < command.y ? currentX : command.x;
-                const slope_inv = (command.x - currentX) / dy;
-                const direction = Math.sign(dy);
-                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv, direction });
+                const slope_inv = (command.x - currentX) / (command.y - currentY);
+                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
                 currentX = command.x;
                 currentY = command.y;
                 break;
@@ -686,23 +677,15 @@ export class CanvasRenderingContext2D {
                 currentY = command.y;
                 break;
             }
-            case 'close': {
-                const dy = startY - currentY;
-                if (Math.abs(dy) < 1e-9) {
-                    currentX = startX;
-                    currentY = startY;
-                    break;
-                }
+            case 'close':
                 const y_min = Math.min(currentY, startY);
                 const y_max = Math.max(currentY, startY);
                 const x_at_ymin = currentY < startY ? currentX : startX;
-                const slope_inv = (startX - currentX) / dy;
-                const direction = Math.sign(dy);
-                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv, direction });
+                const slope_inv = (startX - currentX) / (startY - currentY);
+                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
                 currentX = startX;
                 currentY = startY;
                 break;
-            }
             case 'arc': {
                 const y_min = command.y - command.radius;
                 const y_max = command.y + command.radius;

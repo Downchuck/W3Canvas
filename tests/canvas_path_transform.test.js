@@ -6,13 +6,12 @@ test('fill() with a translated path', (t) => {
     const ctx = new CanvasRenderingContext2D(100, 100);
     ctx.fillStyle = 'purple';
 
-    // Create a path
+    ctx.beginPath();
     ctx.rect(0, 0, 10, 10);
 
-    // Apply a transform
+    // Apply a transform AFTER the path is defined
     ctx.translate(20, 30);
 
-    // Fill the path
     ctx.fill();
 
     // Check if the pixel at the transformed location is filled
@@ -38,13 +37,12 @@ test('stroke() with a translated path', (t) => {
     ctx.strokeStyle = 'orange';
     ctx.lineWidth = 1;
 
-    // Create a path
+    ctx.beginPath();
     ctx.rect(10, 10, 10, 10);
 
-    // Apply a transform
+    // Apply a transform AFTER the path is defined
     ctx.translate(20, 30);
 
-    // Stroke the path
     ctx.stroke();
 
     // Check if a pixel on the transformed path is stroked
