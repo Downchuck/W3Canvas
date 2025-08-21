@@ -28,7 +28,17 @@ export class Mouse {
 				visualSelection = vars.visualSelection;
 				visualTextBox	= vars.visualTextBox;
 				debug.checkNull("Mouse", [basicModel, canvasBox, cursor, cursorPosition, textBoxId, textModel, visualSelection, visualTextBox]);
-				onmouse(canvasBox);
+
+                width = canvasBox.width;
+                height = canvasBox.height;
+                leftOffset = canvasBox.offsetLeft;
+                topOffset = canvasBox.offsetTop;
+
+                const textDomElement = vars.textDomElement;
+                textDomElement.addEventListener('mousedown', this.handleMouseDown);
+                textDomElement.addEventListener('mouseup', this.handleMouseUp);
+                textDomElement.addEventListener('mousemove', handleMouseMove);
+                textDomElement.addEventListener('dblclick', this.handleMouseDoubleClick);
 			}
 			catch (e) {
 				debug.programmerPanic("Mouse. Initialization error: " + e.name + " = " + e.message);
@@ -37,7 +47,7 @@ export class Mouse {
 
 		const getCursorFromMouse = (e) => {
 			const x = e.clientX - leftOffset;
-			const y = e.clientY + window.pageYOffset - topOffset;
+			const y = e.clientY - topOffset;
 			const bm = visualTextBox.getBoxModel();
 			const xOffset = bm.getLeftLength();
 			const withinContentArea = (xOffset <= x && x < xOffset+bm.contentArea.width && 0 <= y && y < height);
@@ -133,29 +143,6 @@ export class Mouse {
 					cursor.startBlink();
 				}
 			}
-		};
-
-		const onmouse = (box) => {
-			width		= box.width;
-			height		= box.height;
-			leftOffset	= box.offsetLeft;
-			topOffset	= box.offsetTop;
-			box.onmousedown = (e) => {
-				this.handleMouseDown(e);
-				box.onmousemove = (e) => {
-					if (mouseDown) {
-						handleMouseMove(e);
-					}
-				};
-			};
-			box.onmouseup = (e) => {
-				this.handleMouseUp(e);
-				box.onmousemove = null;
-			};
-			box.ondblclick = (e) => {
-				this.handleMouseDoubleClick(e);
-				e.preventDefault();
-			};
 		};
 	}
 }

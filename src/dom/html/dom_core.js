@@ -81,17 +81,27 @@ export class Node {
   }
 
   dispatchEvent(event) {
-    if (this.listeners[event.type]) {
-        this.listeners[event.type].forEach(function(listener) {
-            listener(event);
-        });
+    if (!event.target) {
+        event.target = this;
     }
-    if (this.parent) {
+
+    if (this.listeners[event.type]) {
+        const listeners = [...this.listeners[event.type]];
+        for (const listener of listeners) {
+            if (!event.bubbles) {
+                break;
+            }
+            listener.call(this, event);
+        }
+    }
+
+    if (this.parent && event.bubbles) {
         this.parent.dispatchEvent(event);
     }
   }
 }
 
+import { Event } from '../event.js';
 import { ElementStyle, CssStyle } from '../css/css_style.js';
 import { ContentFragment } from './textbox/basic_model.js';
 import { LineWrapper } from '../css/text_wrap.js';
@@ -182,6 +192,25 @@ export class Element extends Node {
             }
         }
     }
+  }
+
+  hitTest(x, y) {
+    // Check if the point is within the element's border box
+    if (this.boxModel.isPointInsideBorder(x, y)) {
+        // If it is, check its children in reverse order (topmost first)
+        for (let i = this.children.length - 1; i >= 0; i--) {
+            const child = this.children[i];
+            if (child.nodeType === NODE_TYPE_ELEMENT) {
+                const hit = child.hitTest(x, y);
+                if (hit) {
+                    return hit;
+                }
+            }
+        }
+        // If no child was hit, this element is the target
+        return this;
+    }
+    return null;
   }
 }
 
