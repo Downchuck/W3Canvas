@@ -9,8 +9,8 @@ test('HTML Parser should correctly parse a simple HTML string', () => {
     const doc = parser.parse(html);
 
     assert.strictEqual(doc.nodeType, NODE_TYPE_DOCUMENT, 'Root node should be a document');
-    const p = doc.getFirstChild();
-    assert.ok(p, 'Document should have a child');
+    const p = doc.body.getFirstChild();
+    assert.ok(p, 'Document body should have a child');
     assert.strictEqual(p.nodeType, NODE_TYPE_ELEMENT, 'Child should be an element');
     assert.strictEqual(p.tagName, 'p', 'Element should be a <p>');
 
@@ -25,8 +25,8 @@ test('HTML Parser should parse attributes', () => {
     const parser = new HTMLParser();
     const doc = parser.parse(html);
 
-    const p = doc.getFirstChild();
-    assert.ok(p, 'Document should have a child');
+    const p = doc.body.getFirstChild();
+    assert.ok(p, 'Document body should have a child');
     assert.strictEqual(p.tagName, 'p', 'Element should be a <p>');
     assert.strictEqual(p.id, 'intro', 'id attribute should be set correctly');
     assert.strictEqual(p.attributes['class'], 'main', 'class attribute should be set correctly');
@@ -37,7 +37,7 @@ test('HTML Parser should handle nested elements', () => {
     const parser = new HTMLParser();
     const doc = parser.parse(html);
 
-    const div = doc.getFirstChild();
+    const div = doc.body.getFirstChild();
     assert.strictEqual(div.tagName, 'div', 'First element should be a <div>');
 
     const span = div.getFirstChild();
@@ -54,7 +54,7 @@ test('HTML Parser should handle self-closing tags', () => {
     const parser = new HTMLParser();
     const doc = parser.parse(html);
 
-    const p = doc.getFirstChild();
+    const p = doc.body.getFirstChild();
     assert.strictEqual(p.tagName, 'p', 'First element should be a <p>');
     assert.strictEqual(p.children.length, 3, '<p> should have three children');
 
@@ -79,9 +79,9 @@ test('HTML Parser should handle comments and doctypes', () => {
 
     assert.strictEqual(doc.doctype, 'html', 'Doctype should be parsed correctly');
 
-    const comment = doc.getFirstChild();
-    assert.ok(comment, 'Document should have a child');
-    assert.strictEqual(comment.nodeType, NODE_TYPE_COMMENT, 'First child should be a comment node');
+    const comment = doc.body.getFirstChild();
+    assert.ok(comment, 'Document body should have a child');
+    assert.strictEqual(comment.nodeType, NODE_TYPE_COMMENT, 'First child of body should be a comment node');
     assert.strictEqual(comment.data, ' a comment ', 'Comment data should be correct');
 
     const p = comment.getNextSibling();
@@ -94,7 +94,7 @@ test('HTML Parser should handle raw text elements like <style>', () => {
     const parser = new HTMLParser();
     const doc = parser.parse(html);
 
-    const style = doc.getFirstChild();
+    const style = doc.body.getFirstChild();
     assert.ok(style, 'Document should have a child');
     assert.strictEqual(style.tagName, 'style', 'Element should be a <style>');
     assert.strictEqual(style.children.length, 1, '<style> should have one child');
@@ -109,7 +109,7 @@ test('HTML Parser should decode HTML entities', () => {
     const parser = new HTMLParser();
     const doc = parser.parse(html);
 
-    const p = doc.getFirstChild();
+    const p = doc.body.getFirstChild();
     assert.ok(p, 'Document should have a child');
     assert.strictEqual(p.tagName, 'p', 'Element should be a <p>');
 

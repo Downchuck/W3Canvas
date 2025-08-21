@@ -112,6 +112,10 @@ export class Element extends Node {
     }
   }
 
+  getAttribute(name) {
+    return this.attributes[name];
+  }
+
   constructor(tag) {
     if (!tag) {
       throw new Error("Element(): missing tag");
