@@ -5,7 +5,9 @@ import { strokePolyline } from '../algorithms/stroke.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import { CanvasPattern } from './CanvasPattern.js';
 import { Path2D } from './Path2D.js';
+import { DOMMatrix } from './DOMMatrix.js';
 import { drawShadow } from './Shadow.js';
+import { compositeImageData } from './compositing.js';
 import fs from 'fs';
 import {
     FontInfo, InitFont, FindGlyphIndex, GetGlyphShape, GetCodepointHMetrics,
@@ -38,6 +40,7 @@ export class CanvasRenderingContext2D {
     this.shadowOffsetX = 0;
     this.shadowOffsetY = 0;
     this.globalAlpha = 1.0;
+    this.globalCompositeOperation = 'source-over';
     this.miterLimit = 10;
     this.lineDashOffset = 0.0;
     this.lineDashList = [];
@@ -74,6 +77,7 @@ export class CanvasRenderingContext2D {
       shadowOffsetX: this.shadowOffsetX,
       shadowOffsetY: this.shadowOffsetY,
       globalAlpha: this.globalAlpha,
+      globalCompositeOperation: this.globalCompositeOperation,
       miterLimit: this.miterLimit,
       lineDashOffset: this.lineDashOffset,
       lineDashList: [...this.lineDashList],
@@ -97,6 +101,7 @@ export class CanvasRenderingContext2D {
       this.shadowOffsetX = state.shadowOffsetX;
       this.shadowOffsetY = state.shadowOffsetY;
       this.globalAlpha = state.globalAlpha;
+      this.globalCompositeOperation = state.globalCompositeOperation;
       this.miterLimit = state.miterLimit;
       this.lineDashOffset = state.lineDashOffset;
       this.lineDashList = state.lineDashList;
@@ -588,14 +593,9 @@ export class CanvasRenderingContext2D {
         drawShadow(this, pathCommands, false);
     }
 
-    // Optimization: if the path is a single full circle, use a specialized fill algorithm.
-    if (pathCommands.length === 1 && pathCommands[0].type === 'arc' && pathCommands[0].endAngle - pathCommands[0].startAngle >= 2 * Math.PI) {
-        const command = pathCommands[0];
-        const color = this._parseColor(this.fillStyle);
-        fillArcWithMidpoint(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
-        // Do not clear the path here, the caller is responsible.
-        return;
-    }
+    const shapeCtx = new this.constructor(this.width, this.height, { isShadowContext: true });
+    shapeCtx.fillStyle = this.fillStyle;
+    shapeCtx.globalAlpha = this.globalAlpha;
 
     const allEdges = [];
     let currentX = 0;
@@ -679,80 +679,54 @@ export class CanvasRenderingContext2D {
     const activeEdges = [];
 
     for (let y = minY; y < maxY; y++) {
-        // Add edges from allEdges to activeEdges if they start at this scanline
         for (const edge of allEdges) {
             if (Math.round(edge.y_min) === y) {
-                if (edge.type === 'line') {
-                    activeEdges.push({ ...edge, current_x: edge.x_at_ymin });
-                } else {
-                    activeEdges.push({ ...edge });
-                }
+                if (edge.type === 'line') activeEdges.push({ ...edge, current_x: edge.x_at_ymin });
+                else activeEdges.push({ ...edge });
             }
         }
-
-        // Remove edges from activeEdges if they end at this scanline
         for (let i = activeEdges.length - 1; i >= 0; i--) {
-            if (y >= Math.round(activeEdges[i].y_max)) {
-                activeEdges.splice(i, 1);
-            }
+            if (y >= Math.round(activeEdges[i].y_max)) activeEdges.splice(i, 1);
         }
-
         const intersections = [];
         for (const edge of activeEdges) {
             if (edge.type === 'bezier') {
-                const p0 = edge.p0, p1 = edge.p1, p2 = edge.p2, p3 = edge.p3;
-                const roots = getBezierYIntercepts(p0, p1, p2, p3, y);
+                const roots = getBezierYIntercepts(edge.p0, edge.p1, edge.p2, edge.p3, y);
                 for (const t of roots) {
-                    if (t >= 0 && t <= 1) {
-                        intersections.push(getBezierXforT(p0, p1, p2, p3, t));
-                    }
+                    if (t >= 0 && t <= 1) intersections.push(getBezierXforT(edge.p0, edge.p1, edge.p2, edge.p3, t));
                 }
             } else if (edge.type === 'arc') {
-                const arcIntersections = getArcScanlineIntersections(edge.x, edge.y, edge.radius, edge.startAngle, edge.endAngle, y);
-                intersections.push(...arcIntersections);
-            } else { // It's a line
+                intersections.push(...getArcScanlineIntersections(edge.x, edge.y, edge.radius, edge.startAngle, edge.endAngle, y));
+            } else {
                 intersections.push(edge.current_x);
             }
         }
-
         intersections.sort((a, b) => a - b);
-
         for (let i = 0; i < intersections.length; i += 2) {
             if (i + 1 < intersections.length) {
                 const x_start = Math.round(intersections[i]);
                 const x_end = Math.round(intersections[i + 1]);
                 for (let x = x_start; x < x_end; x++) {
-                    if (x >= 0 && x < this.width) {
-                         if (this.clippingPath && !this._isPointInPath(x, y, this.clippingPathAsVertices)) {
-                            continue;
-                        }
-                        const index = (y * canvasWidth + x) * 4;
-                        if (isGradient) {
-                            color = this._getColorFromGradientAtPoint(x, y, this.fillStyle);
-                        } else if (isPattern) {
-                            color = this._getColorFromPatternAtPoint(x, y, this.fillStyle);
-                        } else {
-                            color = this._parseColor(this.fillStyle);
-                        }
+                    if (x >= 0 && x < shapeCtx.width) {
+                        const index = (y * shapeCtx.width + x) * 4;
+                        if (isGradient) color = shapeCtx._getColorFromGradientAtPoint(x, y, shapeCtx.fillStyle);
+                        else if (isPattern) color = shapeCtx._getColorFromPatternAtPoint(x, y, shapeCtx.fillStyle);
+                        else color = shapeCtx._parseColor(shapeCtx.fillStyle);
                         const finalColor = { ...color };
-                        finalColor.a = Math.round(finalColor.a * this.globalAlpha);
-
-                        data[index] = finalColor.r;
-                        data[index + 1] = finalColor.g;
-                        data[index + 2] = finalColor.b;
-                        data[index + 3] = finalColor.a;
+                        finalColor.a = Math.round(finalColor.a * shapeCtx.globalAlpha);
+                        shapeCtx.imageData.data[index] = finalColor.r;
+                        shapeCtx.imageData.data[index + 1] = finalColor.g;
+                        shapeCtx.imageData.data[index + 2] = finalColor.b;
+                        shapeCtx.imageData.data[index + 3] = finalColor.a;
                     }
                 }
             }
         }
-
-        // Update x for next scanline
         for (const edge of activeEdges) {
-            if (edge.type === 'line') {
-                edge.current_x += edge.slope_inv;
-            }
+            if (edge.type === 'line') edge.current_x += edge.slope_inv;
         }
     }
+    compositeImageData(this.imageData, shapeCtx.imageData, this.globalCompositeOperation);
   }
 
   _isPointInPath(x, y, vertices) {

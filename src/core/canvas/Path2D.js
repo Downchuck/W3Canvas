@@ -1,23 +1,62 @@
+import { parsePath as parseSvgPath } from '../../dom/svg/path_parser.js';
+
 export class Path2D {
   constructor(path) {
     this.path = [];
     if (path instanceof Path2D) {
-      // Copy the path commands from the existing Path2D object
       this.path = [...path.path];
     } else if (typeof path === 'string') {
-      // SVG path data string - not implemented yet
-      console.warn('Path2D constructor with SVG path data is not implemented yet.');
+      const svgCommands = parseSvgPath(path);
+      this._convertSvgPath(svgCommands);
+    }
+  }
+
+  _convertSvgPath(svgCommands) {
+    for (const cmd of svgCommands) {
+      switch (cmd.type) {
+        case 'M': this.moveTo(cmd.x, cmd.y); break;
+        case 'L': this.lineTo(cmd.x, cmd.y); break;
+        case 'C': this.bezierCurveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y); break;
+        case 'Q': this.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y); break;
+        case 'A': this.ellipse(cmd.cx, cmd.cy, cmd.rx, cmd.ry, cmd.rotation, cmd.startAngle, cmd.endAngle, cmd.anticlockwise); break;
+        case 'Z': this.closePath(); break;
+      }
     }
   }
 
   addPath(path, transform) {
-    // Note: The 'transform' argument is not yet implemented.
+    const commands = path.path;
     if (transform) {
-      console.warn('The transform argument in addPath is not implemented yet.');
+      const m = transform;
+      for (const cmd of commands) {
+        const newCmd = { ...cmd };
+        if (cmd.x !== undefined) {
+          const p = this._transformPoint(cmd.x, cmd.y, m);
+          newCmd.x = p.x;
+          newCmd.y = p.y;
+        }
+        if (cmd.cp1x !== undefined) {
+          const p1 = this._transformPoint(cmd.cp1x, cmd.cp1y, m);
+          newCmd.cp1x = p1.x;
+          newCmd.cp1y = p1.y;
+        }
+        if (cmd.cp2x !== undefined) {
+          const p2 = this._transformPoint(cmd.cp2x, cmd.cp2y, m);
+          newCmd.cp2x = p2.x;
+          newCmd.cp2y = p2.y;
+        }
+        this.path.push(newCmd);
+      }
+    } else {
+      this.path.push(...commands);
     }
-    if (path instanceof Path2D) {
-      this.path.push(...path.path);
-    }
+  }
+
+  _transformPoint(x, y, m) {
+    return {
+      x: m.a * x + m.c * y + m.e,
+      y: m.b * x + m.d * y + m.f,
+    };
   }
 
   closePath() {
@@ -39,7 +78,6 @@ export class Path2D {
   }
 
   quadraticCurveTo(cpx, cpy, x, y) {
-    // Find the last point in the path to use as the starting point.
     let x0 = 0;
     let y0 = 0;
     if (this.path.length > 0) {
@@ -58,13 +96,10 @@ export class Path2D {
             }
         }
     }
-
-    // Convert quadratic to cubic
     const cp1x = x0 + 2/3 * (cpx - x0);
     const cp1y = y0 + 2/3 * (cpy - y0);
     const cp2x = x + 2/3 * (cpx - x);
     const cp2y = y + 2/3 * (cpy - y);
-
     this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
   }
 
@@ -73,17 +108,18 @@ export class Path2D {
   }
 
   arcTo(x1, y1, x2, y2, radius) {
-    // Not implemented yet
-    console.warn('arcTo is not implemented yet.');
+    if (this.path.length === 0) {
+        this.moveTo(x1, y1);
+        return;
+    }
+    console.warn('arcTo is not fully implemented. It will draw a line to the first point.');
+    this.lineTo(x1, y1);
   }
 
   ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, anticlockwise = false) {
-    // This implementation is a simplified version that draws a full ellipse
-    // aligned with the axes, matching the behavior in CanvasRenderingContext2D.
     const kappa = 0.552284749831;
-    const ox = radiusX * kappa; // control point offset horizontal
-    const oy = radiusY * kappa; // control point offset vertical
-
+    const ox = radiusX * kappa;
+    const oy = radiusY * kappa;
     this.moveTo(x - radiusX, y);
     this.bezierCurveTo(x - radiusX, y - oy, x - ox, y - radiusY, x, y - radiusY);
     this.bezierCurveTo(x + ox, y - radiusY, x + radiusX, y - oy, x + radiusX, y);
