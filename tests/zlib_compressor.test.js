@@ -14,7 +14,7 @@ test('Zlib compressor should produce a valid deflate stream', () => {
     assert(compressed_data, 'stbi_zlib_compress should return a result');
     assert(out_len.value > 0, 'Compressed data should not be empty');
 
-    const decompressed_data = zlib_decode_malloc_guesssize_headerflag(compressed_data, original_data.length, true);
+    const decompressed_data = zlib_decode_malloc_guesssize_headerflag(compressed_data, original_data.length, false);
 
     assert.deepStrictEqual(decompressed_data, original_data, 'Decompressed data should match original');
     console.log('Zlib compressor test passed!');
