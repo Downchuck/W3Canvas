@@ -35,11 +35,7 @@ Seems to be implemented. Used in:
 - **Note:** There is some commented-out code related to shadows in `src/dom/css/box_paint.js`.
 
 ### Paths
-- `roundRect()`
-  - **Note:** There are existing `round_rectangle` implementations in `src/dom/css/box_paint.js` and `examples/Z_testing_select_old/all.select.yui.js` that are not exposed on the `CanvasRenderingContext2D`.
 - `arcTo()`
-- `quadraticCurveTo()`
-  - **Note:** Used in the `round_rectangle` implementations mentioned above.
 
 ### Path Drawing
 - `isPointInStroke()`
@@ -101,8 +97,7 @@ There is no support for using the Canvas API within Web Workers (e.g., via `Offs
 
 Based on this analysis, we recommend the following priorities for future development:
 
-1.  **Implement `roundRect()`:** This is a new and frequently requested feature.
-2.  **Complete the Transformations API:** Implementing `translate()`, `scale()`, `rotate()`, and the other transform methods is crucial for basic canvas functionality.
+1.  **Complete the Transformations API:** Implementing `translate()`, `scale()`, `rotate()`, and the other transform methods is crucial for basic canvas functionality.
 3.  **Expand Gradient and Pattern Support:** Adding support for radial and conic gradients, as well as patterns, will significantly improve the rendering capabilities.
 4.  **Implement the `Path2D` API:** This will allow for more complex and reusable path objects.
 5.  **Investigate `OffscreenCanvas` and Web Worker Support:** To improve performance and enable multi-threading, support for `OffscreenCanvas` should be a long-term goal.
