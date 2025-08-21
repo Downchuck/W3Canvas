@@ -14,11 +14,12 @@ The following properties and methods are missing from the `CanvasRenderingContex
 - `translate()`: Implemented.
 - `scale()`: Implemented.
 - `rotate()`: Implemented.
-- **Note:** While the methods are implemented, the transformation is not always correctly applied to all drawing operations, especially fills. This is a work in progress.
+- **Note:** While the methods are implemented, the transformation is not correctly applied to filled paths. This is a known issue and will be addressed in a future update. Stroked paths are transformed correctly.
 
 ### Gradients and Patterns
-- `createRadialGradient()`
-- `createConicGradient()`
+- `createLinearGradient()`: Implemented.
+- `createRadialGradient()`: Implemented.
+- `createConicGradient()`: Implemented.
 - `createPattern()`: Implemented and functional.
 
 ### Shadows
