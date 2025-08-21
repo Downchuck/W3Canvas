@@ -119,6 +119,36 @@ export class CanvasRenderingContext2D {
     };
   }
 
+  _getTransformedPath(pathCommands) {
+    if (!pathCommands) return [];
+    const transformedPath = [];
+    for (const command of pathCommands) {
+        const newCommand = { ...command };
+        if (command.type === 'move' || command.type === 'line') {
+            const p = this._transformPoint(command.x, command.y);
+            newCommand.x = p.x;
+            newCommand.y = p.y;
+        } else if (command.type === 'bezier') {
+            const p = this._transformPoint(command.x, command.y);
+            newCommand.x = p.x;
+            newCommand.y = p.y;
+            const cp1 = this._transformPoint(command.cp1x, command.cp1y);
+            newCommand.cp1x = cp1.x;
+            newCommand.cp1y = cp1.y;
+            const cp2 = this._transformPoint(command.cp2x, command.cp2y);
+            newCommand.cp2x = cp2.x;
+            newCommand.cp2y = cp2.y;
+        } else if (command.type === 'arc') {
+            const p = this._transformPoint(command.x, command.y);
+            newCommand.x = p.x;
+            newCommand.y = p.y;
+            // NOTE: Radius is not transformed, so non-uniform scales will look incorrect.
+        }
+        transformedPath.push(newCommand);
+    }
+    return transformedPath;
+  }
+
   getTransform() {
     return [...this.transformMatrix];
   }
@@ -189,16 +219,13 @@ export class CanvasRenderingContext2D {
                   const vcx = currentX + v.cx * scale;
                   const vcy = baseline - v.cy * scale;
 
-                  // Apply transformation
-                  const p = this._transformPoint(vx, vy);
-                  const cp = this._transformPoint(vcx, vcy);
-
+                  // Transformation is now handled by fill() and stroke()
                   if (v.type === STBTT_vmove) {
-                      this.moveTo(p.x, p.y);
+                      this.moveTo(vx, vy);
                   } else if (v.type === STBTT_vline) {
-                      this.lineTo(p.x, p.y);
+                      this.lineTo(vx, vy);
                   } else if (v.type === STBTT_vcurve) {
-                      this.quadraticCurveTo(cp.x, cp.y, p.x, p.y);
+                      this.quadraticCurveTo(vcx, vcy, vx, vy);
                   }
               }
           }
@@ -473,12 +500,14 @@ export class CanvasRenderingContext2D {
         drawShadow(this, pathCommands, true);
     }
 
+    const transformedPathCommands = this._getTransformedPath(pathCommands);
+
     const originalPath = this.path; // Save the context's current default path
     const subPaths = [];
     let currentSubPath = [];
 
     // First, split the given path into sub-paths
-    for (const command of pathCommands) {
+    for (const command of transformedPathCommands) {
         if (command.type === 'move') {
             if (currentSubPath.length > 0) {
                 subPaths.push(currentSubPath);
@@ -557,7 +586,15 @@ export class CanvasRenderingContext2D {
         const strokeFillStyle = this.strokeStyle;
         const oldFillStyle = this.fillStyle;
         this.fillStyle = strokeFillStyle;
+
+        // The path for the stroke outline is already transformed. We need to
+        // temporarily reset the transform before calling _scanlineFill to avoid
+        // a double transformation.
+        const m = this.getTransform();
+        this.resetTransform();
         this._scanlineFill(this.path); // Fill the new path
+        this.setTransform(...m);
+
         this.fillStyle = oldFillStyle;
     }
 
@@ -593,6 +630,8 @@ export class CanvasRenderingContext2D {
         drawShadow(this, pathCommands, false);
     }
 
+    const transformedPathCommands = this._getTransformedPath(pathCommands);
+
     const shapeCtx = new this.constructor(this.width, this.height, { isShadowContext: true });
     shapeCtx.fillStyle = this.fillStyle;
     shapeCtx.globalAlpha = this.globalAlpha;
@@ -608,7 +647,7 @@ export class CanvasRenderingContext2D {
         allEdges.push(edge);
     };
 
-    for (const command of pathCommands) {
+    for (const command of transformedPathCommands) {
         switch (command.type) {
             case 'move':
                 currentX = command.x;
@@ -1041,20 +1080,8 @@ export class CanvasRenderingContext2D {
   fillRect(x, y, width, height) {
     const oldPath = this.path;
     this.beginPath();
-
-    const p1 = this._transformPoint(x, y);
-    const p2 = this._transformPoint(x + width, y);
-    const p3 = this._transformPoint(x + width, y + height);
-    const p4 = this._transformPoint(x, y + height);
-
-    this.moveTo(p1.x, p1.y);
-    this.lineTo(p2.x, p2.y);
-    this.lineTo(p3.x, p3.y);
-    this.lineTo(p4.x, p4.y);
-    this.closePath();
-
-    this._scanlineFill(this.path);
-
+    this.rect(x, y, width, height);
+    this.fill();
     this.path = oldPath;
   }
 
@@ -1078,15 +1105,11 @@ export class CanvasRenderingContext2D {
   }
 
   strokeRect(x, y, width, height) {
-    const p1 = this._transformPoint(x, y);
-    const p2 = this._transformPoint(x + width, y);
-    const p3 = this._transformPoint(x + width, y + height);
-    const p4 = this._transformPoint(x, y + height);
-
-    this._drawLine(p1.x, p1.y, p2.x, p2.y);
-    this._drawLine(p2.x, p2.y, p3.x, p3.y);
-    this._drawLine(p3.x, p3.y, p4.x, p4.y);
-    this._drawLine(p4.x, p4.y, p1.x, p1.y);
+    const oldPath = this.path;
+    this.beginPath();
+    this.rect(x, y, width, height);
+    this.stroke();
+    this.path = oldPath;
   }
 
   _drawLine(x0, y0, x1, y1) {
