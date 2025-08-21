@@ -7,6 +7,8 @@ This document provides an analysis of the current Canvas 2D implementation, high
 The following properties and methods are missing from the `CanvasRenderingContext2D` implementation, based on the MDN documentation.
 
 ### Gradients and Patterns
+- `createPattern()`
+  - **Note:** This appears to be missing from the core context implementation, though it is used in some examples (likely leveraging the native browser canvas).
 
 ### Shadows
 - `shadowBlur`
@@ -62,6 +64,12 @@ The following supporting APIs and features are either missing or incomplete.
 - **`FontFaceSet.ready` Promise:** The `ready` promise is not implemented.
 - **Extended Descriptors:** Support for `unicodeRange`, `featureSettings`, and `variationSettings` is missing.
 
+### Path2D API
+The `Path2D` object is not implemented. This includes the `Path2D` constructor and methods that accept a `Path2D` object, such as:
+- `fill(path)`
+- `stroke(path)`
+- `clip(path)`
+
 ### OffscreenCanvas
 The `OffscreenCanvas` API is not implemented. This would allow for canvas rendering in Web Workers.
 
@@ -72,7 +80,7 @@ There is no support for using the Canvas API within Web Workers (e.g., via `Offs
 
 Based on this analysis, we recommend the following priorities for future development:
 
-1.  **Implement `createPattern()`:** This is a core feature for creating repeating patterns. (DONE)
-2.  **Implement the `Path2D` API:** This will allow for more complex and reusable path objects. (DONE)
+1.  **Implement `createPattern()`:** This is a core feature for creating repeating patterns.
+2.  **Implement the `Path2D` API:** This will allow for more complex and reusable path objects.
 3.  **Implement Shadows:** Adding shadow effects is a common requirement for rich graphics.
 4.  **Investigate `OffscreenCanvas` and Web Worker Support:** To improve performance and enable multi-threading, support for `OffscreenCanvas` should be a long-term goal.
