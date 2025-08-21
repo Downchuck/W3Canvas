@@ -151,13 +151,14 @@ function getStrokeGeometry(points, lineWidth, lineJoin, isClosed, miterLimit) {
             continue;
         }
 
-        const miterScale = 1 / Math.sqrt(miterLenSq);
         const miterRatio = 1 / Math.sqrt(miterLenSq);
 
         if (lineJoin === 'miter' && miterRatio <= miterLimit) {
-            leftPoints.push({ x: p_curr.x + miterNx * miterScale * halfWidth, y: p_curr.y + miterNy * miterScale * halfWidth });
-            rightPoints.push({ x: p_curr.x - miterNx * miterScale * halfWidth, y: p_curr.y - miterNy * miterScale * halfWidth });
+            const scale = (halfWidth / miterLenSq);
+            leftPoints.push({ x: p_curr.x + miterNx * scale, y: p_curr.y + miterNy * scale });
+            rightPoints.push({ x: p_curr.x - miterNx * scale, y: p_curr.y - miterNy * scale });
         } else { // Bevel join or miter limit exceeded
+            const miterScale = 1 / Math.sqrt(miterLenSq);
             if (cross_product_z > 0) { // Left turn
                 leftPoints.push({ x: p_curr.x + miterNx * miterScale * halfWidth, y: p_curr.y + miterNy * miterScale * halfWidth });
                 rightPoints.push({ x: p_curr.x - n1.nx * halfWidth, y: p_curr.y - n1.ny * halfWidth });

@@ -60,7 +60,7 @@ test('Stroking a polyline with a miter join works correctly', (t) => {
     assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 13, 18, blue);
 
     // Check a point just outside the join
-    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 22, white);
+    assertPixelIsColor(ctx.getImageData(0, 0, 30, 30), 15, 25, white);
 });
 
 test('Stroking a bezier curve with lineWidth works correctly', (t) => {

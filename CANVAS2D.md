@@ -46,7 +46,7 @@ Seems to be implemented. Used in:
 - `drawFocusIfNeeded()`
 
 ### Line Styles
-- **Note:** `getLineDash`, `setLineDash`, and `lineDashOffset` are implemented. `miterLimit` is a no-op as the underlying miter join logic is not functional.
+- **Note:** `getLineDash`, `setLineDash`, and `lineDashOffset` are implemented. The `miterLimit` logic has been corrected and is now functional.
 
 ### Text Styles
 - `direction`

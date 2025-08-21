@@ -4,9 +4,13 @@ export class CanvasPattern {
         throw new TypeError('Failed to execute \'createPattern\' on \'CanvasRenderingContext2D\': The provided source is not a valid CanvasImageSource.');
     }
 
+    // The spec says to treat null/empty string as 'repeat', and invalid values also as 'repeat'.
+    if (repetition === null || typeof repetition === 'undefined') {
+      repetition = 'repeat';
+    }
+
     const validRepetitions = ['repeat', 'repeat-x', 'repeat-y', 'no-repeat'];
     if (validRepetitions.indexOf(repetition) === -1) {
-        // The spec says to treat null/empty string as 'repeat', and invalid values also as 'repeat'.
         repetition = 'repeat';
     }
 
