@@ -4,6 +4,7 @@ import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algori
 import { strokePolyline } from '../algorithms/stroke.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import { CanvasPattern } from './CanvasPattern.js';
+import { Path2D } from './Path2D.js';
 import fs from 'fs';
 import {
     FontInfo, InitFont, FindGlyphIndex, GetGlyphShape, GetCodepointHMetrics,
@@ -219,8 +220,17 @@ export class CanvasRenderingContext2D {
     }
   }
 
-  clip() {
-    this.clippingPath = [...this.path];
+  clip(pathOrFillRule, fillRule) {
+    let path;
+    if (pathOrFillRule instanceof Path2D) {
+      path = pathOrFillRule.path;
+      // TODO: Handle fillRule
+    } else {
+      path = this.path;
+      // TODO: Handle pathOrFillRule as fillRule
+    }
+
+    this.clippingPath = [...path];
 
     // Convert path to vertices for _isPointInPath
     const vertices = [];
@@ -363,11 +373,16 @@ export class CanvasRenderingContext2D {
     this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
   }
 
-  stroke() {
-    if (this.path.length === 0) {
-      return;
+  stroke(path) {
+    if (path instanceof Path2D) {
+      if (path.path.length > 0) {
+        this._strokePath(path.path);
+      }
+    } else {
+      if (this.path.length > 0) {
+        this._strokePath(this.path);
+      }
     }
-    this._strokePath();
   }
 
   _legacyStroke() {
@@ -402,13 +417,13 @@ export class CanvasRenderingContext2D {
       }
   }
 
-  _strokePath() {
-    const originalPath = this.path;
+  _strokePath(pathCommands) {
+    const originalPath = this.path; // Save the context's current default path
     const subPaths = [];
     let currentSubPath = [];
 
-    // First, split the path into sub-paths
-    for (const command of originalPath) {
+    // First, split the given path into sub-paths
+    for (const command of pathCommands) {
         if (command.type === 'move') {
             if (currentSubPath.length > 0) {
                 subPaths.push(currentSubPath);
@@ -422,7 +437,7 @@ export class CanvasRenderingContext2D {
         subPaths.push(currentSubPath);
     }
 
-    // Clear the current path to build the new stroke path
+    // Temporarily clear the context's default path to build the new stroke outline path
     this.beginPath();
 
     for (const subPath of subPaths) {
@@ -467,7 +482,7 @@ export class CanvasRenderingContext2D {
             }
         }
 
-        // Now that we have a polyline, stroke it.
+        // Now that we have a polyline, stroke it by creating a new path that is the outline
         const isClosed = subPath[subPath.length - 1].type === 'close';
         const polygon = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed);
 
@@ -480,33 +495,49 @@ export class CanvasRenderingContext2D {
         }
     }
 
-    // If we built a new path to fill, fill it.
+    // If we built a new path to fill, fill it using the stroke style.
     if (this.path.length > 0) {
         const strokeFillStyle = this.strokeStyle;
         const oldFillStyle = this.fillStyle;
         this.fillStyle = strokeFillStyle;
-        this.fill();
+        this._scanlineFill(this.path); // Fill the new path
         this.fillStyle = oldFillStyle;
     }
 
-    // Restore original path
+    // Restore original default path
     this.path = originalPath;
   }
 
-  fill() {
-    if (this.path.length === 0) {
+  fill(pathOrFillRule, fillRule) {
+    let path;
+    // Overload: fill(fillRule)
+    if (typeof pathOrFillRule === 'string') {
+      // TODO: handle fillRule
+      path = this.path;
+    }
+    // Overload: fill(path, fillRule)
+    else if (pathOrFillRule instanceof Path2D) {
+      path = pathOrFillRule.path;
+      // TODO: handle fillRule
+    }
+    // Overload: fill()
+    else {
+      path = this.path;
+    }
+
+    if (path.length === 0) {
       return;
     }
-    this._scanlineFill();
+    this._scanlineFill(path);
   }
 
-  _scanlineFill() {
+  _scanlineFill(pathCommands) {
     // Optimization: if the path is a single full circle, use a specialized fill algorithm.
-    if (this.path.length === 1 && this.path[0].type === 'arc' && this.path[0].endAngle - this.path[0].startAngle >= 2 * Math.PI) {
-        const command = this.path[0];
+    if (pathCommands.length === 1 && pathCommands[0].type === 'arc' && pathCommands[0].endAngle - pathCommands[0].startAngle >= 2 * Math.PI) {
+        const command = pathCommands[0];
         const color = this._parseColor(this.fillStyle);
         fillArcWithMidpoint(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
-        this.path = []; // Clear the path after filling
+        // Do not clear the path here, the caller is responsible.
         return;
     }
 
@@ -521,7 +552,7 @@ export class CanvasRenderingContext2D {
         allEdges.push(edge);
     };
 
-    for (const command of this.path) {
+    for (const command of pathCommands) {
         switch (command.type) {
             case 'move':
                 currentX = command.x;
@@ -975,7 +1006,7 @@ export class CanvasRenderingContext2D {
     this.lineTo(p4.x, p4.y);
     this.closePath();
 
-    this.fill();
+    this._scanlineFill(this.path);
 
     this.path = oldPath;
   }
