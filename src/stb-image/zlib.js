@@ -110,10 +110,6 @@ export class Zlib {
 
     fill_bits() {
         do {
-            if (this.code_buffer >= (1 << this.num_bits)) {
-                this.zbuffer_pos = this.zbuffer.length; // treat as EOF
-                return;
-            }
             this.code_buffer |= this.zget8() << this.num_bits;
             this.num_bits += 8;
         } while (this.num_bits <= 24);
@@ -147,15 +143,9 @@ export class Zlib {
     zhuffman_decode(z) {
         if (this.num_bits < 16) {
             if (this.zeof()) {
-                if (!this.hit_zeof_once) {
-                    this.hit_zeof_once = true;
-                    this.num_bits += 16;
-                } else {
-                    return -1;
-                }
-            } else {
-                this.fill_bits();
+                return -1; // End of stream
             }
+            this.fill_bits();
         }
 
         const b = z.fast[this.code_buffer & ZFAST_MASK];
