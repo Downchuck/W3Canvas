@@ -6,16 +6,6 @@ This document provides an analysis of the current Canvas 2D implementation, high
 
 The following properties and methods are missing from the `CanvasRenderingContext2D` implementation, based on the MDN documentation.
 
-### Transformations
-- `rotate()`
-- `scale()` (stubbed)
-- `translate()` (stubbed)
-- `transform()`
-- `setTransform()`
-- `resetTransform()`
-- `getTransform()`
-- **Note:** There are `TODO` comments for these in `src/core/canvas/CanvasRenderingContext2D.js`.
-
 ### Gradients and Patterns
 - `createRadialGradient()`
 - `createConicGradient()`
@@ -97,7 +87,6 @@ There is no support for using the Canvas API within Web Workers (e.g., via `Offs
 
 Based on this analysis, we recommend the following priorities for future development:
 
-1.  **Complete the Transformations API:** Implementing `translate()`, `scale()`, `rotate()`, and the other transform methods is crucial for basic canvas functionality.
-3.  **Expand Gradient and Pattern Support:** Adding support for radial and conic gradients, as well as patterns, will significantly improve the rendering capabilities.
+1.  **Expand Gradient and Pattern Support:** Adding support for radial and conic gradients, as well as patterns, will significantly improve the rendering capabilities.
 4.  **Implement the `Path2D` API:** This will allow for more complex and reusable path objects.
 5.  **Investigate `OffscreenCanvas` and Web Worker Support:** To improve performance and enable multi-threading, support for `OffscreenCanvas` should be a long-term goal.
