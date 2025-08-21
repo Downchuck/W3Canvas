@@ -117,7 +117,7 @@ export class Element extends Node {
       throw new Error("Element(): missing tag");
     }
     super(NODE_TYPE_ELEMENT);
-    this.tagName = tag;
+    this.tagName = tag.toLowerCase();
     this.style = new ElementStyle(new CssStyle(), this);
     this.boxModel = new BoxModel();
   }
@@ -209,21 +209,23 @@ export class Comment extends Node {
 
 export class Document extends Node {
   doctype = null;
+  body = null;
 
   constructor() {
     super(NODE_TYPE_DOCUMENT);
   }
 
-  createElement(tag) { return new Element(tag); }
-  createTextNode(content) { return new TextNode(content); }
-  createComment(data) { return new CommentNode(data); }
-}
+  createElement(tag) {
+    return new Element(tag);
+  }
 
-export class CommentNode extends Node {
-    constructor(data) {
-        super(8); // NODE_TYPE_COMMENT
-        this.data = data;
-    }
+  createTextNode(content) {
+    return new TextNode(content);
+  }
+
+  createComment(data) {
+    return new Comment(data);
+  }
 }
 
 export class NodeIterator {

@@ -1,89 +1,92 @@
 import { Document, NodeIterator, Element } from './dom_core.js';
 import { tags, HTMLCollection } from './dom_html_basic.js';
-import { mixin } from '../../legacy/lang_util.js';
 
 export class HTMLDocument extends Document {
-  constructor(domDoc) {
+  constructor() {
     super();
-    const doc = domDoc || new Document();
+    this.body = this.createElement("body");
+  }
 
-    const DocumentImpl = function() {
-      this.elems = [];
-      this.createElement = (tagName) => {
-        tagName = tagName.toUpperCase();
-        const ElementConstructor = tags[tagName];
-        let elem;
-        if (ElementConstructor) {
-          elem = new ElementConstructor();
-        } else {
-          elem = new Element(tagName);
-        }
-        this.elems.push(elem);
-        return elem;
-      };
+  createElement(tagName) {
+    const ElementConstructor = tags[tagName.toUpperCase()];
+    let elem;
+    if (ElementConstructor) {
+      elem = new ElementConstructor();
+    } else {
+      elem = new Element(tagName);
+    }
+    return elem;
+  }
 
-      this.body = this.createElement("body");
+  createElementNS(namespace, tagName) {
+    if (namespace === 'http://www.w3.org/2000/svg') {
+      const qualifiedName = 'svg:' + tagName;
+      const ElementConstructor = tags[qualifiedName.toUpperCase()];
+      if (ElementConstructor) {
+        return new ElementConstructor();
+      }
+    }
+    // Fallback for unknown tags in any namespace
+    return new Element(tagName);
+  }
 
-      this.getElementsByName = (name) => {
-        return null;
-      };
+  getElementsByName(name) {
+    return null;
+  }
 
-      this.getElementById = (id) => {
-        let found = null;
-        const iter = new NodeIterator(this.body, (node) => {
-          if (node.getId && node.getId() === id) {
-            found = node;
-          }
-        });
-        iter.start();
-        return found;
-      };
+  getElementById(id) {
+    let found = null;
+    const iter = new NodeIterator(this.body, (node) => {
+      if (node.getId && node.getId() === id) {
+        found = node;
+      }
+    });
+    iter.start();
+    return found;
+  }
 
-      this.getElementsByTagName = (tagName) => {
-        const results = [];
-        const iter = new NodeIterator(this.body, (node) => {
-          if (node.tagName && node.tagName.toLowerCase() === tagName.toLowerCase()) {
-            results.push(node);
-          }
-        });
-        iter.start();
-        return new HTMLCollection(results[0]);
-      };
+  getElementsByTagName(tagName) {
+    const results = [];
+    const iter = new NodeIterator(this.body, (node) => {
+      if (node.tagName && node.tagName.toLowerCase() === tagName.toLowerCase()) {
+        results.push(node);
+      }
+    });
+    iter.start();
+    return new HTMLCollection(results);
+  }
 
-      this.querySelectorAll = (selector) => {
-        const results = [];
-        const iter = new NodeIterator(this.body, (node) => {
-          if (this.matchesSelector(node, selector)) {
-            results.push(node);
-          }
-        });
-        iter.start();
-        return new HTMLCollection(results[0]);
-      };
+  querySelectorAll(selector) {
+    const results = [];
+    const iter = new NodeIterator(this.body, (node) => {
+      if (this.matchesSelector(node, selector)) {
+        results.push(node);
+      }
+    });
+    iter.start();
+    return new HTMLCollection(results);
+  }
 
-      this.querySelector = (selector) => {
-        let result = null;
-        const iter = new NodeIterator(this.body, (node) => {
-          if (this.matchesSelector(node, selector)) {
-            result = node;
-            iter.traverse = function() {};
-          }
-        });
-        iter.start();
-        return result;
-      };
+  querySelector(selector) {
+    let result = null;
+    const iter = new NodeIterator(this.body, (node) => {
+      if (this.matchesSelector(node, selector)) {
+        result = node;
+        iter.traverse = function() {};
+      }
+    });
+    iter.start();
+    return result;
+  }
 
-      this.matchesSelector = (node, selector) => {
-        if (selector.startsWith('#')) {
-          return node.getId && node.getId() === selector.substring(1);
-        } else if (selector.startsWith('.')) {
-          return node.getClassName && node.getClassName().split(' ').indexOf(selector.substring(1)) !== -1;
-        } else {
-          return node.tagName && node.tagName.toLowerCase() === selector.toLowerCase();
-        }
-      };
-    };
-    return mixin(doc, new DocumentImpl());
+  matchesSelector(node, selector) {
+    if (selector.startsWith('#')) {
+      return node.getId && node.getId() === selector.substring(1);
+    } else if (selector.startsWith('.')) {
+      return node.getClassName && node.getClassName().split(' ').indexOf(selector.substring(1)) !== -1;
+    } else {
+      return node.tagName && node.tagName.toLowerCase() === selector.toLowerCase();
+    }
   }
 }
 

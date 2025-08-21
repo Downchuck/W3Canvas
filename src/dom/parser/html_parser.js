@@ -1,11 +1,13 @@
 import { HTMLTokenizer } from './html_tokenizer.js';
-import { Document, Element, TextNode, NODE_TYPE_TEXT } from '../html/dom_core.js';
+import { HTMLDocument } from '../html/dom_html_doc.js';
+import { TextNode, NODE_TYPE_TEXT } from '../html/dom_core.js';
 
 export class HTMLParser {
     constructor() {
         this.stack = [];
-        this.doc = new Document();
+        this.doc = new HTMLDocument();
         this.stack.push(this.doc);
+        this.namespace = null;
     }
 
     parse(html) {
@@ -25,19 +27,32 @@ export class HTMLParser {
 
         switch (token.type) {
             case 'StartTag':
-                const element = new Element(token.tagName);
+                let element;
+                if (this.namespace) {
+                    element = this.doc.createElementNS(this.namespace, token.tagName);
+                } else {
+                    element = this.doc.createElement(token.tagName);
+                }
+
                 for (const [name, value] of Object.entries(token.attributes)) {
                     element.setAttribute(name, value);
                 }
                 currentNode.appendChild(element);
+
                 if (!token.selfClosing) {
                     this.stack.push(element);
+                    if (token.tagName.toLowerCase() === 'svg') {
+                        this.namespace = 'http://www.w3.org/2000/svg';
+                    }
                 }
                 break;
 
             case 'EndTag':
                 if (currentNode.tagName.toLowerCase() === token.tagName) {
                     this.stack.pop();
+                    if (token.tagName.toLowerCase() === 'svg') {
+                        this.namespace = null;
+                    }
                 } else {
                     // Basic error handling: ignore mismatched closing tags
                     console.warn(`Mismatched closing tag: expected </${currentNode.tagName.toLowerCase()}> but got </${token.tagName}>`);
