@@ -1,23 +1,11 @@
-# Work in Progress
+# Undone tasks
 
-*   **DOM and Parser Implementation:**
-    *   **TODO:** Implement a standards-compliant HTML parser to replace `jsdom` for testing.
-    *   **TODO:** Extend the custom DOM implementation to support all features required by the test suite.
+## Radial Gradient
 
-*   **Font Rendering:**
-    *   **IN PROGRESS:** Implement the `@font-face` rule to allow loading of custom fonts.
-        *   **DONE:** Created `FontFace` and `FontFaceSet` objects.
-        *   **DONE:** Implemented a basic parser for `@font-face` rules that handles `file:///` URIs.
-        *   **DONE:** Integrated with the rendering engine to use loaded fonts for text rendering.
-        *   **TODO:** Expand parser and loading mechanism to support remote URLs and other font formats.
+The implementation of `createRadialGradient` is not fully functional. The current implementation fails the tests in `tests/canvas_radial_gradient.test.js`.
 
-*   **Implement CSS Box Model and SVG DOM:**
-    *   **CSS Box Model:**
-        *   Enabled and fixed layout tests.
-        *   Integrated the box model into the layout, accounting for padding.
-        *   Implemented `text-align`.
-        *   Implemented basic painting of background, border, and text.
-    *   **SVG DOM:**
-        *   Expanded SVG path parser to handle `H`, `h`, `V`, `v`, `C`, and `c` commands.
-        *   **DONE:** Optimized `fill()` for Beziers and arcs, and refactored the scanline filler to use an Active Edge Table, fixing the memory leak and significantly improving performance.
-        *   **DONE:** Fixed a regression in `stroke()` for 1px-wide Bézier curves where the start pixel was not being drawn. This involved removing a legacy stroking path and correcting the start cap geometry in the modern stroking algorithm.
+The main issue seems to be with the calculation of the `t` parameter in the `_getColorFromRadialGradientAtPoint` function in `src/core/canvas/CanvasRenderingContext2D.js`. The formula is complex and I have been unable to get it right.
+
+### `fillRect` and `strokeRect`
+
+The `fillRect` and `strokeRect` methods were refactored to use the path system, but this was incorrect according to the spec. They should not be affected by the current path. I have reverted this change, but the `fillRect` method is now very slow, as it iterates over each pixel. A better solution would be to implement a scanline algorithm for filling a transformed quadrilateral.
