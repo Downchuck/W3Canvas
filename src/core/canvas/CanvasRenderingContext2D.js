@@ -715,24 +715,105 @@ export class CanvasRenderingContext2D {
   }
 
   _getColorFromGradientAtPoint(x, y, gradient) {
-      const g_x0 = gradient.x0;
-      const g_y0 = gradient.y0;
-      const dx = gradient.x1 - g_x0;
-      const dy = gradient.y1 - g_y0;
-      const mag_sq = dx * dx + dy * dy;
+    if (gradient.type === 'linear') {
+      return this._getColorFromLinearGradientAtPoint(x, y, gradient);
+    } else if (gradient.type === 'radial') {
+      return this._getColorFromRadialGradientAtPoint(x, y, gradient);
+    } else if (gradient.type === 'conic') {
+      return this._getColorFromConicGradientAtPoint(x, y, gradient);
+    }
+    return { r: 0, g: 0, b: 0, a: 0 }; // Should not happen
+  }
 
-      if (mag_sq === 0) {
-          const lastColorStr = gradient.colorStops.length > 0 ? gradient.colorStops[gradient.colorStops.length - 1].color : 'black';
-          return this._parseColor(lastColorStr);
-      }
+  _getColorFromConicGradientAtPoint(x, y, gradient) {
+    const { startAngle, x: gx, y: gy } = gradient;
+    let angle = Math.atan2(y - gy, x - gx);
+    angle -= startAngle;
+    angle = angle % (2 * Math.PI);
+    if (angle < 0) {
+        angle += 2 * Math.PI;
+    }
+    const t = angle / (2 * Math.PI);
+    return this._getColorFromGradient(gradient, t);
+  }
 
-      const px = x - g_x0;
-      const py = y - g_y0;
-      let t = (px * dx + py * dy) / mag_sq;
+  _getColorFromLinearGradientAtPoint(x, y, gradient) {
+    const g_x0 = gradient.x0;
+    const g_y0 = gradient.y0;
+    const dx = gradient.x1 - g_x0;
+    const dy = gradient.y1 - g_y0;
+    const mag_sq = dx * dx + dy * dy;
 
-      t = Math.max(0, Math.min(1, t)); // Clamp t
+    if (mag_sq === 0) {
+        const lastColorStr = gradient.colorStops.length > 0 ? gradient.colorStops[gradient.colorStops.length - 1].color : 'black';
+        return this._parseColor(lastColorStr);
+    }
 
-      return this._getColorFromGradient(gradient, t);
+    const px = x - g_x0;
+    const py = y - g_y0;
+    let t = (px * dx + py * dy) / mag_sq;
+
+    t = Math.max(0, Math.min(1, t)); // Clamp t
+
+    return this._getColorFromGradient(gradient, t);
+  }
+
+  _getColorFromRadialGradientAtPoint(x, y, gradient) {
+    const { x0, y0, r0, x1, y1, r1 } = gradient;
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const dr = r1 - r0;
+
+    const px = x - x0;
+    const py = y - y0;
+
+    const a = dx * dx + dy * dy - dr * dr;
+    const b = -2 * (px * dx + py * dy + r0 * dr);
+    const c = px * px + py * py - r0 * r0;
+
+    console.log(`x=${x}, y=${y}`);
+    console.log(`a=${a}, b=${b}, c=${c}`);
+
+    if (a === 0) {
+        if (b === 0) return { r: 0, g: 0, b: 0, a: 0 };
+        const t = -c / b;
+        console.log(`a=0, t=${t}`);
+        const clampedT = Math.max(0, Math.min(1, t));
+        return this._getColorFromGradient(gradient, clampedT);
+    }
+
+    const discriminant = b * b - 4 * a * c;
+    console.log(`discriminant=${discriminant}`);
+    if (discriminant < 0) {
+        return { r: 0, g: 0, b: 0, a: 0 };
+    }
+
+    const sqrt_discriminant = Math.sqrt(discriminant);
+
+    const t1 = (-b + sqrt_discriminant) / (2 * a);
+    const t2 = (-b - sqrt_discriminant) / (2 * a);
+
+    console.log(`t1=${t1}, t2=${t2}`);
+
+    let t = -1;
+    const r_t1 = r0 + t1 * dr;
+    const r_t2 = r0 + t2 * dr;
+
+    console.log(`r_t1=${r_t1}, r_t2=${r_t2}`);
+
+    if (r_t1 >= 0 && r_t2 >= 0) {
+      t = Math.max(t1, t2);
+    } else if (r_t1 >= 0) {
+      t = t1;
+    } else if (r_t2 >= 0) {
+      t = t2;
+    } else {
+      return { r: 0, g: 0, b: 0, a: 0 };
+    }
+
+    console.log(`t=${t}`);
+    const clampedT = Math.max(0, Math.min(1, t));
+    return this._getColorFromGradient(gradient, clampedT);
   }
 
   fillRect(x, y, width, height) {
