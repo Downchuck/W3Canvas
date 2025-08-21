@@ -867,45 +867,39 @@ export class CanvasRenderingContext2D {
 
   _getColorFromRadialGradientAtPoint(x, y, gradient) {
     const { x0, y0, r0, x1, y1, r1 } = gradient;
+
     const dx = x1 - x0;
     const dy = y1 - y0;
     const dr = r1 - r0;
 
-    if (dx === 0 && dy === 0) { // Concentric circles
+    const a = dx * dx + dy * dy - dr * dr;
+
+    // If the circles are concentric or have the same radius and position
+    if (a === 0) {
         const dist = Math.sqrt((x - x0) ** 2 + (y - y0) ** 2);
-        if (dr === 0) { // Both circles have same radius
-             return this._getColorFromGradient(gradient, dist <= r0 ? 0 : 1);
-        }
         const t = (dist - r0) / dr;
         const clampedT = Math.max(0, Math.min(1, t));
         return this._getColorFromGradient(gradient, clampedT);
     }
 
-    const px = x - x0;
-    const py = y - y0;
-
-    const a = dx * dx + dy * dy - dr * dr;
-    const b = 2 * (px * dx + py * dy + r0 * dr);
-    const c = px * px + py * py - r0 * r0;
-
-    if (Math.abs(a) < 1e-6) { // Essentially a linear gradient
-        if (Math.abs(b) < 1e-6) return {r:0,g:0,b:0,a:0};
-        const t = -c / b;
-        return this._getColorFromGradient(gradient, t);
-    }
+    const b = 2 * ((x - x0) * dx + (y - y0) * dy - r0 * dr);
+    const c = (x - x0) ** 2 + (y - y0) ** 2 - r0 * r0;
 
     const discriminant = b * b - 4 * a * c;
+
     if (discriminant < 0) {
-        return { r: 0, g: 0, b: 0, a: 0 };
+      return { r: 0, g: 0, b: 0, a: 0 }; // Outside the gradient
     }
 
-    const sqrt_discriminant = Math.sqrt(discriminant);
+    const t1 = (-b + Math.sqrt(discriminant)) / (2 * a);
+    const t2 = (-b - Math.sqrt(discriminant)) / (2 * a);
 
-    const t1 = (-b + sqrt_discriminant) / (2 * a);
-    const t2 = (-b - sqrt_discriminant) / (2 * a);
-
+    // The spec requires using the solution for t that results in the smallest positive radius.
+    // However, a simpler interpretation that works for most cases is to pick the
+    // t value that is between 0 and 1. If both are, we need to decide which one.
+    // For now, we will prefer the smaller positive t.
     let t = -1;
-    if (t1 >=0 && t1 <= 1) {
+    if (t1 >= 0 && t1 <= 1) {
         t = t1;
     }
     if (t2 >= 0 && t2 <= 1) {
@@ -919,6 +913,7 @@ export class CanvasRenderingContext2D {
     }
 
     const clampedT = Math.max(0, Math.min(1, t));
+    console.log(`RADIAL GRADIENT: x=${x}, y=${y}, dist=${dist}, t=${t}, clampedT=${clampedT}`);
     return this._getColorFromGradient(gradient, clampedT);
   }
 

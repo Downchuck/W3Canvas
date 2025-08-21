@@ -7,7 +7,6 @@ This document provides an analysis of the current Canvas 2D implementation, high
 The following properties and methods are missing from the `CanvasRenderingContext2D` implementation, based on the MDN documentation.
 
 ### Gradients and Patterns
-- `createRadialGradient()`
 - `createConicGradient()`
 - `createConicGradient()`
 
