@@ -94,12 +94,11 @@ export class Zlib {
         this.zbuffer_pos = 0;
         this.num_bits = 0;
         this.code_buffer = 0;
-        this.hit_zeof_once = false;
 
         this.zout = null;
         this.zout_pos = 0;
         this.zout_len = 0;
-        this.z_expandable = true;
+        this.z_expandable = 1;
 
         this.z_length = new Huffman();
         this.z_distance = new Huffman();
@@ -188,9 +187,6 @@ export class Zlib {
                 this.zout[this.zout_pos++] = z;
             } else {
                 if (z === 256) {
-                    if (this.hit_zeof_once && this.num_bits < 16) {
-                        return err("unexpected end", "Corrupt PNG");
-                    }
                     return 1;
                 }
                 z -= 257;
