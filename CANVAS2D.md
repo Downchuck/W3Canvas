@@ -7,25 +7,19 @@ This document provides an analysis of the current Canvas 2D implementation, high
 The following properties and methods are missing from the `CanvasRenderingContext2D` implementation, based on the MDN documentation.
 
 ### Transformations
-- `rotate()`
-- `scale()` (stubbed)
-- `translate()` (stubbed)
-- `transform()`
-- `setTransform()`
-- `resetTransform()`
-- `getTransform()`
-- **Note:** There are `TODO` comments for these in `src/core/canvas/CanvasRenderingContext2D.js`.
+- `getTransform()`: Implemented.
+- `resetTransform()`: Implemented.
+- `setTransform()`: Implemented.
+- `transform()`: Implemented.
+- `translate()`: Implemented.
+- `scale()`: Implemented.
+- `rotate()`: Implemented.
+- **Note:** While the methods are implemented, the transformation is not always correctly applied to all drawing operations, especially fills. This is a work in progress.
 
 ### Gradients and Patterns
 - `createRadialGradient()`
 - `createConicGradient()`
-- `createConicGradient()`
-
-#### `createPattern()`
-Seems to be implemented. Used in:
-- `src/dom/html/combobox_control.js`
-- `examples/text_path.html`
-- Legacy code: `examples/Z_testing_select_old/combo_blue.js`, `src/legacy/style/combo_blue.js`
+- `createPattern()`: Implemented and functional.
 
 ### Shadows
 - `shadowBlur`
@@ -82,10 +76,11 @@ The following supporting APIs and features are either missing or incomplete.
 - **Extended Descriptors:** Support for `unicodeRange`, `featureSettings`, and `variationSettings` is missing.
 
 ### Path2D API
-The `Path2D` object is not implemented. This includes the `Path2D` constructor and methods that accept a `Path2D` object, such as:
-- `fill(path)`
-- `stroke(path)`
-- `clip(path)`
+The `Path2D` object is partially implemented. The `CanvasRenderingContext2D` has been refactored to use a `Path2D` object for its default path.
+- The `Path2D` constructor supports creating an empty path, copying another `Path2D` object, and parsing an SVG path string.
+- The `addPath` method is implemented, including support for a transformation matrix.
+- `fill(path)`, `stroke(path)`, and `clip(path)` are implemented.
+- **Note:** The transformation logic for `addPath` and for filling transformed paths is not yet fully correct.
 
 ### OffscreenCanvas
 The `OffscreenCanvas` API is not implemented. This would allow for canvas rendering in Web Workers.

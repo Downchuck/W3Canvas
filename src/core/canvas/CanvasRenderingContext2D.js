@@ -5,6 +5,7 @@ import { strokePolyline } from '../algorithms/stroke.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import { CanvasPattern } from './CanvasPattern.js';
 import { Path2D } from './Path2D.js';
+import { DOMMatrix } from './DOMMatrix.js';
 import { drawShadow } from './Shadow.js';
 import fs from 'fs';
 import {
@@ -115,11 +116,17 @@ export class CanvasRenderingContext2D {
   }
 
   getTransform() {
-    return [...this.transformMatrix];
+    const [a, b, c, d, e, f] = this.transformMatrix;
+    return new DOMMatrix([a, b, c, d, e, f]);
   }
 
   setTransform(a, b, c, d, e, f) {
-     this.transformMatrix = [a, b, c, d, e, f];
+    if (typeof a === 'object') {
+        const m = a;
+        this.transformMatrix = [m.a, m.b, m.c, m.d, m.e, m.f];
+    } else {
+        this.transformMatrix = [a, b, c, d, e, f];
+    }
   }
 
   resetTransform() {
@@ -584,16 +591,41 @@ export class CanvasRenderingContext2D {
   }
 
   _scanlineFill(pathCommands) {
+    const transformedCommands = pathCommands.map(cmd => {
+        const newCmd = { ...cmd };
+        if (cmd.x !== undefined) {
+            const p = this._transformPoint(cmd.x, cmd.y);
+            newCmd.x = p.x;
+            newCmd.y = p.y;
+        }
+        if (cmd.cp1x !== undefined) {
+            const p1 = this._transformPoint(cmd.cp1x, cmd.cp1y);
+            newCmd.cp1x = p1.x;
+            newCmd.cp1y = p1.y;
+        }
+        if (cmd.cp2x !== undefined) {
+            const p2 = this._transformPoint(cmd.cp2x, cmd.cp2y);
+            newCmd.cp2x = p2.x;
+            newCmd.cp2y = p2.y;
+        }
+        if (cmd.radius !== undefined) {
+            const p = this._transformPoint(cmd.x, cmd.y);
+            newCmd.x = p.x;
+            newCmd.y = p.y;
+            const scaleX = Math.sqrt(this.transformMatrix[0] * this.transformMatrix[0] + this.transformMatrix[1] * this.transformMatrix[1]);
+            newCmd.radius *= scaleX;
+        }
+        return newCmd;
+    });
+
     if (!this.isShadowContext) {
-        drawShadow(this, pathCommands, false);
+        drawShadow(this, transformedCommands, false);
     }
 
-    // Optimization: if the path is a single full circle, use a specialized fill algorithm.
-    if (pathCommands.length === 1 && pathCommands[0].type === 'arc' && pathCommands[0].endAngle - pathCommands[0].startAngle >= 2 * Math.PI) {
-        const command = pathCommands[0];
+    if (transformedCommands.length === 1 && transformedCommands[0].type === 'arc' && transformedCommands[0].endAngle - transformedCommands[0].startAngle >= 2 * Math.PI) {
+        const command = transformedCommands[0];
         const color = this._parseColor(this.fillStyle);
         fillArcWithMidpoint(this, color, command.x, command.y, command.radius, command.startAngle, command.endAngle);
-        // Do not clear the path here, the caller is responsible.
         return;
     }
 
@@ -604,11 +636,11 @@ export class CanvasRenderingContext2D {
     let startY = 0;
 
     const addEdge = (edge) => {
-        if (Math.abs(edge.y_min - edge.y_max) < 1e-9) return; // Ignore horizontal edges with a tolerance
+        if (Math.abs(edge.y_min - edge.y_max) < 1e-9) return;
         allEdges.push(edge);
     };
 
-    for (const command of pathCommands) {
+    for (const command of transformedCommands) {
         switch (command.type) {
             case 'move':
                 currentX = command.x;
