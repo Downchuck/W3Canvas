@@ -3,49 +3,59 @@ import path from 'path';
 
 const sharedWorkerBootstrapPath = path.resolve(process.cwd(), 'src/worker/shared_worker_bootstrap.js');
 
-// Registry for active shared workers.
 const activeWorkers = new Map();
 
 export class SharedWorker {
+    port;
+    ready;
+
     constructor(scriptURL, options = {}) {
         let workerInfo = activeWorkers.get(scriptURL);
 
         if (!workerInfo) {
             const worker = new NodeWorker(sharedWorkerBootstrapPath, {
-                workerData: {
-                    scriptURL: scriptURL,
-                    options: options
-                }
+                workerData: { scriptURL, options }
             });
 
             workerInfo = {
-                worker: worker,
+                worker,
                 refCount: 0,
                 isReady: false,
-                connectionQueue: []
+                connectionQueue: [],
+                clients: new Set(),
+                ready: new Promise(resolve => {
+                    worker.on('message', message => {
+                        if (message.type === '__worker_ready__') resolve();
+                    });
+                })
             };
             activeWorkers.set(scriptURL, workerInfo);
 
-            worker.on('message', (message) => {
-                if (message && message.type === '__worker_ready__') {
-                    workerInfo.isReady = true;
-                    // Process any pending connections
-                    for (const msg of workerInfo.connectionQueue) {
-                        workerInfo.worker.postMessage(msg.message, msg.transfer);
-                    }
-                    workerInfo.connectionQueue = [];
-                }
+            workerInfo.ready.then(() => {
+                workerInfo.isReady = true;
+                workerInfo.connectionQueue.forEach(msg => worker.postMessage(msg.message, msg.transfer));
+                workerInfo.connectionQueue = [];
             });
 
-            worker.on('exit', () => {
-                activeWorkers.delete(scriptURL);
+            const propagateError = err => {
+                for (const clientPort of workerInfo.clients) {
+                    clientPort.postMessage({ type: '__worker_error__', message: err.message, stack: err.stack });
+                }
+            };
+
+            worker.on('message', message => {
+                if (message && message.type === 'error') propagateError(message);
             });
+            worker.on('error', propagateError);
+            worker.on('exit', () => activeWorkers.delete(scriptURL));
         }
 
+        this.ready = workerInfo.ready;
         workerInfo.refCount++;
 
         const { port1, port2 } = new MessageChannel();
         this.port = port1;
+        workerInfo.clients.add(this.port);
         this.port.start();
 
         const connectMessage = {
@@ -60,6 +70,7 @@ export class SharedWorker {
         }
 
         this.port.on('close', () => {
+            workerInfo.clients.delete(this.port);
             workerInfo.refCount--;
             if (workerInfo.refCount === 0) {
                 workerInfo.worker.terminate();
@@ -69,10 +80,6 @@ export class SharedWorker {
     }
 }
 
-/**
- * Forcefully terminates all active shared workers.
- * This is useful for cleaning up at the end of a process, like in tests.
- */
 export function shutdownAllSharedWorkers() {
     for (const workerInfo of activeWorkers.values()) {
         workerInfo.worker.terminate();

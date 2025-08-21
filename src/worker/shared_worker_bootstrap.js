@@ -63,5 +63,6 @@ import(pathToFileURL(scriptPath).href)
         parentPort.postMessage({ type: '__worker_ready__' });
     })
     .catch(err => {
-        console.error(`Error in shared worker script: ${scriptURL}`, err);
+        // Post an error message back to the main thread if the script fails to import.
+        parentPort.postMessage({ type: 'error', message: err.message, stack: err.stack });
     });

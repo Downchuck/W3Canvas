@@ -7,8 +7,14 @@ export class Worker {
     #nodeWorker;
     #isReady = false;
     #messageQueue = [];
+    ready;
+    #resolveReady;
 
     constructor(scriptURL, options = {}) {
+        this.ready = new Promise(resolve => {
+            this.#resolveReady = resolve;
+        });
+
         this.#nodeWorker = new NodeWorker(workerBootstrapPath, {
             workerData: {
                 scriptURL: scriptURL,
@@ -20,6 +26,15 @@ export class Worker {
             if (message && message.type === '__worker_ready__') {
                 this.#isReady = true;
                 this.#flushMessageQueue();
+                this.#resolveReady();
+                return;
+            }
+            if (message && message.type === 'error') {
+                if (this.onerror) {
+                    const err = new Error(message.message);
+                    err.stack = message.stack;
+                    this.onerror(err);
+                }
                 return;
             }
             if (this.onmessage) {
@@ -34,24 +49,24 @@ export class Worker {
         });
 
         this.#nodeWorker.on('exit', (code) => {
-            if (code !== 0 && this.onerror) {
-                this.onerror(new Error(`Worker stopped with exit code ${code}`));
+            if (this.onexit) {
+                this.onexit(code);
             }
         });
     }
 
     #flushMessageQueue() {
-        for (const message of this.#messageQueue) {
-            this.#nodeWorker.postMessage(message);
+        for (const item of this.#messageQueue) {
+            this.#nodeWorker.postMessage(item.message, item.transferList);
         }
         this.#messageQueue = [];
     }
 
-    postMessage(message) {
+    postMessage(message, transferList) {
         if (this.#isReady) {
-            this.#nodeWorker.postMessage(message);
+            this.#nodeWorker.postMessage(message, transferList);
         } else {
-            this.#messageQueue.push(message);
+            this.#messageQueue.push({ message, transferList });
         }
     }
 

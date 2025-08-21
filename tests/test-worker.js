@@ -2,10 +2,22 @@
 // `self` is the global scope, provided by worker_bootstrap.js
 
 self.onmessage = async (e) => {
-    const { command, data, fontPath, family } = e.data;
+    const { command, data, fontPath, family, buffer } = e.data;
 
     if (command === 'echo') {
         self.postMessage({ response: 'echo', data: data });
+    }
+
+    if (command === 'arrayBuffer') {
+        // The buffer should have been transferred, not copied.
+        // We can check its content and send it back.
+        const view = new Uint8Array(buffer);
+        const sum = view.reduce((acc, val) => acc + val, 0);
+        self.postMessage({ response: 'arrayBuffer', sum: sum });
+    }
+
+    if (command === 'error') {
+        throw new Error('This is a test error from inside the worker.');
     }
 
     if (command === 'loadFont') {
