@@ -1,9 +1,15 @@
 export class CanvasGradient {
-  constructor(x0, y0, x1, y1) {
-    this.x0 = x0;
-    this.y0 = y0;
-    this.x1 = x1;
-    this.y1 = y1;
+  constructor(props) {
+    this.type = props.type;
+    this.x0 = props.x0;
+    this.y0 = props.y0;
+    this.r0 = props.r0;
+    this.x1 = props.x1;
+    this.y1 = props.y1;
+    this.r1 = props.r1;
+    this.startAngle = props.startAngle; // for conic
+    this.x = props.x; // for conic
+    this.y = props.y; // for conic
     this.colorStops = [];
   }
 

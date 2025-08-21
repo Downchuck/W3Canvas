@@ -33,6 +33,7 @@ export class CanvasRenderingContext2D {
     this.path = [];
     this.clippingPath = null;
     this.clippingPathAsVertices = null;
+    this.transformMatrix = [1, 0, 0, 1, 0, 0]; // [a, b, c, d, e, f]
 
     // Load font
     this.fontInfo = new FontInfo();
@@ -54,6 +55,7 @@ export class CanvasRenderingContext2D {
       font: this.font,
       textAlign: this.textAlign,
       textBaseline: this.textBaseline,
+      transformMatrix: [...this.transformMatrix],
     });
   }
 
@@ -68,15 +70,58 @@ export class CanvasRenderingContext2D {
       this.font = state.font;
       this.textAlign = state.textAlign;
       this.textBaseline = state.textBaseline;
+      if (state.transformMatrix) {
+        this.transformMatrix = state.transformMatrix;
+      }
     }
   }
 
+  _transformPoint(x, y) {
+    const m = this.transformMatrix;
+    return {
+      x: m[0] * x + m[2] * y + m[4],
+      y: m[1] * x + m[3] * y + m[5],
+    };
+  }
+
+  getTransform() {
+    return [...this.transformMatrix];
+  }
+
+  setTransform(a, b, c, d, e, f) {
+     this.transformMatrix = [a, b, c, d, e, f];
+  }
+
+  resetTransform() {
+    this.transformMatrix = [1, 0, 0, 1, 0, 0];
+  }
+
+  transform(a, b, c, d, e, f) {
+    const m1 = this.transformMatrix;
+    const m2 = [a, b, c, d, e, f];
+
+    const a_new = m1[0] * m2[0] + m1[2] * m2[1];
+    const b_new = m1[1] * m2[0] + m1[3] * m2[1];
+    const c_new = m1[0] * m2[2] + m1[2] * m2[3];
+    const d_new = m1[1] * m2[2] + m1[3] * m2[3];
+    const e_new = m1[0] * m2[4] + m1[2] * m2[5] + m1[4];
+    const f_new = m1[1] * m2[4] + m1[3] * m2[5] + m1[5];
+
+    this.transformMatrix = [a_new, b_new, c_new, d_new, e_new, f_new];
+  }
+
   translate(x, y) {
-    // TODO: Implement transformations
+    this.transform(1, 0, 0, 1, x, y);
   }
 
   scale(x, y) {
-    // TODO: Implement transformations
+    this.transform(x, 0, 0, y, 0, 0);
+  }
+
+  rotate(angle) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    this.transform(cos, sin, -sin, cos, 0, 0);
   }
 
   _parseFont() {
@@ -257,6 +302,20 @@ export class CanvasRenderingContext2D {
     this.lineTo(x + w, y);
     this.lineTo(x + w, y + h);
     this.lineTo(x, y + h);
+    this.closePath();
+  }
+
+  roundRect(x, y, w, h, radii) {
+    this.beginPath();
+    this.moveTo(x + radii, y);
+    this.lineTo(x + w - radii, y);
+    this.arc(x + w - radii, y + radii, radii, -Math.PI / 2, 0);
+    this.lineTo(x + w, y + h - radii);
+    this.arc(x + w - radii, y + h - radii, radii, 0, Math.PI / 2);
+    this.lineTo(x + radii, y + h);
+    this.arc(x + radii, y + h - radii, radii, Math.PI / 2, Math.PI);
+    this.lineTo(x, y + radii);
+    this.arc(x + radii, y + radii, radii, Math.PI, Math.PI * 1.5);
     this.closePath();
   }
 
@@ -668,7 +727,15 @@ export class CanvasRenderingContext2D {
   }
 
   createLinearGradient(x0, y0, x1, y1) {
-    return new CanvasGradient(x0, y0, x1, y1);
+    return new CanvasGradient({ type: 'linear', x0, y0, x1, y1 });
+  }
+
+  createRadialGradient(x0, y0, r0, x1, y1, r1) {
+    return new CanvasGradient({ type: 'radial', x0, y0, r0, x1, y1, r1 });
+  }
+
+  createConicGradient(startAngle, x, y) {
+    return new CanvasGradient({ type: 'conic', startAngle, x, y });
   }
 
   _getColorFromGradient(gradient, t) {
@@ -771,19 +838,14 @@ export class CanvasRenderingContext2D {
     const b = -2 * (px * dx + py * dy + r0 * dr);
     const c = px * px + py * py - r0 * r0;
 
-    console.log(`x=${x}, y=${y}`);
-    console.log(`a=${a}, b=${b}, c=${c}`);
-
     if (a === 0) {
         if (b === 0) return { r: 0, g: 0, b: 0, a: 0 };
         const t = -c / b;
-        console.log(`a=0, t=${t}`);
         const clampedT = Math.max(0, Math.min(1, t));
         return this._getColorFromGradient(gradient, clampedT);
     }
 
     const discriminant = b * b - 4 * a * c;
-    console.log(`discriminant=${discriminant}`);
     if (discriminant < 0) {
         return { r: 0, g: 0, b: 0, a: 0 };
     }
@@ -793,72 +855,41 @@ export class CanvasRenderingContext2D {
     const t1 = (-b + sqrt_discriminant) / (2 * a);
     const t2 = (-b - sqrt_discriminant) / (2 * a);
 
-    console.log(`t1=${t1}, t2=${t2}`);
-
-    let t = -1;
-    const r_t1 = r0 + t1 * dr;
-    const r_t2 = r0 + t2 * dr;
-
-    console.log(`r_t1=${r_t1}, r_t2=${r_t2}`);
-
-    if (r_t1 >= 0 && r_t2 >= 0) {
-      t = Math.max(t1, t2);
-    } else if (r_t1 >= 0) {
-      t = t1;
-    } else if (r_t2 >= 0) {
-      t = t2;
-    } else {
-      return { r: 0, g: 0, b: 0, a: 0 };
+    const candidates = [];
+    if (t1 >= 0 && (r0 + t1 * dr) >= 0) {
+        candidates.push(t1);
+    }
+    if (t2 >= 0 && (r0 + t2 * dr) >= 0) {
+        candidates.push(t2);
     }
 
-    console.log(`t=${t}`);
+    if (candidates.length === 0) {
+        return { r: 0, g: 0, b: 0, a: 0 };
+    }
+
+    const t = Math.min(...candidates);
     const clampedT = Math.max(0, Math.min(1, t));
     return this._getColorFromGradient(gradient, clampedT);
   }
 
   fillRect(x, y, width, height) {
-    if (this.fillStyle instanceof CanvasGradient) {
-      const { data, width: canvasWidth } = this.imageData;
-      const xStart = Math.max(0, x);
-      const yStart = Math.max(0, y);
-      const xEnd = Math.min(this.width, x + width);
-      const yEnd = Math.min(this.height, y + height);
-      for (let j = yStart; j < yEnd; j++) {
-        for (let i = xStart; i < xEnd; i++) {
-        if (this.clippingPath && !this._isPointInPath(i, j, this.clippingPathAsVertices)) {
-            continue;
-        }
-          const color = this._getColorFromGradientAtPoint(i, j, this.fillStyle);
-          const index = (j * canvasWidth + i) * 4;
-          data[index] = color.r;
-          data[index + 1] = color.g;
-          data[index + 2] = color.b;
-          data[index + 3] = color.a;
-        }
-      }
-      return;
-    }
+    const oldPath = this.path;
+    this.beginPath();
 
-    const color = this._parseColor(this.fillStyle);
-    const { data, width: canvasWidth } = this.imageData;
+    const p1 = this._transformPoint(x, y);
+    const p2 = this._transformPoint(x + width, y);
+    const p3 = this._transformPoint(x + width, y + height);
+    const p4 = this._transformPoint(x, y + height);
 
-    const xStart = Math.max(0, x);
-    const yStart = Math.max(0, y);
-    const xEnd = Math.min(this.width, x + width);
-    const yEnd = Math.min(this.height, y + height);
+    this.moveTo(p1.x, p1.y);
+    this.lineTo(p2.x, p2.y);
+    this.lineTo(p3.x, p3.y);
+    this.lineTo(p4.x, p4.y);
+    this.closePath();
 
-    for (let j = yStart; j < yEnd; j++) {
-      for (let i = xStart; i < xEnd; i++) {
-        if (this.clippingPath && !this._isPointInPath(i, j, this.clippingPathAsVertices)) {
-            continue;
-        }
-        const index = (j * canvasWidth + i) * 4;
-        data[index] = color.r;
-        data[index + 1] = color.g;
-        data[index + 2] = color.b;
-        data[index + 3] = color.a;
-      }
-    }
+    this.fill();
+
+    this.path = oldPath;
   }
 
   clearRect(x, y, width, height) {
@@ -881,15 +912,15 @@ export class CanvasRenderingContext2D {
   }
 
   strokeRect(x, y, width, height) {
-    const x0 = x;
-    const y0 = y;
-    const x1 = x + width;
-    const y1 = y + height;
+    const p1 = this._transformPoint(x, y);
+    const p2 = this._transformPoint(x + width, y);
+    const p3 = this._transformPoint(x + width, y + height);
+    const p4 = this._transformPoint(x, y + height);
 
-    this._drawLine(x0, y0, x1, y0); // top
-    this._drawLine(x1, y0, x1, y1); // right
-    this._drawLine(x1, y1, x0, y1); // bottom
-    this._drawLine(x0, y1, x0, y0); // left
+    this._drawLine(p1.x, p1.y, p2.x, p2.y);
+    this._drawLine(p2.x, p2.y, p3.x, p3.y);
+    this._drawLine(p3.x, p3.y, p4.x, p4.y);
+    this._drawLine(p4.x, p4.y, p1.x, p1.y);
   }
 
   _drawLine(x0, y0, x1, y1) {
