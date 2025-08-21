@@ -64,6 +64,6 @@ export class Context {
 export let g_failure_reason = "";
 export function err(str, reason) {
     g_failure_reason = reason;
-    console.error(reason);
+    console.error(`Error: ${str} (${reason})`);
     return 0;
 }

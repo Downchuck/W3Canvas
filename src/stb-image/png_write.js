@@ -122,28 +122,29 @@ function stbiw__encode_png_line(src, stride_bytes, width, height, y, n, filter_t
 
 function stbiw__write_chunk(out, type, data) {
     const len = data.length;
+    const chunk = new Uint8Array(12 + len);
+    const dv = new DataView(chunk.buffer);
+
     // Length
-    out.push((len >> 24) & 0xff);
-    out.push((len >> 16) & 0xff);
-    out.push((len >> 8) & 0xff);
-    out.push(len & 0xff);
+    dv.setUint32(0, len, false);
 
     // Type
-    const typeBytes = new Uint8Array(4 + len);
-    typeBytes[0] = type.charCodeAt(0);
-    typeBytes[1] = type.charCodeAt(1);
-    typeBytes[2] = type.charCodeAt(2);
-    typeBytes[3] = type.charCodeAt(3);
-    typeBytes.set(data, 4);
+    chunk[4] = type.charCodeAt(0);
+    chunk[5] = type.charCodeAt(1);
+    chunk[6] = type.charCodeAt(2);
+    chunk[7] = type.charCodeAt(3);
 
-    out.push(...typeBytes);
+    // Data
+    chunk.set(data, 8);
 
     // CRC
-    const crc = stbiw__crc32(typeBytes, 4 + len);
-    out.push((crc >> 24) & 0xff);
-    out.push((crc >> 16) & 0xff);
-    out.push((crc >> 8) & 0xff);
-    out.push(crc & 0xff);
+    const typeAndData = new Uint8Array(4 + len);
+    typeAndData.set(chunk.subarray(4, 8));
+    typeAndData.set(data, 4);
+    const crc = stbiw__crc32(typeAndData, 4 + len);
+    dv.setUint32(8 + len, crc, false);
+
+    for(let i=0; i<chunk.length; ++i) out.push(chunk[i]);
 }
 
 export function stbi_write_png_to_mem(pixels, stride_bytes, x, y, n, out_len_obj) {
@@ -200,8 +201,8 @@ export function stbi_write_png_to_mem(pixels, stride_bytes, x, y, n, out_len_obj
     // IHDR
     const ihdr = new Uint8Array(13);
     const dv_ihdr = new DataView(ihdr.buffer);
-    dv_ihdr.setUint32(0, x);
-    dv_ihdr.setUint32(4, y);
+    dv_ihdr.setUint32(0, x, false);
+    dv_ihdr.setUint32(4, y, false);
     ihdr[8] = 8; // bit depth
     ihdr[9] = ctype; // color type
     ihdr[10] = 0; // compression method
