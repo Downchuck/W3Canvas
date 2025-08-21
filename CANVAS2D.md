@@ -7,8 +7,6 @@ This document provides an analysis of the current Canvas 2D implementation, high
 The following properties and methods are missing from the `CanvasRenderingContext2D` implementation, based on the MDN documentation.
 
 ### Gradients and Patterns
-- `createPattern()`
-  - **Note:** This appears to be missing from the core context implementation, though it is used in some examples (likely leveraging the native browser canvas).
 
 ### Shadows
 - `shadowBlur`

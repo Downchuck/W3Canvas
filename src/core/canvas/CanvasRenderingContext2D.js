@@ -3,6 +3,7 @@ import { drawArc, fillArcWithMidpoint, getArcScanlineIntersections } from '../al
 import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algorithms/bezier.js';
 import { strokePolyline } from '../algorithms/stroke.js';
 import { CanvasGradient } from './CanvasGradient.js';
+import { CanvasPattern } from './CanvasPattern.js';
 import fs from 'fs';
 import {
     FontInfo, InitFont, FindGlyphIndex, GetGlyphShape, GetCodepointHMetrics,
@@ -577,6 +578,7 @@ export class CanvasRenderingContext2D {
     const { data, width: canvasWidth } = this.imageData;
     let color;
     const isGradient = this.fillStyle instanceof CanvasGradient;
+    const isPattern = this.fillStyle instanceof CanvasPattern;
 
     let minY = Infinity;
     let maxY = -Infinity;
@@ -640,6 +642,8 @@ export class CanvasRenderingContext2D {
                         const index = (y * canvasWidth + x) * 4;
                         if (isGradient) {
                             color = this._getColorFromGradientAtPoint(x, y, this.fillStyle);
+                        } else if (isPattern) {
+                            color = this._getColorFromPatternAtPoint(x, y, this.fillStyle);
                         } else {
                             color = this._parseColor(this.fillStyle);
                         }
@@ -778,6 +782,10 @@ export class CanvasRenderingContext2D {
     return new CanvasGradient({ type: 'conic', startAngle, x, y });
   }
 
+  createPattern(image, repetition) {
+    return new CanvasPattern(image, repetition);
+  }
+
   _getColorFromGradient(gradient, t) {
       const stops = gradient.colorStops;
       if (stops.length === 0) {
@@ -830,6 +838,41 @@ export class CanvasRenderingContext2D {
       return this._getColorFromConicGradientAtPoint(x, y, gradient);
     }
     return { r: 0, g: 0, b: 0, a: 0 }; // Should not happen
+  }
+
+  _getColorFromPatternAtPoint(x, y, pattern) {
+    const { image, repetition } = pattern;
+    const { width, height, data } = image;
+
+    let sx = x;
+    let sy = y;
+
+    if (repetition === 'repeat') {
+        sx = sx % width;
+        sy = sy % height;
+        if (sx < 0) sx += width;
+        if (sy < 0) sy += height;
+    } else if (repetition === 'repeat-x') {
+        if (y < 0 || y >= height) return { r: 0, g: 0, b: 0, a: 0 };
+        sx = sx % width;
+        if (sx < 0) sx += width;
+    } else if (repetition === 'repeat-y') {
+        if (x < 0 || x >= width) return { r: 0, g: 0, b: 0, a: 0 };
+        sy = sy % height;
+        if (sy < 0) sy += height;
+    } else { // no-repeat
+        if (x < 0 || x >= width || y < 0 || y >= height) {
+            return { r: 0, g: 0, b: 0, a: 0 };
+        }
+    }
+
+    const index = (Math.floor(sy) * width + Math.floor(sx)) * 4;
+    return {
+        r: data[index],
+        g: data[index + 1],
+        b: data[index + 2],
+        a: data[index + 3],
+    };
   }
 
   _getColorFromConicGradientAtPoint(x, y, gradient) {
