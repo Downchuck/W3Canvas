@@ -4,14 +4,13 @@ import { CanvasRenderingContext2D } from '../src/core/canvas/CanvasRenderingCont
 import { createCanvas } from 'canvas';
 import fs from 'fs';
 
-test('fillText with identity transform', (t) => {
+test('fillText with identity transform', async (t) => {
     const ctx = new CanvasRenderingContext2D(100, 100);
     ctx.fillStyle = 'green';
     ctx.font = '20px sans-serif';
     ctx.fillText('Hi', 10, 20);
 
     const imageData = ctx.getImageData(0, 0, 100, 100);
-    assert.strictEqual(imageData.data[1*4+1], 255, 'Green channel should be 255');
 
     const canvas = createCanvas(100, 100);
     const canvasCtx = canvas.getContext('2d');
@@ -22,7 +21,10 @@ test('fillText with identity transform', (t) => {
     const out = fs.createWriteStream('test_output.png');
     const stream = canvas.createPNGStream();
     stream.pipe(out);
-    out.on('finish', () => console.log('The PNG file was created.'));
+    await new Promise((resolve) => out.on('finish', resolve));
+    console.log('The PNG file was created.');
+
+    assert.strictEqual(imageData.data[1*4+1], 255, 'Green channel should be 255');
 });
 
 test.skip('strokeText with identity transform', (t) => {
