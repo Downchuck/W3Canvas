@@ -105,10 +105,16 @@ class CanvasVideoElement extends HTMLElement {
 
             const pathData = pathMatch[1];
             this.path2d = new Path2D(pathData);
+            this.dispatchEvent(new Event('load'));
             this.render(); // Render the first frame
         } catch (error) {
             console.error('Error loading or parsing SVG:', error);
+            this.dispatchEvent(new CustomEvent('error', { detail: { error } }));
         }
+    }
+
+    disconnectedCallback() {
+        this.pause();
     }
 
     render() {

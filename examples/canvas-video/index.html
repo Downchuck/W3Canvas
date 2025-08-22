@@ -28,6 +28,13 @@
 
         playButton.addEventListener('click', () => video.play());
         pauseButton.addEventListener('click', () => video.pause());
+
+        video.addEventListener('load', () => {
+            console.log('SUCCESS: "load" event fired on canvas-video element.');
+        });
+        video.addEventListener('error', (e) => {
+            console.error('ERROR: "error" event fired on canvas-video element.', e.detail.error);
+        });
     </script>
 </body>
 </html>
