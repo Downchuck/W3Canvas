@@ -24,6 +24,7 @@ export class EventDispatcher {
         this.canvas = canvas;
         this.rootElement = rootElement;
         this.focusedElement = rootElement; // Default focus to the root
+        this.mousedownTarget = null;
     }
 
     init() {
@@ -36,7 +37,7 @@ export class EventDispatcher {
 
     handleMouseDown(e) {
         const target = this.rootElement.hitTest(e.clientX, e.clientY);
-        console.log('mousedown target:', target);
+        this.mousedownTarget = target;
         if (target) {
             if (target instanceof HTMLOptionElement) {
                 const select = target.parent;
@@ -70,7 +71,16 @@ export class EventDispatcher {
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
             );
             target.dispatchEvent(event);
+
+            if (target === this.mousedownTarget) {
+                const clickEvent = new MouseEvent(
+                    'click', view, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                    e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
+                );
+                target.dispatchEvent(clickEvent);
+            }
         }
+        this.mousedownTarget = null;
     }
 
     handleMouseMove(e) {

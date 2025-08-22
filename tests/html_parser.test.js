@@ -1,5 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
+
+global.Image = class {
+    constructor() {
+        // Mock Image class
+    }
+};
 import { HTMLParser } from '../src/dom/parser/html_parser.js';
 import { NODE_TYPE_DOCUMENT, NODE_TYPE_ELEMENT, NODE_TYPE_TEXT, NODE_TYPE_COMMENT } from '../src/dom/html/dom_core.js';
 import { HTMLArticleElement, HTMLSectionElement, HTMLNavElement } from '../src/dom/html/dom_html_basic.js';
