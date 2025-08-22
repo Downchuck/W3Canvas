@@ -7,7 +7,7 @@ This document analyzes the current state of the HTML implementation in this proj
 The HTML implementation is based on a custom DOM and parser.
 
 *   **DOM:** The DOM is defined in `src/dom/html/dom_core.js` and `src/dom/html/dom_html_basic.js`. It includes a generic `Element` class and a more specific `HTMLElement` class that adds common attributes.
-*   **Parser:** The parser in `src/dom/parser/html_parser.js` builds a DOM tree from an HTML string. However, it does not use the `document.createElement` mechanism and instead creates generic `Element` objects for all tags.
+*   **Parser:** The parser in `src/dom/parser/html_parser.js` builds a DOM tree from an HTML string. It uses a `document.createElement` mechanism to instantiate the correct element classes for each tag.
 *   **Element Registration:** A `registerElement` function in `src/dom/html/dom_html_basic.js` maps tag names to specific element constructor functions. This allows for specialized implementations of certain elements.
 
 ## Supported HTML Elements
@@ -19,7 +19,9 @@ The following HTML elements have specific implementations:
 *   `<span>`
 *   `<div>`
 *   `<p>`
-*   `<input>` (generic, without support for most modern types)
+*   `<input type="text">`
+*   `<select>`
+*   `<option>`
 *   `<textarea>`
 *   `<img>`
 *   `<button>`
@@ -51,6 +53,7 @@ The `<input>` element lacks support for the new types introduced in HTML5, such 
 *   `number`, `range`
 *   `color`
 *   `email`, `url`, `search`, `tel`
+*   `button`, `checkbox`, `radio` (basic support exists in `button_control.js` but is not fully integrated with the DOM)
 
 ### Other Elements
 *   `<details>` and `<summary>`
