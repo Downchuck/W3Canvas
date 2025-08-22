@@ -43,10 +43,6 @@
                 "virtual:0460f86c7587ee75dac643681550c044e8047ba46e219a5baac054fc0fea2d0af97a9bd3fe4b22de0884797215e0a1a4368bb60f9ef7087a69c4008789f4e032#npm:26.1.0"
               ],
               [
-                "pngjs",
-                "npm:7.0.0"
-              ],
-              [
                 "typescript",
                 "patch:typescript@npm%3A5.9.2#optional!builtin<compat/typescript>::version=5.9.2&hash=5786d5"
               ]
@@ -559,10 +555,6 @@
               [
                 "jsdom",
                 "virtual:0460f86c7587ee75dac643681550c044e8047ba46e219a5baac054fc0fea2d0af97a9bd3fe4b22de0884797215e0a1a4368bb60f9ef7087a69c4008789f4e032#npm:26.1.0"
-              ],
-              [
-                "pngjs",
-                "npm:7.0.0"
               ],
               [
                 "typescript",
@@ -2534,24 +2526,6 @@
               [
                 "picomatch",
                 "npm:4.0.3"
-              ]
-            ],
-            "linkType": "HARD"
-          }
-        ]
-      ]
-    ],
-    [
-      "pngjs",
-      [
-        [
-          "npm:7.0.0",
-          {
-            "packageLocation": "../home/jules/.yarn/berry/cache/pngjs-npm-7.0.0-788de6ba02-10.zip/node_modules/pngjs/",
-            "packageDependencies": [
-              [
-                "pngjs",
-                "npm:7.0.0"
               ]
             ],
             "linkType": "HARD"

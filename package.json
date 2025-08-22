@@ -22,7 +22,6 @@
     "test": "yarn node --test"
   },
   "devDependencies": {
-    "pngjs": "^7.0.0",
     "typescript": "^5.9.2"
   },
   "packageManager": "yarn@4.9.2",
