@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas Video Element Test</title>
+    <style>
+        canvas-video {
+            display: block;
+            width: 500px;
+            height: 500px;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Canvas Video Custom Element Test</h1>
+    <p>A static SVG path should be rendered and animated on the canvas below.</p>
+
+    <canvas-video src="test.svg" controls></canvas-video>
+
+    <button id="play-button">Play</button>
+    <button id="pause-button">Pause</button>
+
+    <script type="module" src="canvas-video.js"></script>
+    <script type="module">
+        const video = document.querySelector('canvas-video');
+        const playButton = document.getElementById('play-button');
+        const pauseButton = document.getElementById('pause-button');
+
+        playButton.addEventListener('click', () => video.play());
+        pauseButton.addEventListener('click', () => video.pause());
+    </script>
+</body>
+</html>
