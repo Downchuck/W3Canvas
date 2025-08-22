@@ -117,6 +117,10 @@ class CanvasVideoElement extends HTMLElement {
         this.pause();
     }
 
+    captureStream() {
+        return this.canvas.captureStream();
+    }
+
     render() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
