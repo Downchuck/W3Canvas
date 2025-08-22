@@ -1,5 +1,4 @@
 import { NodeIterator } from './html/dom_core.js';
-import { SVGElement } from './svg/dom_svg_base.js';
 
 const dirtyElements = new Set();
 
@@ -7,7 +6,9 @@ export function requestRepaint(element) {
     dirtyElements.add(element);
 }
 
-export function render(domElement, canvasContext) {
+export async function render(domElement, canvasContext) {
+    const { SVGElement } = await import('./svg/dom_svg_base.js');
+
     // Full repaint
     const iterator = new NodeIterator(domElement, (el) => {
         if (el.nodeType === 1) { // ELEMENT_NODE

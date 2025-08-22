@@ -19,7 +19,7 @@ The following HTML elements have specific implementations:
 *   `<span>`
 *   `<div>`
 *   `<p>`
-*   `<input type="text">`
+*   `<input type="text, checkbox, radio, button">`
 *   `<select>`
 *   `<option>`
 *   `<textarea>`
@@ -53,7 +53,6 @@ The `<input>` element lacks support for the new types introduced in HTML5, such 
 *   `number`, `range`
 *   `color`
 *   `email`, `url`, `search`, `tel`
-*   `button`, `checkbox`, `radio` (basic support exists in `button_control.js` but is not fully integrated with the DOM)
 
 ### Other Elements
 *   `<details>` and `<summary>`
@@ -64,11 +63,11 @@ The `<input>` element lacks support for the new types introduced in HTML5, such 
 ### APIs
 Many important HTML5 JavaScript APIs are not implemented, including:
 *   Web Storage (localStorage, sessionStorage)
-*   Web Workers
-*   WebSockets
 *   Geolocation API
 *   Drag and Drop API
 *   History API
+
+Note: Web Workers are now supported. WebSockets and fetch are available through the underlying Node.js environment and do not require a custom implementation.
 
 ## Recommendations
 
