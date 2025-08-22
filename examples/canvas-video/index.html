@@ -17,8 +17,6 @@
 
     <canvas-video src="test.svg" controls></canvas-video>
 
-    <button id="play-button">Play</button>
-    <button id="pause-button">Pause</button>
     <button id="connect-button">Connect to Video Element</button>
 
     <video id="video-player" controls></video>
@@ -27,12 +25,8 @@
     <script type="module">
         const canvasVideo = document.querySelector('canvas-video');
         const videoPlayer = document.getElementById('video-player');
-        const playButton = document.getElementById('play-button');
-        const pauseButton = document.getElementById('pause-button');
         const connectButton = document.getElementById('connect-button');
 
-        playButton.addEventListener('click', () => canvasVideo.play());
-        pauseButton.addEventListener('click', () => canvasVideo.pause());
         connectButton.addEventListener('click', () => {
             const stream = canvasVideo.captureStream();
             videoPlayer.srcObject = stream;

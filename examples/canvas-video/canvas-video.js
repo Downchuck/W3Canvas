@@ -15,10 +15,14 @@ class CanvasVideoElement extends HTMLElement {
         this.duration = 10; // Let's say the video is 10 seconds long
         this.paused = true;
         this.animationFrameId = null;
+
+        this.controlsContainer = null;
+        this.playPauseButton = null;
+        this.progressBar = null;
     }
 
     static get observedAttributes() {
-        return ['src', 'width', 'height'];
+        return ['src', 'width', 'height', 'controls'];
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
@@ -27,6 +31,12 @@ class CanvasVideoElement extends HTMLElement {
             this.load();
         } else if (name === 'width' || name === 'height') {
             this.updateCanvasSize();
+        } else if (name === 'controls') {
+            if (newValue !== null) {
+                this.createControls();
+            } else {
+                this.removeControls();
+            }
         }
     }
 
@@ -35,6 +45,9 @@ class CanvasVideoElement extends HTMLElement {
         if (this.hasAttribute('src')) {
             this.src = this.getAttribute('src');
             this.load();
+        }
+        if (this.hasAttribute('controls')) {
+            this.createControls();
         }
     }
 
@@ -51,6 +64,9 @@ class CanvasVideoElement extends HTMLElement {
 
     set currentTime(value) {
         this._currentTime = value;
+        if (this.progressBar) {
+            this.progressBar.value = this.currentTime;
+        }
         this.render();
     }
 
@@ -59,6 +75,9 @@ class CanvasVideoElement extends HTMLElement {
         this.paused = false;
         this.startTime = performance.now() - this.currentTime * 1000;
         this.animationFrameId = requestAnimationFrame(this.tick.bind(this));
+        if (this.playPauseButton) {
+            this.playPauseButton.textContent = 'Pause';
+        }
     }
 
     pause() {
@@ -67,6 +86,9 @@ class CanvasVideoElement extends HTMLElement {
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
+        }
+        if (this.playPauseButton) {
+            this.playPauseButton.textContent = 'Play';
         }
     }
 
@@ -77,6 +99,10 @@ class CanvasVideoElement extends HTMLElement {
         if (this.currentTime >= this.duration) {
             this._currentTime = this.duration;
             this.pause();
+        }
+
+        if (this.progressBar) {
+            this.progressBar.value = this.currentTime;
         }
 
         this.render();
@@ -119,6 +145,67 @@ class CanvasVideoElement extends HTMLElement {
 
     captureStream() {
         return this.canvas.captureStream();
+    }
+
+    createControls() {
+        if (this.controlsContainer) return;
+
+        const style = document.createElement('style');
+        style.textContent = `
+            .controls {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                padding: 5px;
+            }
+            .controls button {
+                margin-right: 10px;
+            }
+            .controls input[type=range] {
+                flex-grow: 1;
+            }
+        `;
+        this.shadowRoot.appendChild(style);
+
+        this.controlsContainer = document.createElement('div');
+        this.controlsContainer.className = 'controls';
+
+        this.playPauseButton = document.createElement('button');
+        this.playPauseButton.textContent = 'Play';
+        this.playPauseButton.addEventListener('click', () => {
+            if (this.paused) {
+                this.play();
+            } else {
+                this.pause();
+            }
+        });
+        this.controlsContainer.appendChild(this.playPauseButton);
+
+        this.progressBar = document.createElement('input');
+        this.progressBar.type = 'range';
+        this.progressBar.min = 0;
+        this.progressBar.max = this.duration;
+        this.progressBar.step = 0.1;
+        this.progressBar.value = this.currentTime;
+        this.progressBar.addEventListener('input', () => {
+            this.currentTime = this.progressBar.value;
+        });
+        this.controlsContainer.appendChild(this.progressBar);
+
+        this.shadowRoot.appendChild(this.controlsContainer);
+    }
+
+    removeControls() {
+        if (this.controlsContainer) {
+            this.shadowRoot.removeChild(this.controlsContainer);
+            this.controlsContainer = null;
+            this.playPauseButton = null;
+            this.progressBar = null;
+        }
     }
 
     render() {
