@@ -27,13 +27,6 @@ The following HTML elements have specific implementations:
 *   `<button>`
 *   `<a>` (as `HTMLLinkElement`)
 *   `<canvas>` (the core focus of the project)
-
-## Missing HTML5 Features
-
-The implementation is missing a significant number of HTML5 features.
-
-### Semantic Elements
-The following structural and semantic elements are not supported:
 *   `<article>`
 *   `<section>`
 *   `<nav>`
@@ -41,6 +34,13 @@ The following structural and semantic elements are not supported:
 *   `<header>`
 *   `<footer>`
 *   `<main>`
+
+## Missing HTML5 Features
+
+The implementation is missing a significant number of HTML5 features.
+
+### Semantic Elements
+The following structural and semantic elements are not supported:
 *   `<figure>` and `<figcaption>`
 
 ### Multimedia
