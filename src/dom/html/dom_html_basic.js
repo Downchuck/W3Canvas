@@ -299,7 +299,7 @@ export class HTMLInputElement extends HTMLElement {
 
     repaint(ctx) {
         this.painter.paintBox(ctx, this, this.style);
-        if (this.type === 'text' || this.type === 'email' || this.type === 'url' || this.type === 'search' || this.type === 'tel') {
+        if (this.type === 'text' || this.type === 'email' || this.type === 'url' || this.type === 'search' || this.type === 'tel' || this.type === 'time' || this.type === 'datetime-local') {
             const contentBox = this.getContentBox();
             ctx.save();
             ctx.fillStyle = this.style.getFont().getTextColor();
@@ -652,6 +652,20 @@ export class HTMLMarkElement extends HTMLElement {
     }
 }
 
+export class HTMLFigureElement extends HTMLElement {
+    constructor() {
+        super("FIGURE");
+        this.style.style.setProperty('display', 'block');
+    }
+}
+
+export class HTMLFigCaptionElement extends HTMLElement {
+    constructor() {
+        super("FIGCAPTION");
+        this.style.style.setProperty('display', 'block');
+    }
+}
+
 registerElement("FORM", "HTMLFormElement", HTMLFormElement);
 registerElement("BODY", "HTMLBodyElement", HTMLBodyElement);
 registerElement("SPAN", "HTMLSpanElement", HTMLSpanElement);
@@ -678,3 +692,5 @@ registerElement("PROGRESS", "HTMLProgressElement", HTMLProgressElement);
 registerElement("METER", "HTMLMeterElement", HTMLMeterElement);
 registerElement("TIME", "HTMLTimeElement", HTMLTimeElement);
 registerElement("MARK", "HTMLMarkElement", HTMLMarkElement);
+registerElement("FIGURE", "HTMLFigureElement", HTMLFigureElement);
+registerElement("FIGCAPTION", "HTMLFigCaptionElement", HTMLFigCaptionElement);

@@ -19,7 +19,7 @@ The following HTML elements have specific implementations:
 *   `<span>`
 *   `<div>`
 *   `<p>`
-*   `<input type="text, checkbox, radio, button, number, range, color, date">`
+*   `<input type="text, checkbox, radio, button, number, range, color, date, time, datetime-local">`
 *   `<select>`
 *   `<option>`
 *   `<textarea>`
@@ -40,22 +40,22 @@ The following HTML elements have specific implementations:
 *   `<meter>`
 *   `<time>`
 *   `<mark>`
+*   `<figure>`
+*   `<figcaption>`
 
 ## Missing HTML5 Features
 
 The implementation is missing a significant number of HTML5 features.
 
 ### Semantic Elements
-The following structural and semantic elements are not supported:
-*   `<figure>` and `<figcaption>`
+*No missing elements in this category.*
 
 ### Multimedia
 *   `<audio>`
 *   `<video>`
 
 ### Form Controls
-The `<input>` element lacks support for the following types:
-*   `time`, `datetime-local`
+*No missing elements in this category.*
 
 ### Other Elements
 *No missing elements in this category.*

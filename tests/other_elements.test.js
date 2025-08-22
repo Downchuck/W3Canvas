@@ -8,7 +8,7 @@ global.Image = class {
 };
 import { HTMLParser } from '../src/dom/parser/html_parser.js';
 import { EventDispatcher } from '../src/dom/event_dispatcher.js';
-import { HTMLDetailsElement, HTMLSummaryElement, HTMLProgressElement, HTMLMeterElement, HTMLTimeElement, HTMLMarkElement } from '../src/dom/html/dom_html_basic.js';
+import { HTMLDetailsElement, HTMLSummaryElement, HTMLProgressElement, HTMLMeterElement, HTMLTimeElement, HTMLMarkElement, HTMLFigureElement, HTMLFigCaptionElement } from '../src/dom/html/dom_html_basic.js';
 
 test('should toggle details element on summary click', () => {
     const parser = new HTMLParser();
@@ -65,4 +65,35 @@ test('should parse time and mark elements', () => {
     const mark = doc.getElementById('mymark');
     assert.strictEqual(time.tagName, 'time', 'time element should be parsed');
     assert.strictEqual(mark.tagName, 'mark', 'mark element should be parsed');
+});
+
+test('should parse figure and figcaption elements', () => {
+    const parser = new HTMLParser();
+    const html = `
+        <figure id="myfigure">
+            <p>A cute cat.</p>
+            <figcaption id="myfigcaption">Fig.1 - A cat, probably plotting something.</figcaption>
+        </figure>
+    `;
+    const doc = parser.parse(html);
+    const figure = doc.getElementById('myfigure');
+    const figcaption = doc.getElementById('myfigcaption');
+    assert.strictEqual(figure.tagName, 'figure', 'figure element should be parsed');
+    assert.strictEqual(figcaption.tagName, 'figcaption', 'figcaption element should be parsed');
+    assert.strictEqual(figure.children.includes(figcaption), true, 'figcaption should be a child of figure');
+});
+
+test('should parse time and datetime-local input types', () => {
+    const parser = new HTMLParser();
+    const html = `
+        <input type="time" id="mytime" value="13:30">
+        <input type="datetime-local" id="mydatetime" value="2025-08-21T19:30">
+    `;
+    const doc = parser.parse(html);
+    const timeInput = doc.getElementById('mytime');
+    const datetimeInput = doc.getElementById('mydatetime');
+    assert.strictEqual(timeInput.type, 'time', 'time input type should be correct');
+    assert.strictEqual(timeInput.value, '13:30', 'time input value should be correct');
+    assert.strictEqual(datetimeInput.type, 'datetime-local', 'datetime-local input type should be correct');
+    assert.strictEqual(datetimeInput.value, '2025-08-21T19:30', 'datetime-local input value should be correct');
 });
