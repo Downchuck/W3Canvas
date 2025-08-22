@@ -2,6 +2,7 @@ import { bresenham } from '../algorithms/bresenham.js';
 import { drawArc, fillArcWithMidpoint, getArcScanlineIntersections } from '../algorithms/arc.js';
 import { getBezierPoints, getBezierYIntercepts, getBezierXforT } from '../algorithms/bezier.js';
 import { strokePolyline } from '../algorithms/stroke.js';
+import { scanlineFill } from '../algorithms/scanline_fill.js';
 import { CanvasGradient } from './CanvasGradient.js';
 import { CanvasPattern } from './CanvasPattern.js';
 import { Path2D } from './Path2D.js';
@@ -630,142 +631,21 @@ export class CanvasRenderingContext2D {
         drawShadow(this, pathCommands, false);
     }
 
-    const transformedPathCommands = this._getTransformedPath(pathCommands);
+    // The scanlineFill module now handles transformations and rasterization.
+    const filledImageData = scanlineFill(
+        pathCommands,
+        this.width,
+        this.height,
+        this.fillStyle,
+        this.globalAlpha,
+        this._getTransformedPath.bind(this),
+        this.constructor,
+        this._getColorFromGradientAtPoint.bind(this),
+        this._getColorFromPatternAtPoint.bind(this),
+        this._parseColor.bind(this)
+    );
 
-    const shapeCtx = new this.constructor(this.width, this.height, { isShadowContext: true });
-    shapeCtx.fillStyle = this.fillStyle;
-    shapeCtx.globalAlpha = this.globalAlpha;
-
-    const allEdges = [];
-    let currentX = 0;
-    let currentY = 0;
-    let startX = 0;
-    let startY = 0;
-
-    const addEdge = (edge) => {
-        if (Math.abs(edge.y_min - edge.y_max) < 1e-9) return; // Ignore horizontal edges with a tolerance
-        allEdges.push(edge);
-    };
-
-    for (const command of transformedPathCommands) {
-        switch (command.type) {
-            case 'move':
-                currentX = command.x;
-                currentY = command.y;
-                startX = command.x;
-                startY = command.y;
-                break;
-            case 'line': {
-                const y_min = Math.min(currentY, command.y);
-                const y_max = Math.max(currentY, command.y);
-                const x_at_ymin = currentY < command.y ? currentX : command.x;
-                const slope_inv = (command.x - currentX) / (command.y - currentY);
-                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
-                currentX = command.x;
-                currentY = command.y;
-                break;
-            }
-            case 'bezier': {
-                const p0 = { x: currentX, y: currentY };
-                const p1 = { x: command.cp1x, y: command.cp1y };
-                const p2 = { x: command.cp2x, y: command.cp2y };
-                const p3 = { x: command.x, y: command.y };
-                const y_min = Math.min(p0.y, p1.y, p2.y, p3.y);
-                const y_max = Math.max(p0.y, p1.y, p2.y, p3.y);
-                addEdge({ type: 'bezier', p0, p1, p2, p3, y_min, y_max });
-                currentX = command.x;
-                currentY = command.y;
-                break;
-            }
-            case 'close':
-                const y_min = Math.min(currentY, startY);
-                const y_max = Math.max(currentY, startY);
-                const x_at_ymin = currentY < startY ? currentX : startX;
-                const slope_inv = (startX - currentX) / (startY - currentY);
-                addEdge({ type: 'line', y_min, y_max, x_at_ymin, slope_inv });
-                currentX = startX;
-                currentY = startY;
-                break;
-            case 'arc': {
-                const y_min = command.y - command.radius;
-                const y_max = command.y + command.radius;
-                addEdge({ type: 'arc', ...command, y_min, y_max });
-                currentX = command.x + command.radius * Math.cos(command.endAngle);
-                currentY = command.y + command.radius * Math.sin(command.endAngle);
-                break;
-            }
-        }
-    }
-
-    if (allEdges.length === 0) {
-        return;
-    }
-
-    const { data, width: canvasWidth } = this.imageData;
-    let color;
-    const isGradient = this.fillStyle instanceof CanvasGradient;
-    const isPattern = this.fillStyle instanceof CanvasPattern;
-
-    let minY = Infinity;
-    let maxY = -Infinity;
-    for (const edge of allEdges) {
-        minY = Math.min(minY, edge.y_min);
-        maxY = Math.max(maxY, edge.y_max);
-    }
-    minY = Math.max(0, Math.floor(minY));
-    maxY = Math.min(this.height, Math.ceil(maxY));
-
-    const activeEdges = [];
-
-    for (let y = minY; y < maxY; y++) {
-        for (const edge of allEdges) {
-            if (Math.round(edge.y_min) === y) {
-                if (edge.type === 'line') activeEdges.push({ ...edge, current_x: edge.x_at_ymin });
-                else activeEdges.push({ ...edge });
-            }
-        }
-        for (let i = activeEdges.length - 1; i >= 0; i--) {
-            if (y >= Math.round(activeEdges[i].y_max)) activeEdges.splice(i, 1);
-        }
-        const intersections = [];
-        for (const edge of activeEdges) {
-            if (edge.type === 'bezier') {
-                const roots = getBezierYIntercepts(edge.p0, edge.p1, edge.p2, edge.p3, y);
-                for (const t of roots) {
-                    if (t >= 0 && t <= 1) intersections.push(getBezierXforT(edge.p0, edge.p1, edge.p2, edge.p3, t));
-                }
-            } else if (edge.type === 'arc') {
-                intersections.push(...getArcScanlineIntersections(edge.x, edge.y, edge.radius, edge.startAngle, edge.endAngle, y));
-            } else {
-                intersections.push(edge.current_x);
-            }
-        }
-        intersections.sort((a, b) => a - b);
-        for (let i = 0; i < intersections.length; i += 2) {
-            if (i + 1 < intersections.length) {
-                const x_start = Math.round(intersections[i]);
-                const x_end = Math.round(intersections[i + 1]);
-                for (let x = x_start; x < x_end; x++) {
-                    if (x >= 0 && x < shapeCtx.width) {
-                        const index = (y * shapeCtx.width + x) * 4;
-                        if (isGradient) color = shapeCtx._getColorFromGradientAtPoint(x, y, shapeCtx.fillStyle);
-                        else if (isPattern) color = shapeCtx._getColorFromPatternAtPoint(x, y, shapeCtx.fillStyle);
-                        else color = shapeCtx._parseColor(shapeCtx.fillStyle);
-                        const finalColor = { ...color };
-                        finalColor.a = Math.round(finalColor.a * shapeCtx.globalAlpha);
-                        shapeCtx.imageData.data[index] = finalColor.r;
-                        shapeCtx.imageData.data[index + 1] = finalColor.g;
-                        shapeCtx.imageData.data[index + 2] = finalColor.b;
-                        shapeCtx.imageData.data[index + 3] = finalColor.a;
-                    }
-                }
-            }
-        }
-        for (const edge of activeEdges) {
-            if (edge.type === 'line') edge.current_x += edge.slope_inv;
-        }
-    }
-    compositeImageData(this.imageData, shapeCtx.imageData, this.globalCompositeOperation);
+    compositeImageData(this.imageData, filledImageData, this.globalCompositeOperation);
   }
 
   _isPointInPath(x, y, vertices) {
