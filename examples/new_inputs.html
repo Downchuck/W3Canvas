@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>New Inputs Test</title>
+</head>
+<body>
+    <h1>New Input and Select Elements</h1>
+    <form>
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" value="Jules">
+        <br><br>
+        <label for="fruit">Choose a fruit:</label>
+        <select id="fruit" name="fruit">
+            <option value="apple">Apple</option>
+            <option value="banana">Banana</option>
+            <option value="cherry">Cherry</option>
+        </select>
+        <br><br>
+        <label for="agree">Agree to terms:</label>
+        <input type="checkbox" id="agree" name="agree" checked>
+        <br><br>
+        <fieldset>
+            <legend>Choose your favorite color:</legend>
+            <input type="radio" id="red" name="color" value="red">
+            <label for="red">Red</label><br>
+            <input type="radio" id="green" name="color" value="green" checked>
+            <label for="green">Green</label><br>
+            <input type="radio" id="blue" name="color" value="blue">
+            <label for="blue">Blue</label>
+        </fieldset>
+        <br><br>
+        <label for="quantity">Quantity (between 1 and 5):</label>
+        <input type="number" id="quantity" name="quantity" min="1" max="5" value="2">
+        <br><br>
+        <label for="volume">Volume:</label>
+        <input type="range" id="volume" name="volume" min="0" max="11" value="5">
+        <br><br>
+        <label for="favcolor">Favorite color:</label>
+        <input type="color" id="favcolor" name="favcolor" value="#ff0000">
+        <br><br>
+        <label for="start">Start date:</label>
+        <input type="date" id="start" name="trip-start" value="2025-08-21">
+        <br><br>
+        <label for="appointment">Appointment time:</label>
+        <input type="time" id="appointment" name="appointment" value="13:30">
+        <br><br>
+        <label for="meeting">Meeting (date and time):</label>
+        <input type="datetime-local" id="meeting" name="meeting" value="2025-08-21T19:30">
+        <br><br>
+        <input type="button" value="Click Me">
+    </form>
+</body>
+</html>
