@@ -13,6 +13,7 @@ export class Node {
   parent = null;
   children = [];
   listeners = {};
+  ownerDocument = null;
 
   constructor(type) {
     if (!type) {

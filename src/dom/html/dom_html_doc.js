@@ -1,10 +1,12 @@
 import { Document, NodeIterator, Element } from './dom_core.js';
 import { tags, HTMLCollection } from './dom_html_basic.js';
+import { Window } from '../window.js';
 
 export class HTMLDocument extends Document {
   constructor() {
     super();
     this.body = this.createElement("body");
+    this.defaultView = new Window();
   }
 
   createElement(tagName) {
@@ -15,6 +17,7 @@ export class HTMLDocument extends Document {
     } else {
       elem = new Element(tagName);
     }
+    elem.ownerDocument = this;
     return elem;
   }
 

@@ -1,24 +1,6 @@
 import { Event, MouseEvent, KeyboardEvent } from './event.js';
 import { HTMLOptionElement } from './html/dom_html_basic.js';
 
-const view = (typeof window !== 'undefined') ? window : {
-    screenX: 0,
-    screenY: 0,
-    clientX: 0,
-    clientY: 0,
-    ctrlKey: false,
-    altKey: false,
-    shiftKey: false,
-    metaKey: false,
-    button: 0,
-    relatedTarget: null,
-    key: '',
-    code: '',
-    location: 0,
-    keyCode: 0,
-    charCode: 0
-};
-
 export class EventDispatcher {
     constructor(canvas, rootElement) {
         this.canvas = canvas;
@@ -56,7 +38,7 @@ export class EventDispatcher {
             }
 
             const event = new MouseEvent(
-                'mousedown', view, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                'mousedown', this.rootElement.ownerDocument.defaultView, 1, e.screenX, e.screenY, e.clientX, e.clientY,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
             );
             target.dispatchEvent(event);
@@ -67,14 +49,14 @@ export class EventDispatcher {
         const target = this.rootElement.hitTest(e.clientX, e.clientY);
         if (target) {
             const event = new MouseEvent(
-                'mouseup', view, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                'mouseup', this.rootElement.ownerDocument.defaultView, 1, e.screenX, e.screenY, e.clientX, e.clientY,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
             );
             target.dispatchEvent(event);
 
             if (target === this.mousedownTarget) {
                 const clickEvent = new MouseEvent(
-                    'click', view, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                    'click', this.rootElement.ownerDocument.defaultView, 1, e.screenX, e.screenY, e.clientX, e.clientY,
                     e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
                 );
                 target.dispatchEvent(clickEvent);
@@ -87,7 +69,7 @@ export class EventDispatcher {
         const target = this.rootElement.hitTest(e.clientX, e.clientY);
         if (target) {
             const event = new MouseEvent(
-                'mousemove', view, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                'mousemove', this.rootElement.ownerDocument.defaultView, 1, e.screenX, e.screenY, e.clientX, e.clientY,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
             );
             target.dispatchEvent(event);
@@ -97,7 +79,7 @@ export class EventDispatcher {
     handleKeyDown(e) {
         if (this.focusedElement) {
             const event = new KeyboardEvent(
-                'keydown', view, 1, e.key, e.code, e.location,
+                'keydown', this.rootElement.ownerDocument.defaultView, 1, e.key, e.code, e.location,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.keyCode, e.charCode
             );
             this.focusedElement.dispatchEvent(event);
@@ -107,7 +89,7 @@ export class EventDispatcher {
     handleKeyPress(e) {
         if (this.focusedElement) {
             const event = new KeyboardEvent(
-                'keypress', view, 1, e.key, e.code, e.location,
+                'keypress', this.rootElement.ownerDocument.defaultView, 1, e.key, e.code, e.location,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.keyCode, e.charCode
             );
             this.focusedElement.dispatchEvent(event);

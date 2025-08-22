@@ -764,7 +764,7 @@
               ],
               [
                 "node-gyp",
-                "npm:11.3.0"
+                "npm:11.4.1"
               ],
               [
                 "prebuild-install",
@@ -2285,7 +2285,7 @@
               ],
               [
                 "node-gyp",
-                "npm:11.3.0"
+                "npm:11.4.1"
               ]
             ],
             "linkType": "HARD"
@@ -2297,9 +2297,9 @@
       "node-gyp",
       [
         [
-          "npm:11.3.0",
+          "npm:11.4.1",
           {
-            "packageLocation": "./.yarn/unplugged/node-gyp-npm-11.3.0-b555487fd9/node_modules/node-gyp/",
+            "packageLocation": "./.yarn/unplugged/node-gyp-npm-11.4.1-14bb56f076/node_modules/node-gyp/",
             "packageDependencies": [
               [
                 "env-paths",
@@ -2319,7 +2319,7 @@
               ],
               [
                 "node-gyp",
-                "npm:11.3.0"
+                "npm:11.4.1"
               ],
               [
                 "nopt",

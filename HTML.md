@@ -62,12 +62,11 @@ The `<input>` element lacks support for the new types introduced in HTML5, such 
 
 ### APIs
 Many important HTML5 JavaScript APIs are not implemented, including:
-*   Web Storage (localStorage, sessionStorage)
 *   Geolocation API
 *   Drag and Drop API
 *   History API
 
-Note: Web Workers are now supported. WebSockets and fetch are available through the underlying Node.js environment and do not require a custom implementation.
+Note: Web Storage (`localStorage` and `sessionStorage`) is now supported using an SQLite backend. Web Workers are also supported. WebSockets and fetch are available through the underlying Node.js environment and do not require a custom implementation.
 
 ## Recommendations
 
