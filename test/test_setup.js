@@ -1,17 +1,20 @@
-import { JSDOM } from 'jsdom';
+import { HTMLDocument } from '../src/dom/html/dom_html_doc.js';
+import '../src/dom/html/dom_html_canvas.js';
+import '../src/dom/svg/dom_svg_path.js';
+import '../src/dom/svg/dom_svg_rect.js';
 
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-    url: "https://example.org/",
-    referrer: "https://example.com/",
-    contentType: "text/html",
-    includeNodeLocations: true,
-    storageQuota: 10000000
-});
+// Create a fresh document for this test run to avoid state pollution.
+const doc = new HTMLDocument();
+global.document = doc;
 
-global.window = dom.window;
-global.document = dom.window.document;
-global.navigator = dom.window.navigator;
+// Create a mock window object.
+global.window = {
+    document: doc,
+    navigator: {
+        userAgent: 'node.js'
+    }
+};
 
-// Now, import the test file
+// Now, import the test files that rely on this setup.
 import './test_svg.js';
 import './test_svg_rect.js';

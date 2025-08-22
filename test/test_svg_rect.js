@@ -17,7 +17,7 @@ test('Render SVG rect on canvas', () => {
   rect.setFill('red');
 
   canvas.appendChild(rect);
-  rect.repaint();
+  rect.repaint(canvas.getContext('2d'));
 
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(15, 15, 1, 1);
