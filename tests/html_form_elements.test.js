@@ -145,3 +145,105 @@ test('should dispatch click event on button', () => {
     dispatcher.handleMouseUp(event);
     assert.strictEqual(clicked, true, 'click event should be dispatched on button');
 });
+
+test('should increment and decrement number input', () => {
+    const parser = new HTMLParser();
+    const html = `<input type="number" id="mynumber" value="5" step="2" max="10">`;
+    const doc = parser.parse(html);
+    const numberInput = doc.getElementById('mynumber');
+    const canvas = { addEventListener: () => {} };
+    const dispatcher = new EventDispatcher(canvas, doc.body);
+    doc.body.hitTest = (x, y) => numberInput;
+    numberInput.getBoundingRect = () => ({ x: 0, y: 0, width: 110, height: 20 });
+
+    // Up arrow click
+    let event = { clientX: 100, clientY: 5 }; // Assuming arrows are on the right
+    dispatcher.handleMouseDown(event);
+    dispatcher.handleMouseUp(event);
+    assert.strictEqual(numberInput.value, '7', 'number should be incremented');
+
+    // Down arrow click
+    event = { clientX: 100, clientY: 15 };
+    dispatcher.handleMouseDown(event);
+    dispatcher.handleMouseUp(event);
+    assert.strictEqual(numberInput.value, '5', 'number should be decremented');
+});
+
+test('should update range input on drag', () => {
+    const parser = new HTMLParser();
+    const html = `<input type="range" id="myrange" value="50">`;
+    const doc = parser.parse(html);
+    const rangeInput = doc.getElementById('myrange');
+    const canvas = { addEventListener: () => {} };
+    const dispatcher = new EventDispatcher(canvas, doc.body);
+    doc.body.hitTest = (x, y) => rangeInput;
+    rangeInput.getBoundingRect = () => ({ x: 0, y: 0, width: 100, height: 20 });
+
+    let event = { clientX: 0, clientY: 0 };
+    dispatcher.handleMouseDown(event);
+
+    event = { clientX: 75, clientY: 0 };
+    dispatcher.handleMouseMove(event);
+    assert.strictEqual(rangeInput.value, '75', 'range value should be updated on drag');
+
+    dispatcher.handleMouseUp(event);
+    assert.strictEqual(rangeInput.isDragging, false, 'range should not be dragging after mouseup');
+});
+
+test('should select color from color picker', () => {
+    const parser = new HTMLParser();
+    const html = `<input type="color" id="mycolor" value="#ff0000">`;
+    const doc = parser.parse(html);
+    const colorInput = doc.getElementById('mycolor');
+    const canvas = { addEventListener: () => {} };
+    const dispatcher = new EventDispatcher(canvas, doc.body);
+    doc.body.hitTest = (x, y) => colorInput;
+    colorInput.getBoundingRect = () => ({ x: 0, y: 0, width: 100, height: 20 });
+
+    // Open picker
+    let event = { clientX: 50, clientY: 10 };
+    dispatcher.handleMouseDown(event);
+    dispatcher.handleMouseUp(event);
+    assert.strictEqual(colorInput.isColorPickerOpen, true, 'color picker should be open');
+
+    // Select color
+    event = { clientX: 25, clientY: 25 }; // Second color on the first row
+    dispatcher.handleMouseDown(event);
+    dispatcher.handleMouseUp(event);
+    assert.strictEqual(colorInput.value, '#00ff00', 'color should be updated');
+    assert.strictEqual(colorInput.isColorPickerOpen, false, 'color picker should be closed');
+});
+
+test('should select date from date picker', () => {
+    const parser = new HTMLParser();
+    const html = `<input type="date" id="mydate" value="2025-08-21">`;
+    const doc = parser.parse(html);
+    const dateInput = doc.getElementById('mydate');
+    const canvas = { addEventListener: () => {} };
+    const dispatcher = new EventDispatcher(canvas, doc.body);
+    doc.body.hitTest = (x, y) => dateInput;
+    dateInput.getBoundingRect = () => ({ x: 0, y: 0, width: 100, height: 20 });
+
+    // Open picker
+    let event = { clientX: 50, clientY: 10 };
+    dispatcher.handleMouseDown(event);
+    dispatcher.handleMouseUp(event);
+    assert.strictEqual(dateInput.isDatePickerOpen, true, 'date picker should be open');
+
+    // Select date
+    const date = new Date(dateInput.value);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const day = 15;
+    const col = (firstDay + day - 1) % 7;
+    const row = Math.floor((firstDay + day - 1) / 7);
+    const daySize = 20;
+    const pickerX = 0;
+    const pickerY = 20;
+    event = { clientX: pickerX + col * daySize + daySize / 2, clientY: pickerY + 35 + row * daySize + daySize / 2 };
+    dispatcher.handleMouseDown(event);
+    dispatcher.handleMouseUp(event);
+    assert.strictEqual(dateInput.value, '2025-08-15', 'date should be updated');
+    assert.strictEqual(dateInput.isDatePickerOpen, false, 'date picker should be closed');
+});

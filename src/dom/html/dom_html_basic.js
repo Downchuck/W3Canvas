@@ -133,8 +133,14 @@ export class HTMLInputElement extends HTMLElement {
         this.name = '';
         this.checked = false;
         this.disabled = false;
+        this.min = null;
+        this.max = null;
+        this.step = 1;
         this.painter = new BoxModelPainter();
         this.isFocused = false;
+        this.isDragging = false;
+        this.isColorPickerOpen = false;
+        this.isDatePickerOpen = false;
 
         this.addEventListener('focus', (e) => {
             this.isFocused = true;
@@ -157,25 +163,143 @@ export class HTMLInputElement extends HTMLElement {
             }
         });
 
+        this.addEventListener('mousedown', (e) => {
+            if (this.type === 'range') {
+                this.isDragging = true;
+            }
+        });
+
+        this.addEventListener('mouseup', (e) => {
+            if (this.type === 'range') {
+                this.isDragging = false;
+            }
+        });
+
+        this.addEventListener('mousemove', (e) => {
+            if (this.type === 'range' && this.isDragging) {
+                const rect = this.getBoundingRect();
+                const min = this.min || 0;
+                const max = this.max || 100;
+                const percent = (e.clientX - rect.x) / rect.width;
+                let value = min + percent * (max - min);
+                if (value < min) value = min;
+                if (value > max) value = max;
+                this.value = String(value);
+                this.requestRepaint();
+            }
+        });
+
         this.addEventListener('click', (e) => {
-            if (this.type === 'checkbox') {
-                this.checked = !this.checked;
-                this.requestRepaint();
-            } else if (this.type === 'radio') {
-                const group = inputRadioGroup.getRadioGroup(this.name);
-                for (const radio of group) {
-                    radio.checked = false;
-                    radio.requestRepaint();
-                }
-                this.checked = true;
-                this.requestRepaint();
+            switch (this.type) {
+                case 'checkbox':
+                    this.handleClick_Checkbox(e);
+                    break;
+                case 'radio':
+                    this.handleClick_Radio(e);
+                    break;
+                case 'number':
+                    this.handleClick_Number(e);
+                    break;
+                case 'color':
+                    this.handleClick_Color(e);
+                    break;
+                case 'date':
+                    this.handleClick_Date(e);
+                    break;
             }
         });
     }
 
+    handleClick_Checkbox(e) {
+        this.checked = !this.checked;
+        this.requestRepaint();
+    }
+
+    handleClick_Radio(e) {
+        const group = inputRadioGroup.getRadioGroup(this.name);
+        for (const radio of group) {
+            radio.checked = false;
+            radio.requestRepaint();
+        }
+        this.checked = true;
+        this.requestRepaint();
+    }
+
+    handleClick_Number(e) {
+        const rect = this.getBoundingRect();
+        const arrowWidth = 10;
+        const arrowX = rect.x + rect.width - arrowWidth - 2;
+        if (e.clientX >= arrowX) {
+            let numValue = parseFloat(this.value) || 0;
+            if (e.clientY < rect.y + rect.height / 2) {
+                // Up arrow
+                numValue += this.step;
+            } else {
+                // Down arrow
+                numValue -= this.step;
+            }
+            if (this.max !== null && numValue > this.max) {
+                numValue = this.max;
+            }
+            if (this.min !== null && numValue < this.min) {
+                numValue = this.min;
+            }
+            this.value = String(numValue);
+            this.requestRepaint();
+        }
+    }
+
+    handleClick_Color(e) {
+        if (this.isColorPickerOpen) {
+            const rect = this.getBoundingRect();
+            const pickerX = rect.x;
+            const pickerY = rect.y + rect.height;
+            const swatchSize = 20;
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff', '#ffffff', '#000000'];
+            const col = Math.floor((e.clientX - pickerX) / swatchSize);
+            const row = Math.floor((e.clientY - pickerY) / swatchSize);
+            const index = row * 4 + col;
+            if (index >= 0 && index < colors.length) {
+                this.value = colors[index];
+                this.isColorPickerOpen = false;
+                this.requestRepaint();
+            }
+        } else {
+            this.isColorPickerOpen = true;
+            this.requestRepaint();
+        }
+    }
+
+    handleClick_Date(e) {
+        if (this.isDatePickerOpen) {
+            const rect = this.getBoundingRect();
+            const pickerX = rect.x;
+            const pickerY = rect.y + rect.height;
+            const daySize = 20;
+            const date = new Date(this.value || Date.now());
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const col = Math.floor((e.clientX - pickerX) / daySize);
+            const row = Math.floor((e.clientY - (pickerY + 35)) / daySize);
+            const day = row * 7 + col - firstDay + 1;
+
+            if (day > 0 && day <= daysInMonth) {
+                this.value = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                this.isDatePickerOpen = false;
+                this.requestRepaint();
+            }
+        } else {
+            this.isDatePickerOpen = true;
+            this.requestRepaint();
+        }
+    }
+
     repaint(ctx) {
         this.painter.paintBox(ctx, this, this.style);
-        if (this.type === 'text') {
+        if (this.type === 'text' || this.type === 'email' || this.type === 'url' || this.type === 'search' || this.type === 'tel') {
             const contentBox = this.getContentBox();
             ctx.save();
             ctx.fillStyle = this.style.getFont().getTextColor();
@@ -191,6 +315,102 @@ export class HTMLInputElement extends HTMLElement {
         } else if (this.type === 'radio') {
             const icon = this.checked ? buttonIcons.checkedRadioIcon : buttonIcons.uncheckedRadioIcon;
             this.painter.paintImage(ctx, icon, this.getBoundingRect());
+        } else if (this.type === 'number') {
+            this.painter.paintBox(ctx, this, this.style);
+            const contentBox = this.getContentBox();
+            ctx.save();
+            ctx.fillStyle = this.style.getFont().getTextColor();
+            this.painter.paintText(ctx, contentBox, this.value, this.style.getFont());
+
+            const rect = this.getBoundingRect();
+            const arrowWidth = 10;
+            const arrowHeight = rect.height / 2;
+            const arrowX = rect.x + rect.width - arrowWidth - 2;
+
+            // Up arrow
+            ctx.beginPath();
+            ctx.moveTo(arrowX, arrowHeight);
+            ctx.lineTo(arrowX + arrowWidth, arrowHeight);
+            ctx.lineTo(arrowX + arrowWidth / 2, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // Down arrow
+            ctx.beginPath();
+            ctx.moveTo(arrowX, arrowHeight);
+            ctx.lineTo(arrowX + arrowWidth, arrowHeight);
+            ctx.lineTo(arrowX + arrowWidth / 2, rect.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        } else if (this.type === 'range') {
+            const rect = this.getBoundingRect();
+            const trackHeight = 4;
+            const trackY = rect.y + rect.height / 2 - trackHeight / 2;
+            ctx.fillStyle = '#ccc';
+            ctx.fillRect(rect.x, trackY, rect.width, trackHeight);
+
+            const thumbSize = 10;
+            const min = this.min || 0;
+            const max = this.max || 100;
+            const value = parseFloat(this.value) || 0;
+            const percent = (value - min) / (max - min);
+            const thumbX = rect.x + percent * (rect.width - thumbSize);
+            ctx.fillStyle = '#666';
+            ctx.fillRect(thumbX, rect.y, thumbSize, rect.height);
+        } else if (this.type === 'color') {
+            const rect = this.getBoundingRect();
+            ctx.fillStyle = this.value || '#000000';
+            ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+
+            if (this.isColorPickerOpen) {
+                const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff', '#ffffff', '#000000'];
+                const pickerX = rect.x;
+                const pickerY = rect.y + rect.height;
+                const swatchSize = 20;
+                for (let i = 0; i < colors.length; i++) {
+                    ctx.fillStyle = colors[i];
+                    ctx.fillRect(pickerX + (i % 4) * swatchSize, pickerY + Math.floor(i / 4) * swatchSize, swatchSize, swatchSize);
+                }
+            }
+        } else if (this.type === 'date') {
+            this.painter.paintBox(ctx, this, this.style);
+            const contentBox = this.getContentBox();
+            ctx.save();
+            ctx.fillStyle = this.style.getFont().getTextColor();
+            this.painter.paintText(ctx, contentBox, this.value, this.style.getFont());
+            ctx.restore();
+
+            if (this.isDatePickerOpen) {
+                const rect = this.getBoundingRect();
+                const pickerX = rect.x;
+                const pickerY = rect.y + rect.height;
+                const daySize = 20;
+                const date = new Date(this.value || Date.now());
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                // Draw month/year header
+                ctx.fillStyle = '#000';
+                ctx.fillText(`${year}-${month + 1}`, pickerX, pickerY - 5);
+
+                // Draw days of the week
+                const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+                for (let i = 0; i < 7; i++) {
+                    ctx.fillText(daysOfWeek[i], pickerX + i * daySize, pickerY + 15);
+                }
+
+                // Draw days of the month
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const day = new Date(year, month, i);
+                    const col = (firstDay + i - 1) % 7;
+                    const row = Math.floor((firstDay + i - 1) / 7);
+                    ctx.fillText(i, pickerX + col * daySize, pickerY + 35 + row * daySize);
+                }
+            }
         } else if (this.type === 'button') {
             this.painter.paintBox(ctx, this, this.style);
             const contentBox = this.getContentBox();
@@ -217,6 +437,9 @@ export class HTMLInputElement extends HTMLElement {
         if (name === 'name') this.name = value;
         if (name === 'checked') this.checked = true;
         if (name === 'disabled') this.disabled = true;
+        if (name === 'min') this.min = parseFloat(value);
+        if (name === 'max') this.max = parseFloat(value);
+        if (name === 'step') this.step = parseFloat(value);
     }
 }
 
