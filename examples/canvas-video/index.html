@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas Video Element Test</title>
+    <style>
+        canvas-video {
+            display: block;
+            width: 500px;
+            height: 500px;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Canvas Video Custom Element Test</h1>
+    <p>A static SVG path should be rendered and animated on the canvas below.</p>
+
+    <canvas-video src="test.svg" controls></canvas-video>
+
+    <button id="connect-button">Connect to Video Element</button>
+
+    <video id="video-player" controls></video>
+
+    <script type="module" src="canvas-video.js"></script>
+    <script type="module">
+        const canvasVideo = document.querySelector('canvas-video');
+        const videoPlayer = document.getElementById('video-player');
+        const connectButton = document.getElementById('connect-button');
+
+        connectButton.addEventListener('click', () => {
+            const stream = canvasVideo.captureStream();
+            videoPlayer.srcObject = stream;
+            videoPlayer.play();
+        });
+
+        canvasVideo.addEventListener('load', () => {
+            console.log('SUCCESS: "load" event fired on canvas-video element.');
+        });
+        canvasVideo.addEventListener('error', (e) => {
+            console.error('ERROR: "error" event fired on canvas-video element.', e.detail.error);
+        });
+    </script>
+</body>
+</html>
