@@ -19,7 +19,7 @@ The following HTML elements have specific implementations:
 *   `<span>`
 *   `<div>`
 *   `<p>`
-*   `<input type="text, checkbox, radio, button">`
+*   `<input type="text, checkbox, radio, button, number, range, color, date">`
 *   `<select>`
 *   `<option>`
 *   `<textarea>`
@@ -34,6 +34,12 @@ The following HTML elements have specific implementations:
 *   `<header>`
 *   `<footer>`
 *   `<main>`
+*   `<details>`
+*   `<summary>`
+*   `<progress>`
+*   `<meter>`
+*   `<time>`
+*   `<mark>`
 
 ## Missing HTML5 Features
 
@@ -48,17 +54,11 @@ The following structural and semantic elements are not supported:
 *   `<video>`
 
 ### Form Controls
-The `<input>` element lacks support for the new types introduced in HTML5, such as:
-*   `date`, `time`, `datetime-local`
-*   `number`, `range`
-*   `color`
-*   `email`, `url`, `search`, `tel`
+The `<input>` element lacks support for the following types:
+*   `time`, `datetime-local`
 
 ### Other Elements
-*   `<details>` and `<summary>`
-*   `<progress>` and `<meter>`
-*h*   `<time>`
-*   `<mark>`
+*No missing elements in this category.*
 
 ### APIs
 Many important HTML5 JavaScript APIs are not implemented, including:

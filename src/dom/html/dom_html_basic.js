@@ -544,6 +544,114 @@ class HTMLImageElement extends HTMLElement { constructor() { super("IMG"); } }
 class HTMLButtonElement extends HTMLElement { constructor() { super("BUTTON"); } }
 class HTMLLinkElement extends HTMLElement { constructor() { super("A"); } }
 
+export class HTMLArticleElement extends HTMLElement { constructor() { super("ARTICLE"); this.style.style.setProperty('display', 'block'); } }
+export class HTMLSectionElement extends HTMLElement { constructor() { super("SECTION"); this.style.style.setProperty('display', 'block'); } }
+export class HTMLNavElement extends HTMLElement { constructor() { super("NAV"); this.style.style.setProperty('display', 'block'); } }
+export class HTMLAsideElement extends HTMLElement { constructor() { super("ASIDE"); this.style.style.setProperty('display', 'block'); } }
+export class HTMLHeaderElement extends HTMLElement { constructor() { super("HEADER"); this.style.style.setProperty('display', 'block'); } }
+export class HTMLFooterElement extends HTMLElement { constructor() { super("FOOTER"); this.style.style.setProperty('display', 'block'); } }
+export class HTMLMainElement extends HTMLElement { constructor() { super("MAIN"); this.style.style.setProperty('display', 'block'); } }
+
+export class HTMLDetailsElement extends HTMLElement {
+    constructor() {
+        super("DETAILS");
+        this.open = false;
+        this.style.style.setProperty('display', 'block');
+    }
+
+    repaint(ctx) {
+        this.painter.paintBox(ctx, this, this.style);
+        const summary = this.children.find(c => c.tagName === 'summary');
+        if (summary) {
+            summary.repaint(ctx);
+        }
+        if (this.open) {
+            for (const child of this.children) {
+                if (child.tagName !== 'summary') {
+                    child.repaint(ctx);
+                }
+            }
+        }
+    }
+}
+
+export class HTMLSummaryElement extends HTMLElement {
+    constructor() {
+        super("SUMMARY");
+        this.addEventListener('click', (e) => {
+            const details = this.parent;
+            if (details && details.tagName === 'details') {
+                details.open = !details.open;
+                details.requestRepaint();
+            }
+        });
+    }
+}
+
+export class HTMLProgressElement extends HTMLElement {
+    constructor() {
+        super("PROGRESS");
+        this.value = 0;
+        this.max = 1;
+    }
+
+    setAttribute(name, value) {
+        super.setAttribute(name, value);
+        if (name === 'value') this.value = parseFloat(value);
+        if (name === 'max') this.max = parseFloat(value);
+    }
+
+    repaint(ctx) {
+        this.painter.paintBox(ctx, this, this.style);
+        const rect = this.getBoundingRect();
+        const percent = this.value / this.max;
+        ctx.fillStyle = 'green';
+        ctx.fillRect(rect.x, rect.y, rect.width * percent, rect.height);
+    }
+}
+
+export class HTMLMeterElement extends HTMLElement {
+    constructor() {
+        super("METER");
+        this.value = 0;
+        this.min = 0;
+        this.max = 1;
+        this.low = 0;
+        this.high = 1;
+        this.optimum = 0;
+    }
+
+    setAttribute(name, value) {
+        super.setAttribute(name, value);
+        if (name === 'value') this.value = parseFloat(value);
+        if (name === 'min') this.min = parseFloat(value);
+        if (name === 'max') this.max = parseFloat(value);
+        if (name === 'low') this.low = parseFloat(value);
+        if (name === 'high') this.high = parseFloat(value);
+        if (name === 'optimum') this.optimum = parseFloat(value);
+    }
+
+    repaint(ctx) {
+        this.painter.paintBox(ctx, this, this.style);
+        const rect = this.getBoundingRect();
+        const percent = (this.value - this.min) / (this.max - this.min);
+        ctx.fillStyle = 'green';
+        ctx.fillRect(rect.x, rect.y, rect.width * percent, rect.height);
+    }
+}
+
+export class HTMLTimeElement extends HTMLElement {
+    constructor() {
+        super("TIME");
+    }
+}
+
+export class HTMLMarkElement extends HTMLElement {
+    constructor() {
+        super("MARK");
+    }
+}
+
 registerElement("FORM", "HTMLFormElement", HTMLFormElement);
 registerElement("BODY", "HTMLBodyElement", HTMLBodyElement);
 registerElement("SPAN", "HTMLSpanElement", HTMLSpanElement);
@@ -557,15 +665,6 @@ registerElement("TEXTAREA", "HTMLTextAreaElement", HTMLTextAreaElement);
 registerElement("IMG", "HTMLImageElement", HTMLImageElement);
 registerElement("BUTTON", "HTMLButtonElement", HTMLButtonElement);
 registerElement("A", "HTMLLinkElement", HTMLLinkElement);
-
-export class HTMLArticleElement extends HTMLElement { constructor() { super("ARTICLE"); this.style.style.setProperty('display', 'block'); } }
-export class HTMLSectionElement extends HTMLElement { constructor() { super("SECTION"); this.style.style.setProperty('display', 'block'); } }
-export class HTMLNavElement extends HTMLElement { constructor() { super("NAV"); this.style.style.setProperty('display', 'block'); } }
-export class HTMLAsideElement extends HTMLElement { constructor() { super("ASIDE"); this.style.style.setProperty('display', 'block'); } }
-export class HTMLHeaderElement extends HTMLElement { constructor() { super("HEADER"); this.style.style.setProperty('display', 'block'); } }
-export class HTMLFooterElement extends HTMLElement { constructor() { super("FOOTER"); this.style.style.setProperty('display', 'block'); } }
-export class HTMLMainElement extends HTMLElement { constructor() { super("MAIN"); this.style.style.setProperty('display', 'block'); } }
-
 registerElement("ARTICLE", "HTMLArticleElement", HTMLArticleElement);
 registerElement("SECTION", "HTMLSectionElement", HTMLSectionElement);
 registerElement("NAV", "HTMLNavElement", HTMLNavElement);
@@ -573,3 +672,9 @@ registerElement("ASIDE", "HTMLAsideElement", HTMLAsideElement);
 registerElement("HEADER", "HTMLHeaderElement", HTMLHeaderElement);
 registerElement("FOOTER", "HTMLFooterElement", HTMLFooterElement);
 registerElement("MAIN", "HTMLMainElement", HTMLMainElement);
+registerElement("DETAILS", "HTMLDetailsElement", HTMLDetailsElement);
+registerElement("SUMMARY", "HTMLSummaryElement", HTMLSummaryElement);
+registerElement("PROGRESS", "HTMLProgressElement", HTMLProgressElement);
+registerElement("METER", "HTMLMeterElement", HTMLMeterElement);
+registerElement("TIME", "HTMLTimeElement", HTMLTimeElement);
+registerElement("MARK", "HTMLMarkElement", HTMLMarkElement);
