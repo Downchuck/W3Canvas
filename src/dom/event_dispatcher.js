@@ -1,4 +1,5 @@
-import { MouseEvent, KeyboardEvent } from './event.js';
+import { Event, MouseEvent, KeyboardEvent } from './event.js';
+import { HTMLOptionElement } from './html/dom_html_option.js';
 
 export class EventDispatcher {
     constructor(canvas, rootElement) {
@@ -18,7 +19,21 @@ export class EventDispatcher {
     handleMouseDown(e) {
         const target = this.rootElement.hitTest(e.clientX, e.clientY);
         if (target) {
-            this.focusedElement = target;
+            if (target instanceof HTMLOptionElement) {
+                const select = target.parent;
+                select.selectedIndex = Array.from(select.children).indexOf(target);
+                select.isOpen = false;
+                select.requestRepaint();
+            } else {
+                if (this.focusedElement !== target) {
+                    if (this.focusedElement) {
+                        this.focusedElement.dispatchEvent(new Event('blur'));
+                    }
+                    this.focusedElement = target;
+                    this.focusedElement.dispatchEvent(new Event('focus'));
+                }
+            }
+
             const event = new MouseEvent(
                 'mousedown', window, 1, e.screenX, e.screenY, e.clientX, e.clientY,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null

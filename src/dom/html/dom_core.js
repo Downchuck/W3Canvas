@@ -101,6 +101,7 @@ export class Node {
   }
 }
 
+import { requestRepaint } from '../renderer.js';
 import { Event } from '../event.js';
 import { ElementStyle, CssStyle } from '../css/css_style.js';
 import { ContentFragment } from './textbox/basic_model.js';
@@ -211,6 +212,10 @@ export class Element extends Node {
         return this;
     }
     return null;
+  }
+
+  requestRepaint() {
+    requestRepaint(this);
   }
 }
 

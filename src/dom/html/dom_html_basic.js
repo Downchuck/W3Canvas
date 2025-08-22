@@ -64,7 +64,9 @@ export class HTMLDivElement extends HTMLElement {
 	}
 }
 class HTMLParagraphElement extends HTMLElement { constructor() { super("P"); } }
-class HTMLInputElement extends HTMLElement { constructor() { super("INPUT"); } }
+import { HTMLInputElement } from './dom_html_input.js';
+import { HTMLSelectElement } from './dom_html_select.js';
+import { HTMLOptionElement, HTMLOptGroupElement } from './dom_html_option.js';
 class HTMLTextAreaElement extends HTMLElement { constructor() { super("TEXTAREA"); } }
 class HTMLImageElement extends HTMLElement { constructor() { super("IMG"); } }
 class HTMLButtonElement extends HTMLElement { constructor() { super("BUTTON"); } }
@@ -76,6 +78,9 @@ registerElement("SPAN", "HTMLSpanElement", HTMLSpanElement);
 registerElement("DIV", "HTMLDivElement", HTMLDivElement);
 registerElement("P", "HTMLParagraphElement", HTMLParagraphElement);
 registerElement("INPUT", "HTMLInputElement", HTMLInputElement);
+registerElement("SELECT", "HTMLSelectElement", HTMLSelectElement);
+registerElement("OPTION", "HTMLOptionElement", HTMLOptionElement);
+registerElement("OPTGROUP", "HTMLOptGroupElement", HTMLOptGroupElement);
 registerElement("TEXTAREA", "HTMLTextAreaElement", HTMLTextAreaElement);
 registerElement("IMG", "HTMLImageElement", HTMLImageElement);
 registerElement("BUTTON", "HTMLButtonElement", HTMLButtonElement);
