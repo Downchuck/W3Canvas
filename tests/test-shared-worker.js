@@ -1,5 +1,6 @@
 // This script runs inside a Shared Worker.
 // `self` is the global scope, provided by shared_worker_bootstrap.js
+const self = global;
 
 const ports = new Set();
 

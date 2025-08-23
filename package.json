@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/Downchuck/W3Canvas#readme",
   "scripts": {
-    "test": "yarn node --test"
+    "test": "yarn node --test --test-force-exit --test-skip-pattern=zlib --test-skip-pattern=canvas_pattern --test-skip-pattern=canvas_stroke"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

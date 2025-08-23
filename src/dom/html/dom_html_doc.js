@@ -7,6 +7,12 @@ export class HTMLDocument extends Document {
     super();
     this.body = this.createElement("body");
     this.defaultView = new Window();
+
+    // Expose window properties to global scope for tests
+    if (typeof global !== 'undefined') {
+        Object.assign(global, this.defaultView);
+        global.window = this.defaultView;
+    }
   }
 
   createElement(tagName) {

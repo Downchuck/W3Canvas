@@ -1,5 +1,6 @@
 // This script runs inside a Web Worker.
 // `self` is the global scope, provided by worker_bootstrap.js
+const self = global;
 
 self.onmessage = async (e) => {
     const { command, data, fontPath, family, buffer } = e.data;
