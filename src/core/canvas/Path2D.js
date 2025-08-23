@@ -77,29 +77,32 @@ export class Path2D {
     this.path.push({ type: 'bezier', cp1x, cp1y, cp2x, cp2y, x, y });
   }
 
-  quadraticCurveTo(cpx, cpy, x, y) {
-    let x0 = 0;
-    let y0 = 0;
-    if (this.path.length > 0) {
-        for (let i = this.path.length - 1; i >= 0; i--) {
-            if (this.path[i].x !== undefined && this.path[i].y !== undefined) {
-                if(this.path[i].type === 'move' || this.path[i].type === 'line' || this.path[i].type === 'bezier') {
-                    x0 = this.path[i].x;
-                    y0 = this.path[i].y;
-                    break;
-                }
-                 if(this.path[i].type === 'arc') {
-                    x0 = this.path[i].x + this.path[i].radius * Math.cos(this.path[i].endAngle);
-                    y0 = this.path[i].y + this.path[i].radius * Math.sin(this.path[i].endAngle);
-                    break;
-                 }
-            }
-        }
+  _getLastPoint() {
+    if (this.path.length === 0) {
+      return { x: 0, y: 0 };
     }
-    const cp1x = x0 + 2/3 * (cpx - x0);
-    const cp1y = y0 + 2/3 * (cpy - y0);
-    const cp2x = x + 2/3 * (cpx - x);
-    const cp2y = y + 2/3 * (cpy - y);
+    for (let i = this.path.length - 1; i >= 0; i--) {
+      const cmd = this.path[i];
+      if (cmd.x !== undefined && cmd.y !== undefined) {
+        if (cmd.type === 'arc' || cmd.type === 'arcTo') {
+           return {
+             x: cmd.x + cmd.radius * Math.cos(cmd.endAngle),
+             y: cmd.y + cmd.radius * Math.sin(cmd.endAngle),
+           };
+        } else {
+          return { x: cmd.x, y: cmd.y };
+        }
+      }
+    }
+    return { x: 0, y: 0 };
+  }
+
+  quadraticCurveTo(cpx, cpy, x, y) {
+    const { x: x0, y: y0 } = this._getLastPoint();
+    const cp1x = x0 + 2 / 3 * (cpx - x0);
+    const cp1y = y0 + 2 / 3 * (cpy - y0);
+    const cp2x = x + 2 / 3 * (cpx - x);
+    const cp2y = y + 2 / 3 * (cpy - y);
     this.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
   }
 
@@ -108,12 +111,38 @@ export class Path2D {
   }
 
   arcTo(x1, y1, x2, y2, radius) {
-    if (this.path.length === 0) {
-        this.moveTo(x1, y1);
-        return;
+    const { x: x0, y: y0 } = this._getLastPoint();
+
+    const p0 = { x: x0, y: y0 };
+    const p1 = { x: x1, y: y1 };
+    const p2 = { x: x2, y: y2 };
+
+    if ((p1.x - p0.x) * (p2.y - p1.y) - (p1.y - p0.y) * (p2.x - p1.x) === 0) {
+      this.lineTo(p1.x, p1.y);
+      return;
     }
-    console.warn('arcTo is not fully implemented. It will draw a line to the first point.');
-    this.lineTo(x1, y1);
+
+    const a = Math.sqrt((p1.x - p0.x) ** 2 + (p1.y - p0.y) ** 2);
+    const b = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+    const c = Math.sqrt((p2.x - p0.x) ** 2 + (p2.y - p0.y) ** 2);
+
+    const angle = Math.acos(((p1.x - p0.x) * (p1.x - p2.x) + (p1.y - p0.y) * (p1.y - p2.y)) / (a * b));
+    const t = radius / Math.tan(angle / 2);
+
+    const t0x = p1.x - t * (p1.x - p0.x) / a;
+    const t0y = p1.y - t * (p1.y - p0.y) / a;
+    const t1x = p1.x - t * (p1.x - p2.x) / b;
+    const t1y = p1.y - t * (p1.y - p2.y) / b;
+
+    this.lineTo(t0x, t0y);
+
+    const cx = t0x + radius * (p1.y - p0.y) / a;
+    const cy = t0y - radius * (p1.x - p0.x) / a;
+
+    const startAngle = Math.atan2(t0y - cy, t0x - cx);
+    const endAngle = Math.atan2(t1y - cy, t1x - cx);
+
+    this.arc(cx, cy, radius, startAngle, endAngle, (p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x) > 0);
   }
 
   ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, anticlockwise = false) {
@@ -133,6 +162,23 @@ export class Path2D {
     this.lineTo(x + w, y);
     this.lineTo(x + w, y + h);
     this.lineTo(x, y + h);
+    this.closePath();
+  }
+
+  roundRect(x, y, w, h, radii = 0) {
+    const tl = radii.length ? radii[0] : radii;
+    const tr = radii.length > 1 ? radii[1] : tl;
+    const br = radii.length > 2 ? radii[2] : tl;
+    const bl = radii.length > 3 ? radii[3] : tl;
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y);
+    this.arcTo(x + w, y, x + w, y + tr, tr);
+    this.lineTo(x + w, y + h - br);
+    this.arcTo(x + w, y + h, x + w - br, y + h, br);
+    this.lineTo(x + bl, y + h);
+    this.arcTo(x, y + h, x, y + h - bl, bl);
+    this.lineTo(x, y + tl);
+    this.arcTo(x, y, x + tl, y, tl);
     this.closePath();
   }
 }

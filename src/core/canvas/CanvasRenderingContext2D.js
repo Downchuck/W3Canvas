@@ -666,6 +666,101 @@ export class CanvasRenderingContext2D {
     return inside;
   }
 
+  _getStrokePolygons(pathCommands) {
+    const transformedPathCommands = this._getTransformedPath(pathCommands);
+    const subPaths = [];
+    let currentSubPath = [];
+
+    for (const command of transformedPathCommands) {
+      if (command.type === 'move') {
+        if (currentSubPath.length > 0) {
+          subPaths.push(currentSubPath);
+        }
+        currentSubPath = [command];
+      } else {
+        currentSubPath.push(command);
+      }
+    }
+    if (currentSubPath.length > 0) {
+      subPaths.push(currentSubPath);
+    }
+
+    const allPolygons = [];
+    for (const subPath of subPaths) {
+      const points = [];
+      let currentX = 0;
+      let currentY = 0;
+
+      for (const command of subPath) {
+        if (command.type === 'move') {
+          currentX = command.x;
+          currentY = command.y;
+          points.push({ x: currentX, y: currentY });
+        } else if (command.type === 'line') {
+          currentX = command.x;
+          currentY = command.y;
+          points.push({ x: currentX, y: currentY });
+        } else if (command.type === 'bezier') {
+          const fromX = currentX;
+          const fromY = currentY;
+          if (points.length === 0 || points[points.length - 1].x !== fromX || points[points.length - 1].y !== fromY) {
+            points.push({ x: fromX, y: fromY });
+          }
+          const numPoints = getBezierPoints(fromX, fromY, command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y, this.bezierPoints, 0, this.bezierStack);
+          for (let i = 0; i < numPoints; i++) {
+            points.push({ x: this.bezierPoints[i * 2], y: this.bezierPoints[i * 2 + 1] });
+          }
+          currentX = command.x;
+          currentY = command.y;
+        } else if (command.type === 'arc') {
+          const steps = 50;
+          for (let i = 0; i <= steps; i++) {
+            const angle = command.startAngle + (command.endAngle - command.startAngle) * (i / steps);
+            points.push({
+              x: command.x + command.radius * Math.cos(angle),
+              y: command.y + command.radius * Math.sin(angle)
+            });
+          }
+          currentX = command.x + command.radius * Math.cos(command.endAngle);
+          currentY = command.y + command.radius * Math.sin(command.endAngle);
+        }
+      }
+
+      const isClosed = subPath[subPath.length - 1].type === 'close';
+      const polygons = strokePolyline(points, this.lineWidth, this.lineJoin, isClosed, this.lineDashList, this.lineDashOffset, this.miterLimit);
+      allPolygons.push(...polygons);
+    }
+    return allPolygons;
+  }
+
+  isPointInStroke(x, y) {
+    const polygons = this._getStrokePolygons(this.path);
+    for (const polygon of polygons) {
+      if (this._isPointInPath(x, y, polygon)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  drawFocusIfNeeded(element) {
+    if (element && element.isFocused) {
+      const originalStrokeStyle = this.strokeStyle;
+      const originalLineWidth = this.lineWidth;
+      const originalLineDash = this.getLineDash();
+
+      this.strokeStyle = 'rgba(0, 123, 255, 0.7)';
+      this.lineWidth = 2;
+      this.setLineDash([2, 2]);
+
+      this.stroke();
+
+      this.strokeStyle = originalStrokeStyle;
+      this.lineWidth = originalLineWidth;
+      this.setLineDash(originalLineDash);
+    }
+  }
+
   getImageData(x, y, w, h) {
     const { data, width: canvasWidth } = this.imageData;
     const newData = new Uint8ClampedArray(w * h * 4);
