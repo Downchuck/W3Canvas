@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { stbi_zlib_compress } from '../src/stb-image/zlib_write.js';
-import { inflate } from '../src/stb-image/inflate.js';
+import { zlib_decode_malloc_guesssize_headerflag } from '../src/stb-image/zlib.js';
 
 test('Zlib dynamic block decoder', () => {
     const original_data = new Uint8Array(256);
@@ -13,11 +13,8 @@ test('Zlib dynamic block decoder', () => {
     assert(compressed_data, 'stbi_zlib_compress should return a result');
     assert(out_len.value > 0, 'Compressed data should not be empty');
 
-    const out_buffer = new Uint8Array(original_data.length);
-    const decompressed_len = inflate(compressed_data, out_buffer, false);
-    const decompressed_data = out_buffer.slice(0, decompressed_len);
+    const decompressed_data = zlib_decode_malloc_guesssize_headerflag(compressed_data, original_data.length, true);
 
-    assert.strictEqual(decompressed_len, original_data.length, 'Decompressed data should have the same length as the original');
+    assert.strictEqual(decompressed_data.length, original_data.length, 'Decompressed data should have the same length as the original');
     assert.deepStrictEqual(decompressed_data, original_data, 'Decompressed data should match original');
-    console.log('Zlib dynamic block decoder test passed!');
 });
