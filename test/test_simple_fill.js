@@ -14,7 +14,7 @@ test('Render simple triangle on canvas', () => {
   path.setFill('blue');
 
   canvas.appendChild(path);
-  path.repaint();
+  path.repaint(canvas.getContext('2d'));
 
   const ctx = canvas.getContext('2d');
 
