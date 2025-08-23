@@ -1,14 +1,16 @@
 import { parentPort, workerData } from 'worker_threads';
 import { GlobalScope } from '../dom/globals.js';
 import { FontFace } from '../dom/css/font_face.js';
+import { OffscreenCanvas } from '../core/canvas/OffscreenCanvas.js';
 import path from 'path';
 import { pathToFileURL } from 'url';
 
 // Create the worker's global scope. This is the `self` object in a worker.
 const self = new GlobalScope();
 
-// Expose FontFace class to the worker scope
+// Expose FontFace and OffscreenCanvas classes to the worker scope
 self.FontFace = FontFace;
+self.OffscreenCanvas = OffscreenCanvas;
 
 // Set up the communication channel.
 // The `parentPort` is the connection to the main thread.

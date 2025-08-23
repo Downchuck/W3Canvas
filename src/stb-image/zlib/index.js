@@ -655,8 +655,6 @@ function sdefl_compr(s, in_buf) {
     return s.out_pos;
 }
 
-export { zlib_decode_buffer, sdefl_bound };
-
 export function stbi_zlib_compress(buffer) {
     const s = {
         out: new Uint8Array(sdefl_bound(buffer.length)),

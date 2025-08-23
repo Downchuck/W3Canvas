@@ -43,9 +43,13 @@ export class FontFace {
 
         try {
             if (typeof this.source === 'string') {
-                // Isomorphic fetch: in Node, we can use fs.readFile. In a browser, this would be fetch().
-                // For this project, we'll assume file paths for now.
-                if (this.source.startsWith('file:///')) {
+                if (this.source.startsWith('http://') || this.source.startsWith('https://')) {
+                    const response = await fetch(this.source);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch font: ${response.statusText}`);
+                    }
+                    this.#fontData = await response.arrayBuffer();
+                } else if (this.source.startsWith('file:///')) {
                     const filePath = new URL(this.source).pathname;
                     this.#fontData = await fs.readFile(filePath);
                 } else {
@@ -70,10 +74,15 @@ export class FontFace {
 
 export class FontFaceSet {
     #faces = new Set();
-    #loading = new Set();
+    #loadingPromises = new Set();
+    #readyPromise = Promise.resolve(this);
+
+    onloading = null;
+    onloadingdone = null;
+    onloadingerror = null;
 
     constructor() {
-        this.ready = Promise.resolve(); // Initially, there's nothing to wait for.
+        // The `ready` promise is now a getter.
     }
 
     add(fontFace) {
@@ -81,25 +90,47 @@ export class FontFaceSet {
         // When a font is added, we might need to update the 'ready' promise
         // if the font is not already loaded.
         if (fontFace.status !== 'loaded') {
-            const loadingPromise = fontFace.load().catch(err => {
-                // Don't let a single font failure reject the whole `ready` promise
-                console.error(`Font failed to load: ${fontFace.family}`, err);
-            });
-            this.#loading.add(loadingPromise);
-            this.ready = Promise.allSettled([...this.#loading]).then(() => {});
+            // Trigger onloading if this is the first font to be loaded
+            if (this.#loadingPromises.size === 0 && this.onloading) {
+                this.onloading({ type: 'loading', target: this });
+            }
+
+            const loadingPromise = fontFace.load()
+                .catch(err => {
+                    if (this.onloadingerror) {
+                        const event = { type: 'loadingerror', target: this, error: err, fontFace };
+                        this.onloadingerror(event);
+                    }
+                    // Rethrow to allow Promise.allSettled to see it as rejected.
+                    throw err;
+                });
+
+            this.#loadingPromises.add(loadingPromise);
+
+            this.#readyPromise = Promise.allSettled(this.#loadingPromises)
+                .then(() => {
+                    if (this.onloadingdone) {
+                        this.onloadingdone({ type: 'loadingdone', target: this });
+                    }
+                    return this;
+                });
         }
     }
 
     delete(fontFace) {
         this.#faces.delete(fontFace);
-        // Note: For simplicity, we don't remove from `#loading`.
+        // Note: For simplicity, we don't remove from `#loadingPromises`.
         // A more robust implementation might handle this.
     }
 
     clear() {
         this.#faces.clear();
-        this.#loading.clear();
-        this.ready = Promise.resolve();
+        this.#loadingPromises.clear();
+        this.#readyPromise = Promise.resolve(this);
+    }
+
+    get ready() {
+        return this.#readyPromise;
     }
 
     check(font, text) {
