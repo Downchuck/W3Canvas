@@ -24,9 +24,5 @@
   "devDependencies": {
     "typescript": "^5.9.2"
   },
-  "packageManager": "yarn@4.9.2",
-  "dependencies": {
-    "canvas": "^3.1.2",
-    "jsdom": "^26.1.0"
-  }
+  "packageManager": "yarn@4.9.2"
 }

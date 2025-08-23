@@ -1,4 +1,25 @@
 import assert from 'node:assert';
+import fs from 'fs';
+import path from 'path';
+import { PNG } from 'pngjs';
+import { fileURLToPath } from 'url';
+
+export function writeImageDataToFile(imageData, filename) {
+    const { width, height, data } = imageData;
+    const png = new PNG({ width, height });
+    png.data = Buffer.from(data.buffer);
+    const buffer = PNG.sync.write(png);
+
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const outputPath = path.join(__dirname, '..', 'jules-scratch', 'test-output');
+
+    if (!fs.existsSync(outputPath)) {
+        fs.mkdirSync(outputPath, { recursive: true });
+    }
+
+    fs.writeFileSync(path.join(outputPath, filename), buffer);
+    console.log(`Wrote debug image to ${path.join(outputPath, filename)}`);
+}
 
 export function assertPixelIsColor(imageData, x, y, color) {
     const i = (y * imageData.width + x) * 4;

@@ -26,7 +26,7 @@ test('Render complex SVG path on canvas', () => {
   path.setFill('red');
 
   canvas.appendChild(path);
-  path.repaint();
+  path.repaint(canvas.getContext('2d'));
 
   const ctx = canvas.getContext('2d');
   const imageData = ctx.getImageData(15, 11, 1, 1);
