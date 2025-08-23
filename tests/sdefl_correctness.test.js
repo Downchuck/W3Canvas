@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import zlib from 'node:zlib';
-import { zlib_decode_malloc_guesssize_headerflag, zlib_decode_buffer, stbi_zlib_compress, sdefl_bound } from '../src/stb-image/zlib.js';
+import { stbi_zlib_compress, sdefl_bound, stbi_zlib_compress_buffer, zlib_decode_malloc_guesssize_headerflag } from '../src/stb-image/zlib/index.js';
+import zlib, { deflateSync } from 'zlib';
+import fs from 'fs';
 
 // --- Test Data Generation ---
 const allZeros = Buffer.alloc(256, 0);
@@ -26,7 +27,7 @@ const goldenCompressed = testVectors.map(vector => {
     return {
         name: vector.name,
         original: vector.data,
-        compressed: zlib.deflateSync(vector.data),
+        compressed: deflateSync(vector.data),
     };
 });
 
@@ -56,6 +57,11 @@ test.describe('Zlib In-Place Decompression', () => {
 test.describe('Zlib Compression Correctness', () => {
     goldenCompressed.forEach(vector => {
         test(`should correctly compress "${vector.name}"`, () => {
+            if (vector.name === 'all zeros') {
+                const my_compressed = stbi_zlib_compress(vector.original);
+                fs.writeFileSync('my_output.bin', my_compressed);
+                fs.writeFileSync('native_output.bin', vector.compressed);
+            }
             const compressed = stbi_zlib_compress(vector.original);
             assert(compressed, `Compression of "${vector.name}" failed (returned null)`);
             const decompressed = zlib.inflateSync(Buffer.from(compressed));

@@ -1,5 +1,5 @@
 import { err } from './context.js';
-import { zlib_decode_buffer, zbuild_huffman } from './zlib.js';
+import { zlib_decode_buffer, zbuild_huffman } from './zlib/index.js';
 
 export function png_test(s) {
     s.rewind();

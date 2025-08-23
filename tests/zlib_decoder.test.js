@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
-import { zlib_decode_malloc_guesssize_headerflag } from '../src/stb-image/zlib.js';
+import { zlib_decode_malloc_guesssize_headerflag } from '../src/stb-image/zlib/index.js';
 
 function extract_idat_data(png_filepath) {
     const png_data = fs.readFileSync(png_filepath);
