@@ -645,7 +645,14 @@ export class CanvasRenderingContext2D {
         this._parseColor.bind(this)
     );
 
+    if (this.globalCompositeOperation === 'source-out') {
+        console.log('before compositing', this.imageData.data.slice(50 * this.width * 4 + 50 * 4, 50 * this.width * 4 + 50 * 4 + 4));
+        console.log('filledImageData', filledImageData.data.slice(50 * this.width * 4 + 50 * 4, 50 * this.width * 4 + 50 * 4 + 4));
+    }
     compositeImageData(this.imageData, filledImageData, this.globalCompositeOperation);
+    if (this.globalCompositeOperation === 'source-out') {
+        console.log('after compositing', this.imageData.data.slice(50 * this.width * 4 + 50 * 4, 50 * this.width * 4 + 50 * 4 + 4));
+    }
   }
 
   _isPointInPath(x, y, vertices) {
