@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/Downchuck/W3Canvas#readme",
   "scripts": {
-    "test": "yarn node --test"
+    "test": "yarn node --require ./tests/test_setup_esm.js --test"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
