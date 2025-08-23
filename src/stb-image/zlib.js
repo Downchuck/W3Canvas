@@ -4,7 +4,7 @@ const ZFAST_BITS = 9;
 const ZFAST_MASK = (1 << ZFAST_BITS) - 1;
 const ZNSYMS = 288;
 
-export class Huffman {
+class Huffman {
     constructor() {
         this.fast = new Uint16Array(1 << ZFAST_BITS);
         this.firstcode = new Uint16Array(16);
@@ -386,10 +386,12 @@ const SDEFL_HASH_SIZ = 1 << SDEFL_HASH_BITS;
 const SDEFL_MIN_MATCH = 4;
 const SDEFL_NIL = -1;
 const SDEFL_MAX_MATCH = 258;
-const SDEFL_LIT_LEN_CODES = 14;
+const SDEFL_LIT_LEN_CODES = 15;
 const SDEFL_OFF_CODES = 15;
 const SDEFL_PRE_CODES = 7;
 const SDEFL_EOB = 256;
+const SDEFL_BLK_MAX = 65536;
+const SDEFL_RAW_BLK_SIZE = 65535;
 
 class Sdefl {
     constructor() {
@@ -435,21 +437,24 @@ function sdefl_put(s, code, bitcnt) {
 function sdefl_match_codes(dist, len) {
     let l_slot = 0;
     if (len > 0) {
-        let l = len;
-        while (l > ZLENGTH_BASE[l_slot+1]) l_slot++;
+        l_slot = 31 - Math.clz32(len - 3);
+        if (l_slot > 8) l_slot -= 4;
+        if (l_slot > 8) l_slot -= 4;
+        if (l_slot > 8) l_slot -= 4;
+        while (l_slot < ZLENGTH_BASE.length-1 && len >= ZLENGTH_BASE[l_slot+1]) l_slot++;
     }
 
     let d_slot = 0;
     if (dist > 0) {
-        let d = dist;
-        while (d > ZDIST_BASE[d_slot+1]) d_slot++;
+        d_slot = 31 - Math.clz32(dist - 1);
+        while (d_slot < ZDIST_BASE.length-1 && dist >= ZDIST_BASE[d_slot+1]) d_slot++;
     }
 
     return {
         lcode: 257 + l_slot,
         dcode: d_slot,
-        lextra: len - ZLENGTH_BASE[l_slot],
-        dextra: dist - ZDIST_BASE[d_slot],
+        lextra: len > 0 ? len - ZLENGTH_BASE[l_slot] : 0,
+        dextra: dist > 0 ? dist - ZDIST_BASE[d_slot] : 0,
         lextra_bits: ZLENGTH_EXTRA[l_slot],
         dextra_bits: ZDIST_EXTRA[d_slot],
     };
@@ -500,34 +505,55 @@ function sdefl_huff(lens, codes, freqs, num_syms, max_code_len) {
     }
 }
 
+function sdefl_blk_type(s, blk_len) {
+    // TODO: Implement logic to choose between dynamic and static huffman blocks
+    return 2; // 2 for dynamic huffman
+}
+
 function sdefl_flush(s, in_buf, is_last) {
     s.freq.lit[SDEFL_EOB]++;
 
     sdefl_huff(s.cod.len.lit, s.cod.word.lit, s.freq.lit, ZNSYMS, SDEFL_LIT_LEN_CODES);
     sdefl_huff(s.cod.len.off, s.cod.word.off, s.freq.off, 32, SDEFL_OFF_CODES);
 
+    const blk_type = sdefl_blk_type(s, in_buf.length);
+
     sdefl_put(s, is_last, 1);
-    sdefl_put(s, 2, 2); // dynamic huffman
+    sdefl_put(s, blk_type, 2);
 
-    // ... write trees ...
+    if (blk_type === 2) {
+        // ... write trees ...
 
-    for(let i=0; i<s.seq.length; ++i) {
-        const seq = s.seq[i];
-        if (seq.off >= 0) {
-            for(let j=0; j<seq.len; ++j) {
-                const c = in_buf[seq.off+j];
-                sdefl_put(s, s.cod.word.lit[c], s.cod.len.lit[c]);
+        for(let i=0; i<s.seq.length; ++i) {
+            const seq = s.seq[i];
+            if (seq.off >= 0) {
+                for(let j=0; j<seq.len; ++j) {
+                    const c = in_buf[seq.off+j];
+                    sdefl_put(s, s.cod.word.lit[c], s.cod.len.lit[c]);
+                }
+            } else {
+                const codes = sdefl_match_codes(-seq.off, seq.len);
+                sdefl_put(s, s.cod.word.lit[codes.lcode], s.cod.len.lit[codes.lcode]);
+                if(codes.lextra_bits) sdefl_put(s, codes.lextra, codes.lextra_bits);
+                sdefl_put(s, s.cod.word.off[codes.dcode], s.cod.len.off[codes.dcode]);
+                if(codes.dextra_bits) sdefl_put(s, codes.dextra, codes.dextra_bits);
             }
-        } else {
-            const codes = sdefl_match_codes(-seq.off, seq.len);
-            sdefl_put(s, s.cod.word.lit[codes.lcode], s.cod.len.lit[codes.lcode]);
-            if(codes.lextra_bits) sdefl_put(s, codes.lextra, codes.lextra_bits);
-            sdefl_put(s, s.cod.word.off[codes.dcode], s.cod.len.off[codes.dcode]);
-            if(codes.dextra_bits) sdefl_put(s, codes.dextra, codes.dextra_bits);
         }
+
+        sdefl_put(s, s.cod.word.lit[SDEFL_EOB], s.cod.len.lit[SDEFL_EOB]);
+    } else {
+        // uncompressed block
+        s.bitcnt = 0;
+        s.bits = 0;
+
+        s.out[s.out_pos++] = in_buf.length & 0xff;
+        s.out[s.out_pos++] = (in_buf.length >>> 8) & 0xff;
+        s.out[s.out_pos++] = (~in_buf.length) & 0xff;
+        s.out[s.out_pos++] = ((~in_buf.length) >>> 8) & 0xff;
+        s.out.set(in_buf, s.out_pos);
+        s.out_pos += in_buf.length;
     }
 
-    sdefl_put(s, s.cod.word.lit[SDEFL_EOB], s.cod.len.lit[SDEFL_EOB]);
 
     s.seq = [];
     s.freq.lit.fill(0);
@@ -537,66 +563,72 @@ function sdefl_flush(s, in_buf, is_last) {
 function sdefl_compr(s, in_buf) {
     const in_len = in_buf.length;
     let i = 0;
-    let litlen = 0;
 
-    for(let j=0; j<SDEFL_HASH_SIZ; ++j) s.tbl[j] = SDEFL_NIL;
+    do {
+        const blk_begin = i;
+        const blk_end = ((i + SDEFL_BLK_MAX) < in_len) ? (i + SDEFL_BLK_MAX) : in_len;
+        const is_last = blk_end === in_len;
 
-    while(i < in_len) {
-        let m_len = 0;
-        let m_off = 0;
+        let litlen = 0;
+        for(let j=0; j<SDEFL_HASH_SIZ; ++j) s.tbl[j] = SDEFL_NIL;
 
-        if (i + SDEFL_MIN_MATCH < in_len) {
-            const h = sdefl_hash32(in_buf, i);
-            let p = s.tbl[h];
-            const limit = i > SDEFL_WIN_SIZ ? i - SDEFL_WIN_SIZ : 0;
+        while(i < blk_end) {
+            let m_len = 0;
+            let m_off = 0;
 
-            while (p >= limit) {
-                if (in_buf[p+m_len] === in_buf[i+m_len] &&
-                    (in_buf[p] | (in_buf[p+1] << 8) | (in_buf[p+2] << 16)) ===
-                    (in_buf[i] | (in_buf[i+1] << 8) | (in_buf[i+2] << 16))) {
+            if (i + SDEFL_MIN_MATCH < blk_end) {
+                const h = sdefl_hash32(in_buf, i);
+                let p = s.tbl[h];
+                const limit = i > SDEFL_WIN_SIZ ? i - SDEFL_WIN_SIZ : 0;
 
-                    let n = SDEFL_MIN_MATCH;
-                    while(n < 258 && i + n < in_len && in_buf[p+n] === in_buf[i+n]) {
-                        n++;
+                while (p >= limit) {
+                    if (in_buf[p+m_len] === in_buf[i+m_len] &&
+                        (in_buf[p] | (in_buf[p+1] << 8) | (in_buf[p+2] << 16)) ===
+                        (in_buf[i] | (in_buf[i+1] << 8) | (in_buf[i+2] << 16))) {
+
+                        let n = SDEFL_MIN_MATCH;
+                        while(n < 258 && i + n < blk_end && in_buf[p+n] === in_buf[i+n]) {
+                            n++;
+                        }
+                        if (n > m_len) {
+                            m_len = n;
+                            m_off = i - p;
+                        }
                     }
-                    if (n > m_len) {
-                        m_len = n;
-                        m_off = i - p;
-                    }
+                    p = s.prv[p & (SDEFL_WIN_SIZ - 1)];
                 }
-                p = s.prv[p & (SDEFL_WIN_SIZ - 1)];
+                s.prv[i & (SDEFL_WIN_SIZ - 1)] = s.tbl[h];
+                s.tbl[h] = i;
             }
-            s.prv[i & (SDEFL_WIN_SIZ - 1)] = s.tbl[h];
-            s.tbl[h] = i;
-        }
 
-        if (m_len >= SDEFL_MIN_MATCH) {
-            if(litlen > 0) {
-                s.seq.push({off: i-litlen, len: litlen});
-                litlen = 0;
+            if (m_len >= SDEFL_MIN_MATCH) {
+                if(litlen > 0) {
+                    s.seq.push({off: i-litlen, len: litlen});
+                    litlen = 0;
+                }
+                s.seq.push({off: -m_off, len: m_len});
+                const codes = sdefl_match_codes(m_off, m_len);
+                s.freq.lit[codes.lcode]++;
+                s.freq.off[codes.dcode]++;
+                i += m_len;
+            } else {
+                s.freq.lit[in_buf[i]]++;
+                litlen++;
+                i++;
             }
-            s.seq.push({off: -m_off, len: m_len});
-            const codes = sdefl_match_codes(m_off, m_len);
-            s.freq.lit[codes.lcode]++;
-            s.freq.off[codes.dcode]++;
-            i += m_len;
-        } else {
-            s.freq.lit[in_buf[i]]++;
-            litlen++;
-            i++;
         }
-    }
-    if(litlen > 0) {
-        s.seq.push({off: i-litlen, len: litlen});
-    }
-    sdefl_flush(s, in_buf, true);
+        if(litlen > 0) {
+            s.seq.push({off: i-litlen, len: litlen});
+        }
+        sdefl_flush(s, in_buf.subarray(blk_begin, blk_end), is_last);
+    } while (i < in_len);
 
     return s.out_pos;
 }
 
 export function stbi_zlib_compress(buffer) {
     const s = new Sdefl();
-    s.out = new Uint8Array(buffer.length * 2);
+    s.out = new Uint8Array(sdefl_bound(buffer.length));
 
     // zlib header
     sdefl_put(s, 0x78, 8);
@@ -618,4 +650,35 @@ export function stbi_zlib_compress(buffer) {
     sdefl_put(s, adler & 0xff, 8);
 
     return s.out.slice(0, s.out_pos);
+}
+
+export function sdefl_bound(len) {
+  const max_blocks = 1 + Math.ceil(len / SDEFL_RAW_BLK_SIZE);
+  return 5 * max_blocks + len + 1 + 4 + 8;
+}
+
+export function stbi_zlib_compress_buffer(outputBuffer, inputBuffer) {
+    const s = new Sdefl();
+    s.out = outputBuffer;
+
+    // zlib header
+    sdefl_put(s, 0x78, 8);
+    sdefl_put(s, 0x01, 8);
+
+    sdefl_compr(s, inputBuffer);
+
+    // adler32
+    let s1 = 1, s2 = 0;
+    for(let j=0; j<inputBuffer.length; ++j) {
+        s1 = (s1 + inputBuffer[j]) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    const adler = (s2 << 16) | s1;
+
+    sdefl_put(s, adler >>> 24, 8);
+    sdefl_put(s, (adler >>> 16) & 0xff, 8);
+    sdefl_put(s, (adler >>> 8) & 0xff, 8);
+    sdefl_put(s, adler & 0xff, 8);
+
+    return s.out_pos;
 }
