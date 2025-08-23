@@ -35,6 +35,10 @@
                 "workspace:."
               ],
               [
+                "pngjs",
+                "npm:7.0.0"
+              ],
+              [
                 "typescript",
                 "patch:typescript@npm%3A5.9.2#optional!builtin<compat/typescript>::version=5.9.2&hash=5786d5"
               ]
@@ -57,11 +61,33 @@
                 "workspace:."
               ],
               [
+                "pngjs",
+                "npm:7.0.0"
+              ],
+              [
                 "typescript",
                 "patch:typescript@npm%3A5.9.2#optional!builtin<compat/typescript>::version=5.9.2&hash=5786d5"
               ]
             ],
             "linkType": "SOFT"
+          }
+        ]
+      ]
+    ],
+    [
+      "pngjs",
+      [
+        [
+          "npm:7.0.0",
+          {
+            "packageLocation": "../home/jules/.yarn/berry/cache/pngjs-npm-7.0.0-788de6ba02-10.zip/node_modules/pngjs/",
+            "packageDependencies": [
+              [
+                "pngjs",
+                "npm:7.0.0"
+              ]
+            ],
+            "linkType": "HARD"
           }
         ]
       ]

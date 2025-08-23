@@ -1,11 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 
-global.Image = class {
-    constructor() {
-        // Mock Image class
-    }
-};
 import { HTMLParser } from '../src/dom/parser/html_parser.js';
 import { EventDispatcher } from '../src/dom/event_dispatcher.js';
 import { HTMLInputElement, HTMLSelectElement, HTMLOptionElement } from '../src/dom/html/dom_html_basic.js';

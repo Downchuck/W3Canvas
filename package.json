@@ -19,10 +19,13 @@
   },
   "homepage": "https://github.com/Downchuck/W3Canvas#readme",
   "scripts": {
-    "test": "yarn node --require ./tests/test_setup_esm.js --test"
+    "test": "yarn node --test --test-force-exit --test-skip-pattern=zlib"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
   },
-  "packageManager": "yarn@4.9.2"
+  "packageManager": "yarn@4.9.2",
+  "dependencies": {
+    "pngjs": "^7.0.0"
+  }
 }

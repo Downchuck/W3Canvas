@@ -3,20 +3,8 @@ import { ElementStyle, CssStyle } from '../css/css_style.js';
 import { mixin } from '../../legacy/lang_util.js';
 import { Element } from './dom_core.js';
 import { BoxModelPainter } from '../css/box_paint.js';
-
-const buttonIcons = {
-	'blankIcon'				: new Image(),
-	'checkedRadioIcon'	    : new Image(),
-	'uncheckedRadioIcon' 	: new Image(),
-	'checkedCheckBoxIcon'	: new Image(),
-	'uncheckedCheckBoxIcon' : new Image()
-};
-
-buttonIcons.blankIcon.src             = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAADVJREFUOE9j/P//PwNVANAgqgAGqpgC8taoQQRDYDSMCAbRaDoiHESjYTQaRkSEAGElVCuPAAbjdOFsJI7xAAAAAElFTkSuQmCC";
-buttonIcons.checkedRadioIcon.src      = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAG5JREFUOE9jZGZmZqAKABpEFcBAFVNA3hqZBv1HBfgDAWcYoZkC4eIxC7tBWE3BbxYBg+BOgBuNy1FYDELWw9DQAEFA/fjNGhIGYfUFOWGEbBBm9JEQ2BCl1ElHWM0iM2WTWiqM0GKEpGAafGEEAEBa8MJv2SpKAAAAAElFTkSuQmCC";
-buttonIcons.uncheckedRadioIcon.src    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAGpJREFUOE/l1N0KABAMBtBp7//MTErYj6ZdkF1RnOYjCREhpAgKKQhR6rH+hPJcdghqRovSpoYlQ6JiWxuot9BprSkBGvdoY849AVHbPJGTjEaIX58j7LY05h2J1uHL9v4Kn34jrpjuy6gALDQCtk6jFH4AAAAASUVORK5CYII=";
-buttonIcons.checkedCheckBoxIcon.src   = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAIhJREFUOE/N1OsKgDAIBWBjL+6blzEwcZuXMpj0032chu5orUFJEVRSUKLcv1UPYb5kiCcROWemqH8DCBD7R9FfJmKiKz7EffK6RiUEKWuqRCG2VooPUYc8LG9XzYZ/2SM0HS8fUqFWQ5qDjFEPQRyqBrI3L5rI3V8Lyj4k8+3/+ML98ELukugCcyd7G9ldrsQAAAAASUVORK5CYII=";
-buttonIcons.uncheckedCheckBoxIcon.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAElJREFUOE9jZGZmZqAKABpEFcBAFVNA3qK+QQ2kA2RHIFwENOc/KQCoftQgAgE2GkaEU9RoGA2SMCK1IMGe+yks4WhQQg4WFwEAizzaizrcI/MAAAAASUVORK5CYII=";
+import { loadImageFromMemorySync } from '../../stb-image/index.js';
+import fs from 'fs';
 
 class InputRadioGroup {
 	allRadios = [];
@@ -113,6 +101,82 @@ export class HTMLElement extends Element {
   getClassName() { return this.className; }
   setClassName(c) { this.className = c; }
 }
+
+class HTMLImageElement extends HTMLElement {
+  constructor() {
+    super('IMG');
+    this._src = '';
+    this.data = null;
+    this.width = 0;
+    this.height = 0;
+    this.onload = null;
+    this.onerror = null;
+  }
+
+  get src() {
+    return this._src;
+  }
+
+  set src(url) {
+    this._src = url;
+    this._loadImage(url);
+  }
+
+  async _loadImage(url) {
+    try {
+      let buffer;
+      if (url.startsWith('data:')) {
+        const parts = url.split(',');
+        const b64 = parts[1];
+        buffer = Buffer.from(b64, 'base64');
+      }
+      else if (typeof window === 'undefined') {
+        // In Node.js, read the file directly from the file system.
+        buffer = fs.readFileSync(url);
+      } else {
+        // In the browser, use fetch to get the image data.
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.statusText}`);
+        }
+        buffer = await response.arrayBuffer();
+      }
+
+      const image = loadImageFromMemorySync(buffer);
+      if (image) {
+        this.data = image.data;
+        this.width = image.w;
+        this.height = image.h;
+        if (this.onload) {
+          setImmediate(this.onload);
+        }
+      } else {
+        throw new Error('Failed to decode image');
+      }
+    } catch (error) {
+      console.error(`Error loading image ${url}:`, error);
+      if (this.onerror) {
+        this.onerror(error);
+      }
+    }
+  }
+}
+
+global.Image = HTMLImageElement;
+
+const buttonIcons = {
+	'blankIcon'				: new Image(),
+	'checkedRadioIcon'	    : new Image(),
+	'uncheckedRadioIcon' 	: new Image(),
+	'checkedCheckBoxIcon'	: new Image(),
+	'uncheckedCheckBoxIcon' : new Image()
+};
+
+buttonIcons.blankIcon.src             = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAADVJREFUOE9j/P//PwNVANAgqgAGqpgC8taoQQRDYDSMCAbRaDoiHESjYTQaRkSEAGElVCuPAAbjdOFsJI7xAAAAAElFTkSuQmCC";
+buttonIcons.checkedRadioIcon.src      = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAG5JREFUOE9jZGZmZqAKABpEFcBAFVNA3hqZBv1HBfgDAWcYoZkC4eIxC7tBWE3BbxYBg+BOgBuNy1FYDELWw9DQAEFA/fjNGhIGYfUFOWGEbBBm9JEQ2BCl1ElHWM0iM2WTWiqM0GKEpGAafGEEAEBa8MJv2SpKAAAAAElFTkSuQmCC";
+buttonIcons.uncheckedRadioIcon.src    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAGpJREFUOE/l1N0KABAMBtBp7//MTErYj6ZdkF1RnOYjCREhpAgKKQhR6rH+hPJcdghqRovSpoYlQ6JiWxuot9BprSkBGvdoY849AVHbPJGTjEaIX58j7LY05h2J1uHL9v4Kn34jrpjuy6gALDQCtk6jFH4AAAAASUVORK5CYII=";
+buttonIcons.checkedCheckBoxIcon.src   = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAIhJREFUOE/N1OsKgDAIBWBjL+6blzEwcZuXMpj0032chu5orUFJEVRSUKLcv1UPYb5kiCcROWemqH8DCBD7R9FfJmKiKz7EffK6RiUEKWuqRCG2VooPUYc8LG9XzYZ/2SM0HS8fUqFWQ5qDjFEPQRyqBrI3L5rI3V8Lyj4k8+3/+ML98ELukugCcyd7G9ldrsQAAAAASUVORK5CYII=";
+buttonIcons.uncheckedCheckBoxIcon.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAABGdBTUEAALGPC/xhBQAAAElJREFUOE9jZGZmZqAKABpEFcBAFVNA3qK+QQ2kA2RHIFwENOc/KQCoftQgAgE2GkaEU9RoGA2SMCK1IMGe+yks4WhQQg4WFwEAizzaizrcI/MAAAAASUVORK5CYII=";
 
 class HTMLFormElement extends HTMLElement { constructor() { super("FORM"); } }
 class HTMLBodyElement extends HTMLElement { constructor() { super("BODY"); } }
@@ -540,7 +604,6 @@ export class HTMLOptGroupElement extends HTMLElement {
 }
 
 class HTMLTextAreaElement extends HTMLElement { constructor() { super("TEXTAREA"); } }
-class HTMLImageElement extends HTMLElement { constructor() { super("IMG"); } }
 class HTMLButtonElement extends HTMLElement { constructor() { super("BUTTON"); } }
 class HTMLLinkElement extends HTMLElement { constructor() { super("A"); } }
 
