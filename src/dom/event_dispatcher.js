@@ -1,10 +1,12 @@
-import { MouseEvent, KeyboardEvent } from './event.js';
+import { Event, MouseEvent, KeyboardEvent } from './event.js';
+import { HTMLOptionElement } from './html/dom_html_basic.js';
 
 export class EventDispatcher {
     constructor(canvas, rootElement) {
         this.canvas = canvas;
         this.rootElement = rootElement;
         this.focusedElement = rootElement; // Default focus to the root
+        this.mousedownTarget = null;
     }
 
     init() {
@@ -17,10 +19,26 @@ export class EventDispatcher {
 
     handleMouseDown(e) {
         const target = this.rootElement.hitTest(e.clientX, e.clientY);
+        this.mousedownTarget = target;
         if (target) {
-            this.focusedElement = target;
+            if (target instanceof HTMLOptionElement) {
+                const select = target.parent;
+                const index = Array.from(select.options).indexOf(target);
+                select.selectedIndex = index;
+                select.isOpen = false;
+                select.requestRepaint();
+            } else {
+                if (this.focusedElement !== target) {
+                    if (this.focusedElement) {
+                        this.focusedElement.dispatchEvent(new Event('blur'));
+                    }
+                    this.focusedElement = target;
+                    this.focusedElement.dispatchEvent(new Event('focus'));
+                }
+            }
+
             const event = new MouseEvent(
-                'mousedown', window, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                'mousedown', this.rootElement.ownerDocument.defaultView, 1, e.screenX, e.screenY, e.clientX, e.clientY,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
             );
             target.dispatchEvent(event);
@@ -31,18 +49,27 @@ export class EventDispatcher {
         const target = this.rootElement.hitTest(e.clientX, e.clientY);
         if (target) {
             const event = new MouseEvent(
-                'mouseup', window, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                'mouseup', this.rootElement.ownerDocument.defaultView, 1, e.screenX, e.screenY, e.clientX, e.clientY,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
             );
             target.dispatchEvent(event);
+
+            if (target === this.mousedownTarget) {
+                const clickEvent = new MouseEvent(
+                    'click', this.rootElement.ownerDocument.defaultView, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                    e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
+                );
+                target.dispatchEvent(clickEvent);
+            }
         }
+        this.mousedownTarget = null;
     }
 
     handleMouseMove(e) {
         const target = this.rootElement.hitTest(e.clientX, e.clientY);
         if (target) {
             const event = new MouseEvent(
-                'mousemove', window, 1, e.screenX, e.screenY, e.clientX, e.clientY,
+                'mousemove', this.rootElement.ownerDocument.defaultView, 1, e.screenX, e.screenY, e.clientX, e.clientY,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.button, null
             );
             target.dispatchEvent(event);
@@ -52,7 +79,7 @@ export class EventDispatcher {
     handleKeyDown(e) {
         if (this.focusedElement) {
             const event = new KeyboardEvent(
-                'keydown', window, 1, e.key, e.code, e.location,
+                'keydown', this.rootElement.ownerDocument.defaultView, 1, e.key, e.code, e.location,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.keyCode, e.charCode
             );
             this.focusedElement.dispatchEvent(event);
@@ -62,7 +89,7 @@ export class EventDispatcher {
     handleKeyPress(e) {
         if (this.focusedElement) {
             const event = new KeyboardEvent(
-                'keypress', window, 1, e.key, e.code, e.location,
+                'keypress', this.rootElement.ownerDocument.defaultView, 1, e.key, e.code, e.location,
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey, e.keyCode, e.charCode
             );
             this.focusedElement.dispatchEvent(event);

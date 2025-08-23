@@ -5,7 +5,7 @@ import '../src/dom/html/dom_html_canvas.js';
 import '../src/dom/svg/dom_svg_rect.js';
 import { render } from '../src/dom/renderer.js';
 
-test('Render a rectangle to the canvas', () => {
+test('Render a rectangle to the canvas', async () => {
   const canvas = currentDocument.createElement('canvas');
   canvas.setWidth(200);
   canvas.setHeight(200);
@@ -20,7 +20,7 @@ test('Render a rectangle to the canvas', () => {
   canvas.appendChild(rect);
 
   const ctx = canvas.getContext('2d');
-  render(canvas, ctx);
+  await render(canvas, ctx);
 
   const imageData = ctx.getImageData(0, 0, 200, 200);
   const { data, width } = imageData;

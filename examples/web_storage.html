@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Storage Test</title>
+</head>
+<body>
+    <h1>Web Storage Test</h1>
+    <h2>localStorage</h2>
+    <p>Open this page in another tab or window to see that the data persists.</p>
+    <div id="local-storage-data"></div>
+    <h2>sessionStorage</h2>
+    <p>Open this page in another tab or window to see that the data does not persist.</p>
+    <div id="session-storage-data"></div>
+
+    <script type="module">
+        import { currentDocument } from '../src/dom/html/dom_html_doc.js';
+
+        const { localStorage, sessionStorage } = currentDocument.defaultView;
+
+        // localStorage
+        localStorage.setItem('myCat', 'Tom');
+        const localData = localStorage.getItem('myCat');
+        document.getElementById('local-storage-data').textContent = `localStorage['myCat'] = ${localData}`;
+        console.log('localStorage length:', localStorage.length);
+        console.log('localStorage key(0):', localStorage.key(0));
+
+        // sessionStorage
+        sessionStorage.setItem('myDog', 'Spike');
+        const sessionData = sessionStorage.getItem('myDog');
+        document.getElementById('session-storage-data').textContent = `sessionStorage['myDog'] = ${sessionData}`;
+        console.log('sessionStorage length:', sessionStorage.length);
+        console.log('sessionStorage key(0):', sessionStorage.key(0));
+    </script>
+</body>
+</html>

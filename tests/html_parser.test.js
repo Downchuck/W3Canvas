@@ -1,7 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
+
+global.Image = class {
+    constructor() {
+        // Mock Image class
+    }
+};
 import { HTMLParser } from '../src/dom/parser/html_parser.js';
 import { NODE_TYPE_DOCUMENT, NODE_TYPE_ELEMENT, NODE_TYPE_TEXT, NODE_TYPE_COMMENT } from '../src/dom/html/dom_core.js';
+import { HTMLArticleElement, HTMLSectionElement, HTMLNavElement } from '../src/dom/html/dom_html_basic.js';
 
 test('HTML Parser should correctly parse a simple HTML string', () => {
     const html = '<p>Hello</p>';
@@ -120,4 +127,22 @@ test('HTML Parser should decode HTML entities', () => {
         }
     }
     assert.strictEqual(textData, 'Hello & World © € € &notanentity;', 'Text node should contain decoded entities');
+});
+
+test('HTML Parser should parse semantic elements', () => {
+    const html = '<article><section><nav></nav></section></article>';
+    const parser = new HTMLParser();
+    const doc = parser.parse(html);
+
+    const article = doc.body.getFirstChild();
+    assert(article instanceof HTMLArticleElement, 'article should be an instance of HTMLArticleElement');
+    assert.strictEqual(article.style.getDisplay(), 'block', 'article should have display: block');
+
+    const section = article.getFirstChild();
+    assert(section instanceof HTMLSectionElement, 'section should be an instance of HTMLSectionElement');
+    assert.strictEqual(section.style.getDisplay(), 'block', 'section should have display: block');
+
+    const nav = section.getFirstChild();
+    assert(nav instanceof HTMLNavElement, 'nav should be an instance of HTMLNavElement');
+    assert.strictEqual(nav.style.getDisplay(), 'block', 'nav should have display: block');
 });

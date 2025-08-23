@@ -46,7 +46,7 @@ class SVGSVGElement extends SVGElement {
     }
 }
 
-class SVG extends SVGSVGElement {
+export class SVG extends SVGSVGElement {
     constructor() {
         super();
     }

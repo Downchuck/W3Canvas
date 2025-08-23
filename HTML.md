@@ -7,7 +7,7 @@ This document analyzes the current state of the HTML implementation in this proj
 The HTML implementation is based on a custom DOM and parser.
 
 *   **DOM:** The DOM is defined in `src/dom/html/dom_core.js` and `src/dom/html/dom_html_basic.js`. It includes a generic `Element` class and a more specific `HTMLElement` class that adds common attributes.
-*   **Parser:** The parser in `src/dom/parser/html_parser.js` builds a DOM tree from an HTML string. However, it does not use the `document.createElement` mechanism and instead creates generic `Element` objects for all tags.
+*   **Parser:** The parser in `src/dom/parser/html_parser.js` builds a DOM tree from an HTML string. It uses a `document.createElement` mechanism to instantiate the correct element classes for each tag.
 *   **Element Registration:** A `registerElement` function in `src/dom/html/dom_html_basic.js` maps tag names to specific element constructor functions. This allows for specialized implementations of certain elements.
 
 ## Supported HTML Elements
@@ -19,19 +19,14 @@ The following HTML elements have specific implementations:
 *   `<span>`
 *   `<div>`
 *   `<p>`
-*   `<input>` (generic, without support for most modern types)
+*   `<input type="text, checkbox, radio, button, number, range, color, date, time, datetime-local">`
+*   `<select>`
+*   `<option>`
 *   `<textarea>`
 *   `<img>`
 *   `<button>`
 *   `<a>` (as `HTMLLinkElement`)
 *   `<canvas>` (the core focus of the project)
-
-## Missing HTML5 Features
-
-The implementation is missing a significant number of HTML5 features.
-
-### Semantic Elements
-The following structural and semantic elements are not supported:
 *   `<article>`
 *   `<section>`
 *   `<nav>`
@@ -39,33 +34,39 @@ The following structural and semantic elements are not supported:
 *   `<header>`
 *   `<footer>`
 *   `<main>`
-*   `<figure>` and `<figcaption>`
+*   `<details>`
+*   `<summary>`
+*   `<progress>`
+*   `<meter>`
+*   `<time>`
+*   `<mark>`
+*   `<figure>`
+*   `<figcaption>`
+
+## Missing HTML5 Features
+
+The implementation is missing a significant number of HTML5 features.
+
+### Semantic Elements
+*No missing elements in this category.*
 
 ### Multimedia
 *   `<audio>`
 *   `<video>`
 
 ### Form Controls
-The `<input>` element lacks support for the new types introduced in HTML5, such as:
-*   `date`, `time`, `datetime-local`
-*   `number`, `range`
-*   `color`
-*   `email`, `url`, `search`, `tel`
+*No missing elements in this category.*
 
 ### Other Elements
-*   `<details>` and `<summary>`
-*   `<progress>` and `<meter>`
-*h*   `<time>`
-*   `<mark>`
+*No missing elements in this category.*
 
 ### APIs
 Many important HTML5 JavaScript APIs are not implemented, including:
-*   Web Storage (localStorage, sessionStorage)
-*   Web Workers
-*   WebSockets
 *   Geolocation API
 *   Drag and Drop API
 *   History API
+
+Note: Web Storage (`localStorage` and `sessionStorage`) is now supported using an SQLite backend. Web Workers are also supported. WebSockets and fetch are available through the underlying Node.js environment and do not require a custom implementation.
 
 ## Recommendations
 

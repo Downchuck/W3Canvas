@@ -48,8 +48,8 @@ doc.body.addEventListener('mousedown', (event) => {
     console.log('Body clicked!', event);
 });
 
-function animate() {
-    render(doc.body, ctx);
+async function animate() {
+    await render(doc.body, ctx);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const nativeCtx = canvas.getContext('2d');
     nativeCtx.putImageData(imageData, 0, 0);
