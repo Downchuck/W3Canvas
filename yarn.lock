@@ -9,17 +9,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "app@workspace:."
   dependencies:
-    pngjs: "npm:^7.0.0"
     typescript: "npm:^5.9.2"
   languageName: unknown
   linkType: soft
-
-"pngjs@npm:^7.0.0":
-  version: 7.0.0
-  resolution: "pngjs@npm:7.0.0"
-  checksum: 10/e843ebbb0df092ee0f3a3e7dbd91ff87a239a4e4c4198fff202916bfb33b67622f4b83b3c29f3ccae94fcb97180c289df06068624554f61686fe6b9a4811f7db
-  languageName: node
-  linkType: hard
 
 "typescript@npm:^5.9.2":
   version: 5.9.2
