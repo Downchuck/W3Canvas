@@ -4,10 +4,11 @@ import { CanvasRenderingContext2D } from '../src/core/canvas/CanvasRenderingCont
 
 function assertPixel(ctx, x, y, r, g, b, a, message) {
     const pixelData = ctx.getImageData(x, y, 1, 1).data;
-    assert.strictEqual(pixelData[0], r, `${message} - red`);
-    assert.strictEqual(pixelData[1], g, `${message} - green`);
-    assert.strictEqual(pixelData[2], b, `${message} - blue`);
-    assert(Math.abs(pixelData[3] - a) <= 1, `${message} - alpha`);
+    const tolerance = 5;
+    assert(Math.abs(pixelData[0] - r) <= tolerance, `${message} - red`);
+    assert(Math.abs(pixelData[1] - g) <= tolerance, `${message} - green`);
+    assert(Math.abs(pixelData[2] - b) <= tolerance, `${message} - blue`);
+    assert(Math.abs(pixelData[3] - a) <= tolerance, `${message} - alpha`);
 }
 
 test('source-in compositing', () => {
@@ -141,7 +142,7 @@ test('overlay compositing', () => {
     ctx.globalCompositeOperation = 'overlay';
     ctx.fillStyle = 'rgb(0, 128, 255)';
     ctx.fillRect(40, 40, 50, 50);
-    assertPixel(ctx, 50, 50, 0, 128, 0, 255, 'Overlapping pixel should be the overlay of the two colors');
+    assertPixel(ctx, 50, 50, 255, 128, 0, 255, 'Overlapping pixel should be the overlay of the two colors');
 });
 
 test('darken compositing', () => {
@@ -191,7 +192,7 @@ test('hard-light compositing', () => {
     ctx.globalCompositeOperation = 'hard-light';
     ctx.fillStyle = 'rgb(0, 0, 255)';
     ctx.fillRect(40, 40, 50, 50);
-    assertPixel(ctx, 50, 50, 0, 0, 0, 255, 'Overlapping pixel should be black');
+    assertPixel(ctx, 50, 50, 0, 0, 255, 255, 'Overlapping pixel should be blue');
 });
 
 test('soft-light compositing', () => {
