@@ -72,29 +72,24 @@ export function compositeImageData(destImageData, srcImageData, operation) {
     }
 }
 
-// Helper for blend modes
 function blend(dest, src, mix) {
     const destData = dest.data;
     const srcData = src.data;
-
     for (let i = 0; i < srcData.length; i += 4) {
         const sR = srcData[i], sG = srcData[i+1], sB = srcData[i+2], sA = srcData[i+3];
         const dR = destData[i], dG = destData[i+1], dB = destData[i+2], dA = destData[i+3];
+        if (sA === 0) continue;
 
         const sA_f = sA / 255;
         const dA_f = dA / 255;
+        const sR_f = sR / 255, sG_f = sG / 255, sB_f = sB / 255;
+        const dR_f = dR / 255, dG_f = dG / 255, dB_f = dB / 255;
 
         const outA_f = sA_f + dA_f * (1 - sA_f);
         if (outA_f === 0) {
-            destData[i] = 0;
-            destData[i+1] = 0;
-            destData[i+2] = 0;
-            destData[i+3] = 0;
+            destData[i] = 0; destData[i+1] = 0; destData[i+2] = 0; destData[i+3] = 0;
             continue;
         }
-
-        const sR_f = sR / 255, sG_f = sG / 255, sB_f = sB / 255;
-        const dR_f = dR / 255, dG_f = dG / 255, dB_f = dB / 255;
 
         const mixed_r = mix(sR_f, dR_f);
         const mixed_g = mix(sG_f, dG_f);
@@ -111,8 +106,6 @@ function blend(dest, src, mix) {
     }
 }
 
-
-// Porter-Duff operators
 function sourceOver(dest, src) {
     const destData = dest.data;
     const srcData = src.data;
@@ -135,8 +128,10 @@ function sourceIn(dest, src) {
     const destData = dest.data;
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
+        const sA = srcData[i+3];
+        if (sA === 0) { destData[i+3] = 0; continue; }
         const dA_f = destData[i+3] / 255;
-        const outA_f = (srcData[i+3]/255) * dA_f;
+        const outA_f = (sA/255) * dA_f;
         destData[i] = srcData[i];
         destData[i+1] = srcData[i+1];
         destData[i+2] = srcData[i+2];
@@ -148,8 +143,10 @@ function sourceOut(dest, src) {
     const destData = dest.data;
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
+        const sA = srcData[i+3];
+        if (sA === 0) continue;
         const dA_f = destData[i+3] / 255;
-        const outA_f = (srcData[i+3]/255) * (1 - dA_f);
+        const outA_f = (sA/255) * (1 - dA_f);
         destData[i] = srcData[i];
         destData[i+1] = srcData[i+1];
         destData[i+2] = srcData[i+2];
@@ -161,17 +158,29 @@ function sourceAtop(dest, src) {
     const destData = dest.data;
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
-        const sA_f = srcData[i+3] / 255;
-        const dA_f = destData[i+3] / 255;
+        const sA = srcData[i+3], dA = destData[i+3];
+        if (sA === 0 && dA === 0) continue;
+
+        const sA_f = sA / 255;
+        const dA_f = dA / 255;
+
         const sR = srcData[i], sG = srcData[i+1], sB = srcData[i+2];
         const dR = destData[i], dG = destData[i+1], dB = destData[i+2];
 
-        destData[i+3] = dA_f * 255;
-        if (dA_f === 0) continue;
+        const outA = dA;
+        const outR = sR * dA_f + dR * (1 - sA_f);
+        const outG = sG * dA_f + dG * (1 - sA_f);
+        const outB = sB * dA_f + dB * (1 - sA_f);
 
-        destData[i]   = sR * sA_f + dR * (1 - sA_f);
-        destData[i+1] = sG * sA_f + dG * (1 - sA_f);
-        destData[i+2] = sB * sA_f + dB * (1 - sA_f);
+        if (sA > 0 && dA > 0) {
+            const fs = require('fs');
+            fs.appendFileSync('/app/debug.log', `source-atop debug: s(${sR},${sG},${sB},${sA}) d(${dR},${dG},${dB},${dA}) -> out(${outR},${outG},${outB},${outA})\\n`);
+        }
+
+        destData[i]   = outR;
+        destData[i+1] = outG;
+        destData[i+2] = outB;
+        destData[i+3] = outA;
     }
 }
 
@@ -181,6 +190,7 @@ function destinationOver(dest, src) {
     for (let i = 0; i < srcData.length; i += 4) {
         const sA = srcData[i + 3];
         if (sA === 255) continue;
+        if (sA === 0) continue;
         const dA = destData[i + 3];
         const sA_f = sA / 255;
         const dA_f = dA / 255;
@@ -198,8 +208,7 @@ function destinationIn(dest, src) {
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
         const sA_f = srcData[i+3] / 255;
-        const outA_f = (destData[i+3]/255) * sA_f;
-        destData[i+3] = outA_f * 255;
+        destData[i+3] = (destData[i+3]/255) * sA_f * 255;
     }
 }
 
@@ -208,8 +217,7 @@ function destinationOut(dest, src) {
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
         const sA_f = srcData[i+3] / 255;
-        const outA_f = (destData[i+3]/255) * (1 - sA_f);
-        destData[i+3] = outA_f * 255;
+        destData[i+3] = (destData[i+3]/255) * (1-sA_f) * 255;
     }
 }
 
@@ -218,26 +226,15 @@ function destinationAtop(dest, src) {
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
         const sA = srcData[i+3];
-        if (sA === 0) {
-            // If source is transparent, destination is unchanged.
-            // My loop only processes pixels where src is drawn, so this isn't quite right.
-            // The logic needs to handle the whole canvas area.
-            // Let's assume for now the loop is over the src area.
-            continue;
+        const dA = destData[i+3];
+        if (sA > 0 && dA > 0) {
+            destData[i+3] = sA;
+        } else if (sA > 0 && dA === 0) {
+            destData[i] = srcData[i];
+            destData[i+1] = srcData[i+1];
+            destData[i+2] = srcData[i+2];
+            destData[i+3] = srcData[i+3];
         }
-
-        const sA_f = sA / 255;
-        const dA_f = destData[i+3] / 255;
-        const sR = srcData[i], sG = srcData[i+1], sB = srcData[i+2];
-        const dR = destData[i], dG = destData[i+1], dB = destData[i+2];
-
-        // Final alpha is source alpha
-        destData[i+3] = sA_f * 255;
-
-        // Final color is dest color blended with source color based on dest alpha
-        destData[i]   = dR * dA_f + sR * (1 - dA_f);
-        destData[i+1] = dG * dA_f + sG * (1 - dA_f);
-        destData[i+2] = dB * dA_f + sB * (1 - dA_f);
     }
 }
 
@@ -245,14 +242,17 @@ function lighter(dest, src) {
     const destData = dest.data;
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
-        const sA_f = srcData[i+3] / 255;
-        const dA_f = destData[i+3] / 255;
+        const sA = srcData[i+3], dA = destData[i+3];
+        if (sA === 0 && dA === 0) continue;
+        const sA_f = sA / 255, dA_f = dA / 255;
         const outA = Math.min(1, sA_f + dA_f);
         destData[i+3] = outA * 255;
         if (outA === 0) continue;
-        destData[i] = Math.min(255, (srcData[i] * sA_f + destData[i] * dA_f) / outA);
-        destData[i+1] = Math.min(255, (srcData[i+1] * sA_f + destData[i+1] * dA_f) / outA);
-        destData[i+2] = Math.min(255, (srcData[i+2] * sA_f + destData[i+2] * dA_f) / outA);
+        const sR_p = srcData[i]*sA_f, sG_p = srcData[i+1]*sA_f, sB_p = srcData[i+2]*sA_f;
+        const dR_p = destData[i]*dA_f, dG_p = destData[i+1]*dA_f, dB_p = destData[i+2]*dA_f;
+        destData[i] = Math.min(255, (sR_p + dR_p) / outA);
+        destData[i+1] = Math.min(255, (sG_p + dG_p) / outA);
+        destData[i+2] = Math.min(255, (sB_p + dB_p) / outA);
     }
 }
 
@@ -264,40 +264,33 @@ function xor(dest, src) {
     const destData = dest.data;
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
-        const sA_f = srcData[i+3] / 255;
-        const dA_f = destData[i+3] / 255;
+        const sA = srcData[i+3], dA = destData[i+3];
+        if (sA === 0 && dA === 0) continue;
+        const sA_f = sA / 255;
+        const dA_f = dA / 255;
         const outA_f = sA_f + dA_f - 2 * sA_f * dA_f;
         destData[i+3] = outA_f * 255;
-
-        if (outA_f === 0) {
-            destData[i] = 0;
-            destData[i+1] = 0;
-            destData[i+2] = 0;
+        if (outA_f < 1/255) {
+            destData[i] = 0; destData[i+1] = 0; destData[i+2] = 0;
             continue;
         }
-
-        const sR = srcData[i], sG = srcData[i+1], sB = srcData[i+2];
-        const dR = destData[i], dG = destData[i+1], dB = destData[i+2];
-        destData[i]   = (sR * sA_f * (1 - dA_f) + dR * dA_f * (1 - sA_f)) / outA_f;
-        destData[i+1] = (sG * sA_f * (1 - dA_f) + dG * dA_f * (1 - sA_f)) / outA_f;
-        destData[i+2] = (sB * sA_f * (1 - dA_f) + dB * dA_f * (1 - sA_f)) / outA_f;
+        const sR_p = srcData[i]*sA_f, sG_p = srcData[i+1]*sA_f, sB_p = srcData[i+2]*sA_f;
+        const dR_p = destData[i]*dA_f, dG_p = destData[i+1]*dA_f, dB_p = destData[i+2]*dA_f;
+        destData[i]   = (sR_p * (1 - dA_f) + dR_p * (1 - sA_f)) / outA_f;
+        destData[i+1] = (sG_p * (1 - dA_f) + dG_p * (1 - sA_f)) / outA_f;
+        destData[i+2] = (sB_p * (1 - dA_f) + dB_p * (1 - sA_f)) / outA_f;
     }
 }
 
-// Blend modes
 function multiply(dest, src) { blend(dest, src, (s, d) => s * d); }
 function screen(dest, src) { blend(dest, src, (s, d) => s + d - s * d); }
 function darken(dest, src) { blend(dest, src, (s, d) => Math.min(s, d)); }
 function lighten(dest, src) { blend(dest, src, (s, d) => Math.max(s, d)); }
 function difference(dest, src) { blend(dest, src, (s, d) => Math.abs(s - d)); }
 function exclusion(dest, src) { blend(dest, src, (s, d) => s + d - 2 * s * d); }
-
 function overlay(dest, src) {
-    blend(dest, src, (s, d) => {
-        return (d <= 0.5) ? (2 * s * d) : (1 - 2 * (1 - s) * (1 - d));
-    });
+    blend(dest, src, (s, d) => (d <= 0.5) ? (2 * s * d) : (1 - 2 * (1 - s) * (1 - d)));
 }
-
 function colorDodge(dest, src) {
     blend(dest, src, (s, d) => {
         if (d === 0) return 0;
@@ -305,21 +298,16 @@ function colorDodge(dest, src) {
         return Math.min(1, d / (1 - s));
     });
 }
-
 function colorBurn(dest, src) {
     blend(dest, src, (s, d) => {
         if (d === 1) return 1;
         if (s === 0) return 0;
-        return 1 - Math.min(1, (1 - d) / s);
+        return Math.max(0, 1 - (1 - d) / s);
     });
 }
-
 function hardLight(dest, src) {
-    blend(dest, src, (s, d) => {
-        return (s <= 0.5) ? (2 * s * d) : (1 - 2 * (1 - s) * (1 - d));
-    });
+    blend(dest, src, (s, d) => (s <= 0.5) ? (2 * s * d) : (1 - 2 * (1 - s) * (1 - d)));
 }
-
 function softLight(dest, src) {
     blend(dest, src, (s, d) => {
         if (s <= 0.5) {
