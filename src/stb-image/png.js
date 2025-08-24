@@ -1,5 +1,5 @@
 import { err } from './context.js';
-import { zlib_decode_malloc_guesssize_headerflag, zbuild_huffman } from './zlib.js';
+import { zlib_decode_buffer, zbuild_huffman } from './zlib/index.js';
 
 export function png_test(s) {
     s.rewind();
@@ -247,8 +247,8 @@ export function png_load(s, req_comp) {
 
                 const bpl = Math.floor((s.img_x * depth + 7) / 8);
                 const raw_len = bpl * s.img_y * s.img_n + s.img_y;
-                const expanded = zlib_decode_malloc_guesssize_headerflag(idata, raw_len, true);
-                if (expanded === null) return null;
+                const expanded = new Uint8Array(raw_len);
+                if (zlib_decode_buffer(idata, expanded) < 0) return null;
 
                 s.img_out_n = s.img_n;
                 if ((req_comp === s.img_n + 1 && req_comp !== 3 && !pal_img_n) || has_trans) {

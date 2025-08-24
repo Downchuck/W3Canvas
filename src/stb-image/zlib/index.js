@@ -1,10 +1,11 @@
-import { err } from './context.js';
+import { err } from '../context.js';
+import { sdefl_compr as sdefl_compr_new } from './lz77_new.js';
 
 const ZFAST_BITS = 9;
 const ZFAST_MASK = (1 << ZFAST_BITS) - 1;
 const ZNSYMS = 288;
 
-export class Huffman {
+class Huffman {
     constructor() {
         this.fast = new Uint16Array(1 << ZFAST_BITS);
         this.firstcode = new Uint16Array(16);
@@ -88,7 +89,7 @@ const ZLENGTH_EXTRA = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0
 const ZDIST_BASE = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577,0,0];
 const ZDIST_EXTRA = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
 
-export class Zlib {
+class Zlib {
     constructor(buffer) {
         this.zbuffer = buffer;
         this.zbuffer_pos = 0;
@@ -110,10 +111,6 @@ export class Zlib {
 
     fill_bits() {
         do {
-            if (this.code_buffer >= (1 << this.num_bits)) {
-                this.zbuffer_pos = this.zbuffer.length; // treat as EOF
-                return;
-            }
             this.code_buffer |= this.zget8() << this.num_bits;
             this.num_bits += 8;
         } while (this.num_bits <= 24);
@@ -122,7 +119,7 @@ export class Zlib {
     zreceive(n) {
         if (this.num_bits < n) this.fill_bits();
         const k = this.code_buffer & ((1 << n) - 1);
-        this.code_buffer >>= n;
+        this.code_buffer >>>= n;
         this.num_bits -= n;
         return k;
     }
@@ -139,7 +136,7 @@ export class Zlib {
         if (b >= ZNSYMS) return -1;
         if (z.size[b] !== s) return -1;
 
-        this.code_buffer >>= s;
+        this.code_buffer >>>= s;
         this.num_bits -= s;
         return z.value[b];
     }
@@ -157,11 +154,10 @@ export class Zlib {
                 this.fill_bits();
             }
         }
-
         const b = z.fast[this.code_buffer & ZFAST_MASK];
-        if (b > 0) {
+        if (b) {
             const s = b >> 9;
-            this.code_buffer >>= s;
+            this.code_buffer >>>= s;
             this.num_bits -= s;
             return b & 511;
         }
@@ -198,9 +194,6 @@ export class Zlib {
                 this.zout[this.zout_pos++] = z;
             } else {
                 if (z === 256) {
-                    if (this.hit_zeof_once && this.num_bits < 16) {
-                        return err("unexpected end", "invalid data");
-                    }
                     return 1;
                 }
                 z -= 257;
@@ -285,7 +278,7 @@ export class Zlib {
         let k = 0;
         while (this.num_bits > 0) {
             header[k++] = this.code_buffer & 255;
-            this.code_buffer >>= 8;
+            this.code_buffer >>>= 8;
             this.num_bits -= 8;
         }
         if (this.num_bits < 0) return err("zlib corrupt", "invalid data");
@@ -371,4 +364,389 @@ export function zlib_decode_malloc_guesssize_headerflag(buffer, initial_size, pa
     } else {
         return null;
     }
+}
+
+
+// SDEFL compression
+const SDEFL_MAX_OFF = 1 << 15;
+const SDEFL_WIN_SIZ = SDEFL_MAX_OFF;
+const SDEFL_HASH_BITS = 15;
+const SDEFL_HASH_SIZ = 1 << SDEFL_HASH_BITS;
+const SDEFL_MIN_MATCH = 4;
+const SDEFL_NIL = -1;
+const SDEFL_MAX_MATCH = 258;
+const SDEFL_LIT_LEN_CODES = 15;
+const SDEFL_OFF_CODES = 15;
+const SDEFL_PRE_CODES = 7;
+const SDEFL_EOB = 256;
+const SDEFL_BLK_MAX = 65536;
+const SDEFL_RAW_BLK_SIZE = 65535;
+
+function sdefl_put(s, code, bitcnt) {
+    s.bits |= (code << s.bitcnt);
+    s.bitcnt += bitcnt;
+    while (s.bitcnt >= 8) {
+        s.out[s.out_pos++] = s.bits & 0xFF;
+        s.bits >>>= 8;
+        s.bitcnt -= 8;
+    }
+}
+
+function sdefl_match_codes(dist, len) {
+    let l_slot = 0;
+    if (len > 0) {
+        l_slot = 31 - Math.clz32(len - 3);
+        if (l_slot > 8) l_slot -= 4;
+        if (l_slot > 8) l_slot -= 4;
+        if (l_slot > 8) l_slot -= 4;
+        while (l_slot < ZLENGTH_BASE.length-1 && len >= ZLENGTH_BASE[l_slot+1]) l_slot++;
+    }
+
+    let d_slot = 0;
+    if (dist > 0) {
+        d_slot = 31 - Math.clz32(dist - 1);
+        while (d_slot < ZDIST_BASE.length-1 && dist >= ZDIST_BASE[d_slot+1]) d_slot++;
+    }
+
+    return {
+        lcode: 257 + l_slot,
+        dcode: d_slot,
+        lextra: len > 0 ? len - ZLENGTH_BASE[l_slot] : 0,
+        dextra: dist > 0 ? dist - ZDIST_BASE[d_slot] : 0,
+        lextra_bits: ZLENGTH_EXTRA[l_slot],
+        dextra_bits: ZDIST_EXTRA[d_slot],
+    };
+}
+
+export function sdefl_huff(lens, codes, freqs, num_syms, max_code_len) {
+    if (freqs) {
+        class Node {
+            constructor(symbol, freq, left = null, right = null) {
+                this.symbol = symbol;
+                this.freq = freq;
+                this.left = left;
+                this.right = right;
+            }
+        }
+
+        const pq = [];
+        for (let i = 0; i < num_syms; i++) {
+            if (freqs[i] > 0) {
+                pq.push(new Node(i, freqs[i]));
+            }
+        }
+
+        pq.sort((a, b) => {
+            if (a.freq !== b.freq) {
+                return a.freq - b.freq;
+            }
+            return a.symbol - b.symbol;
+        });
+
+        while (pq.length > 1) {
+            const left = pq.shift();
+            const right = pq.shift();
+
+            const parent = new Node(-1, left.freq + right.freq, left, right);
+
+            let inserted = false;
+            for (let i = 0; i < pq.length; i++) {
+                if (parent.freq < pq[i].freq) {
+                    pq.splice(i, 0, parent);
+                    inserted = true;
+                    break;
+                } else if (parent.freq === pq[i].freq) {
+                    if (parent.symbol < pq[i].symbol) {
+                        pq.splice(i, 0, parent);
+                        inserted = true;
+                        break;
+                    }
+                }
+            }
+            if (!inserted) {
+                pq.push(parent);
+            }
+        }
+
+        const root = pq[0];
+
+        function get_code_lengths(node, depth) {
+            if (!node) return;
+            if (node.symbol !== -1) {
+                lens[node.symbol] = depth;
+                return;
+            }
+            get_code_lengths(node.left, depth + 1);
+            get_code_lengths(node.right, depth + 1);
+        }
+
+        if (root) {
+            get_code_lengths(root, 0);
+        }
+    }
+
+    const symbols = [];
+    for (let i = 0; i < num_syms; i++) {
+        if (lens[i] > 0) {
+            symbols.push(i);
+        }
+    }
+
+    symbols.sort((a, b) => {
+        if (lens[a] !== lens[b]) {
+            return lens[a] - lens[b];
+        }
+        return a - b;
+    });
+
+    const len_cnt = new Uint32Array(max_code_len + 1);
+    for (let i = 0; i < num_syms; i++) {
+        if (lens[i] > 0) {
+            len_cnt[lens[i]]++;
+        }
+    }
+
+    const next_code = new Uint16Array(max_code_len + 1);
+    let code = 0;
+    for(let bits = 1; bits <= max_code_len; bits++) {
+        code = (code + len_cnt[bits-1]) << 1;
+        next_code[bits] = code;
+    }
+
+    for (const n of symbols) {
+        let len = lens[n];
+        if (len !== 0) {
+            codes[n] = next_code[len]++;
+        }
+    }
+}
+
+function get_static_huffman_lengths(alphabet) {
+    const lens = new Uint8Array(288);
+    if (alphabet === 'literal') {
+        for (let i = 0; i <= 143; i++) lens[i] = 8;
+        for (let i = 144; i <= 255; i++) lens[i] = 9;
+        for (let i = 256; i <= 279; i++) lens[i] = 7;
+        for (let i = 280; i <= 287; i++) lens[i] = 8;
+    } else { // distance
+        for (let i = 0; i <= 31; i++) lens[i] = 5;
+    }
+    return lens;
+}
+
+export function sdefl_blk_type(s, blk_len) {
+    const uncompressed_size = 5 + blk_len;
+
+    const static_lit_lens = get_static_huffman_lengths('literal');
+    const static_dist_lens = get_static_huffman_lengths('distance');
+    let static_size = 0;
+    for (let i = 0; i < 288; i++) {
+        if (s.freq.lit[i] > 0) {
+            static_size += s.freq.lit[i] * static_lit_lens[i];
+        }
+    }
+    for (let i = 0; i < 32; i++) {
+        if (s.freq.off[i] > 0) {
+            static_size += s.freq.off[i] * static_dist_lens[i];
+        }
+    }
+    static_size = Math.ceil(static_size / 8);
+
+    if (static_size < uncompressed_size) {
+        return 1; // static
+    } else {
+        return 0; // uncompressed
+    }
+}
+
+function sdefl_flush(s, in_buf, is_last) {
+    s.freq.lit[SDEFL_EOB]++;
+
+    sdefl_huff(s.cod.len.lit, s.cod.word.lit, s.freq.lit, ZNSYMS, SDEFL_LIT_LEN_CODES);
+    sdefl_huff(s.cod.len.off, s.cod.word.off, s.freq.off, 32, SDEFL_OFF_CODES);
+
+    const blk_type = sdefl_blk_type(s, in_buf.length);
+
+    sdefl_put(s, is_last, 1);
+    sdefl_put(s, blk_type, 2);
+
+    if (blk_type === 2) {
+        // ... dynamic huffman block ...
+
+        for(let i=0; i<s.seq.length; ++i) {
+            const seq = s.seq[i];
+            if (seq.off >= 0) {
+                for(let j=0; j<seq.len; ++j) {
+                    const c = in_buf[seq.off+j];
+                    sdefl_put(s, s.cod.word.lit[c], s.cod.len.lit[c]);
+                }
+            } else {
+                const codes = sdefl_match_codes(-seq.off, seq.len);
+                sdefl_put(s, s.cod.word.lit[codes.lcode], s.cod.len.lit[codes.lcode]);
+                if(codes.lextra_bits) sdefl_put(s, codes.lextra, codes.lextra_bits);
+                sdefl_put(s, s.cod.word.off[codes.dcode], s.cod.len.off[codes.dcode]);
+                if(codes.dextra_bits) sdefl_put(s, codes.dextra, codes.dextra_bits);
+            }
+        }
+
+        sdefl_put(s, s.cod.word.lit[SDEFL_EOB], s.cod.len.lit[SDEFL_EOB]);
+    } else if (blk_type === 1) {
+        const static_lit_lens = get_static_huffman_lengths('literal');
+        const static_dist_lens = get_static_huffman_lengths('distance');
+        const static_lit_codes = new Uint16Array(288);
+        const static_dist_codes = new Uint16Array(32);
+        sdefl_huff(static_lit_lens, static_lit_codes, null, 288, 15);
+        sdefl_huff(static_dist_lens, static_dist_codes, null, 32, 15);
+
+        for(let i=0; i<s.seq.length; ++i) {
+            const seq = s.seq[i];
+            if (seq.off >= 0) {
+                for(let j=0; j<seq.len; ++j) {
+                    const c = in_buf[seq.off+j];
+                    sdefl_put(s, static_lit_codes[c], static_lit_lens[c]);
+                }
+            } else {
+                const codes = sdefl_match_codes(-seq.off, seq.len);
+                sdefl_put(s, static_lit_codes[codes.lcode], static_lit_lens[codes.lcode]);
+                if(codes.lextra_bits) sdefl_put(s, codes.lextra, codes.lextra_bits);
+                sdefl_put(s, static_dist_codes[codes.dcode], static_dist_lens[codes.dcode]);
+                if(codes.dextra_bits) sdefl_put(s, codes.dextra, codes.dextra_bits);
+            }
+        }
+
+        sdefl_put(s, static_lit_codes[SDEFL_EOB], static_lit_lens[SDEFL_EOB]);
+    }
+    else {
+        // uncompressed block
+        s.bitcnt = 0;
+        s.bits = 0;
+
+        s.out[s.out_pos++] = in_buf.length & 0xff;
+        s.out[s.out_pos++] = (in_buf.length >>> 8) & 0xff;
+        s.out[s.out_pos++] = (~in_buf.length) & 0xff;
+        s.out[s.out_pos++] = ((~in_buf.length) >>> 8) & 0xff;
+        s.out.set(in_buf, s.out_pos);
+        s.out_pos += in_buf.length;
+    }
+
+
+    s.seq = [];
+    s.freq.lit.fill(0);
+    s.freq.off.fill(0);
+}
+
+function sdefl_compr(s, in_buf) {
+    const in_len = in_buf.length;
+    let i = 0;
+
+    const tbl = new Int32Array(SDEFL_HASH_SIZ).fill(SDEFL_NIL);
+    const prv = new Int32Array(SDEFL_WIN_SIZ);
+
+    do {
+        const blk_begin = i;
+        const blk_end = ((i + SDEFL_BLK_MAX) < in_len) ? (i + SDEFL_BLK_MAX) : in_len;
+        const is_last = blk_end === in_len;
+
+        sdefl_compr_new(s, in_buf, blk_begin, blk_end, tbl, prv);
+        sdefl_flush(s, in_buf.subarray(blk_begin, blk_end), is_last);
+        i = blk_end;
+    } while (i < in_len);
+
+    return s.out_pos;
+}
+
+
+export function stbi_zlib_compress(buffer) {
+    const s = {
+        out: new Uint8Array(sdefl_bound(buffer.length)),
+        out_pos: 0,
+        bits: 0,
+        bitcnt: 0,
+        seq: [],
+        freq: {
+            lit: new Uint32Array(ZNSYMS),
+            off: new Uint32Array(32),
+        },
+        cod: {
+            len: {
+                lit: new Uint8Array(ZNSYMS),
+                off: new Uint8Array(32),
+            },
+            word: {
+                lit: new Uint16Array(ZNSYMS),
+                off: new Uint16Array(32),
+            }
+        }
+    };
+
+    // zlib header
+    sdefl_put(s, 0x78, 8);
+    sdefl_put(s, 0x01, 8);
+
+    sdefl_compr(s, buffer);
+
+    // adler32
+    let s1 = 1, s2 = 0;
+    for(let j=0; j<buffer.length; ++j) {
+        s1 = (s1 + buffer[j]) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    const adler = (s2 << 16) | s1;
+
+    sdefl_put(s, adler >>> 24, 8);
+    sdefl_put(s, (adler >>> 16) & 0xff, 8);
+    sdefl_put(s, (adler >>> 8) & 0xff, 8);
+    sdefl_put(s, adler & 0xff, 8);
+
+    return s.out.slice(0, s.out_pos);
+}
+
+export function sdefl_bound(len) {
+  const max_blocks = 1 + Math.ceil(len / SDEFL_RAW_BLK_SIZE);
+  return 5 * max_blocks + len + 1 + 4 + 8;
+}
+
+export function stbi_zlib_compress_buffer(outputBuffer, inputBuffer) {
+    const s = {
+        out: outputBuffer,
+        out_pos: 0,
+        bits: 0,
+        bitcnt: 0,
+        seq: [],
+        freq: {
+            lit: new Uint32Array(ZNSYMS),
+            off: new Uint32Array(32),
+        },
+        cod: {
+            len: {
+                lit: new Uint8Array(ZNSYMS),
+                off: new Uint8Array(32),
+            },
+            word: {
+                lit: new Uint16Array(ZNSYMS),
+                off: new Uint16Array(32),
+            }
+        }
+    };
+
+    // zlib header
+    sdefl_put(s, 0x78, 8);
+    sdefl_put(s, 0x01, 8);
+
+    sdefl_compr(s, inputBuffer);
+
+    // adler32
+    let s1 = 1, s2 = 0;
+    for(let j=0; j<inputBuffer.length; ++j) {
+        s1 = (s1 + inputBuffer[j]) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    const adler = (s2 << 16) | s1;
+
+    sdefl_put(s, adler >>> 24, 8);
+    sdefl_put(s, (adler >>> 16) & 0xff, 8);
+    sdefl_put(s, (adler >>> 8) & 0xff, 8);
+    sdefl_put(s, adler & 0xff, 8);
+
+    return s.out_pos;
 }
