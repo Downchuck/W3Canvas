@@ -14,20 +14,25 @@ export function parseFontFaceRules(cssText, scope) {
 
         const fontFamilyMatch = /font-family:\s*['"]?([^;'"]+)['"]?/.exec(ruleBlock);
         const srcMatch = /src:\s*url\((['"]?)(.*?)\1\)/.exec(ruleBlock);
-        // A real implementation would parse other descriptors too (weight, style, etc.)
+        const weightMatch = /font-weight:\s*([^;'}]+)/.exec(ruleBlock);
+        const styleMatch = /font-style:\s*([^;'}]+)/.exec(ruleBlock);
 
         if (fontFamilyMatch && srcMatch) {
             const fontFamily = fontFamilyMatch[1];
             const url = srcMatch[2];
+            const weight = weightMatch ? weightMatch[1].trim() : 'normal';
+            const style = styleMatch ? styleMatch[1].trim() : 'normal';
+
+            const descriptors = { weight, style };
 
             // Create a new FontFace object. The source is the URL.
-            const fontFace = new FontFace(fontFamily, url);
+            const fontFace = new FontFace(fontFamily, url, descriptors);
 
             // Add it to the FontFaceSet of the provided scope.
             // The `add` method will automatically trigger the `load()` method.
             scope.fonts.add(fontFace);
 
-            console.log(`Scheduled loading of font: ${fontFamily} from ${url}`);
+            console.log(`Scheduled loading of font: ${fontFamily} from ${url} (weight: ${weight}, style: ${style})`);
         }
     }
 }
