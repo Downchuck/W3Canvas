@@ -94,12 +94,12 @@ function sourceOver(dest, src) {
         if (srcA === 0) continue;
 
         const destA = destData[i + 3];
-        const outA = srcA + (destA * (255 - srcA) / 255);
+        const outA = srcA + (destA * (255 - srcA) >> 8);
         if (outA === 0) continue;
 
-        destData[i] = (srcData[i] * srcA / 255 + destData[i] * destA / 255 * (255 - srcA) / 255) * 255 / outA;
-        destData[i + 1] = (srcData[i+1] * srcA / 255 + destData[i+1] * destA / 255 * (255 - srcA) / 255) * 255 / outA;
-        destData[i + 2] = (srcData[i+2] * srcA / 255 + destData[i+2] * destA / 255 * (255 - srcA) / 255) * 255 / outA;
+        destData[i] = (srcData[i] * srcA + destData[i] * destA * (255 - srcA) / 255) / outA;
+        destData[i + 1] = (srcData[i+1] * srcA + destData[i+1] * destA * (255 - srcA) / 255) / outA;
+        destData[i + 2] = (srcData[i+2] * srcA + destData[i+2] * destA * (255 - srcA) / 255) / outA;
         destData[i + 3] = outA;
     }
 }
@@ -111,7 +111,7 @@ function destinationOver(dest, src) {
     for (let i = 0; i < srcData.length; i += 4) {
         const srcA = srcData[i + 3];
         const destA = destData[i + 3];
-        const outA = srcA * (255 - destA) / 255 + destA;
+        const outA = (srcA * (255 - destA) >> 8) + destA;
 
         destData[i] = (srcData[i] * (255-destA) / 255 + destData[i]);
         destData[i + 1] = (srcData[i+1] * (255-destA) / 255 + destData[i+1]);
@@ -127,7 +127,7 @@ function sourceIn(dest, src) {
     for (let i = 0; i < srcData.length; i += 4) {
         const destA = destData[i + 3];
         const srcA = srcData[i+3];
-        const outA = srcA * destA / 255;
+        const outA = srcA * destA >> 8;
 
         destData[i] = srcData[i];
         destData[i + 1] = srcData[i+1];
@@ -143,7 +143,7 @@ function destinationIn(dest, src) {
     for (let i = 0; i < srcData.length; i += 4) {
         const srcA = srcData[i + 3];
         const destA = destData[i + 3];
-        const outA = srcA * destA / 255;
+        const outA = srcA * destA >> 8;
 
         destData[i] = destData[i];
         destData[i + 1] = destData[i+1];
@@ -159,7 +159,7 @@ function sourceOut(dest, src) {
     for (let i = 0; i < srcData.length; i += 4) {
         const srcA = srcData[i + 3];
         const destA = destData[i + 3];
-        const outA = srcA * (255-destA) / 255;
+        const outA = srcA * (255-destA) >> 8;
 
         destData[i] = srcData[i];
         destData[i + 1] = srcData[i+1];
@@ -175,7 +175,7 @@ function destinationOut(dest, src) {
     for (let i = 0; i < srcData.length; i += 4) {
         const srcA = srcData[i + 3];
         const destA = destData[i + 3];
-        const outA = destA * (255-srcA) / 255;
+        const outA = destA * (255-srcA) >> 8;
 
         destData[i] = destData[i];
         destData[i + 1] = destData[i+1];
@@ -189,13 +189,25 @@ function sourceAtop(dest, src) {
     const srcData = src.data;
 
     for (let i = 0; i < srcData.length; i += 4) {
+        const srcR = srcData[i];
+        const srcG = srcData[i+1];
+        const srcB = srcData[i+2];
         const srcA = srcData[i + 3];
+
+        const destR = destData[i];
+        const destG = destData[i+1];
+        const destB = destData[i+2];
         const destA = destData[i + 3];
+
         const outA = destA;
 
-        destData[i] = (srcData[i] * destA / 255 + destData[i] * (255-srcA) / 255);
-        destData[i + 1] = (srcData[i+1] * destA / 255 + destData[i+1] * (255-srcA) / 255);
-        destData[i + 2] = (srcData[i+2] * destA / 255 + destData[i+2] * (255-srcA) / 255);
+        const outR = (srcR * destA + destR * (255 - srcA)) >> 8;
+        const outG = (srcG * destA + destG * (255 - srcA)) >> 8;
+        const outB = (srcB * destA + destB * (255 - srcA)) >> 8;
+
+        destData[i] = outR;
+        destData[i + 1] = outG;
+        destData[i + 2] = outB;
         destData[i + 3] = outA;
     }
 }
@@ -209,9 +221,9 @@ function destinationAtop(dest, src) {
         const destA = destData[i + 3];
         const outA = srcA;
 
-        destData[i] = (srcData[i] * (255-destA) / 255 + destData[i] * srcA / 255);
-        destData[i + 1] = (srcData[i+1] * (255-destA) / 255 + destData[i+1] * srcA / 255);
-        destData[i + 2] = (srcData[i+2] * (255-destA) / 255 + destData[i+2] * srcA / 255);
+        destData[i] = (srcData[i] * (255-destA) + destData[i] * srcA) >> 8;
+        destData[i + 1] = (srcData[i+1] * (255-destA) + destData[i+1] * srcA) >> 8;
+        destData[i + 2] = (srcData[i+2] * (255-destA) + destData[i+2] * srcA) >> 8;
         destData[i + 3] = outA;
     }
 }
@@ -263,7 +275,7 @@ function blend(dest, src, mix) {
         const destB = destData[i+2];
         const destA = destData[i + 3];
 
-        const outA = srcA + destA * (255 - srcA) / 255;
+        const outA = srcA + (destA * (255 - srcA) >> 8);
 
         const outR = (mix(srcR, destR) * srcA * destA / 255 + srcR * srcA * (255 - destA) / 255 + destR * destA * (255 - srcA) / 255) / outA;
         const outG = (mix(srcG, destG) * srcA * destA / 255 + srcG * srcA * (255 - destA) / 255 + destG * destA * (255 - srcA) / 255) / outA;
