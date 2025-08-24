@@ -1,4 +1,5 @@
 import { err } from '../context.js';
+import { sdefl_compr as sdefl_compr_new } from './lz77_new.js';
 
 const ZFAST_BITS = 9;
 const ZFAST_MASK = (1 << ZFAST_BITS) - 1;
