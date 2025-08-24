@@ -160,27 +160,14 @@ function sourceAtop(dest, src) {
     for (let i = 0; i < srcData.length; i += 4) {
         const sA = srcData[i+3], dA = destData[i+3];
         if (sA === 0 && dA === 0) continue;
-
-        const sA_f = sA / 255;
-        const dA_f = dA / 255;
-
-        const sR = srcData[i], sG = srcData[i+1], sB = srcData[i+2];
-        const dR = destData[i], dG = destData[i+1], dB = destData[i+2];
-
-        const outA = dA;
-        const outR = sR * dA_f + dR * (1 - sA_f);
-        const outG = sG * dA_f + dG * (1 - sA_f);
-        const outB = sB * dA_f + dB * (1 - sA_f);
-
-        if (sA > 0 && dA > 0) {
-            const fs = require('fs');
-            fs.appendFileSync('/app/debug.log', `source-atop debug: s(${sR},${sG},${sB},${sA}) d(${dR},${dG},${dB},${dA}) -> out(${outR},${outG},${outB},${outA})\\n`);
-        }
-
-        destData[i]   = outR;
-        destData[i+1] = outG;
-        destData[i+2] = outB;
-        destData[i+3] = outA;
+        const sA_f = sA / 255, dA_f = dA / 255;
+        const sR = srcData[i], dR = destData[i];
+        const sG = srcData[i+1], dG = destData[i+1];
+        const sB = srcData[i+2], dB = destData[i+2];
+        destData[i+3] = dA;
+        destData[i]   = sR * sA_f + dR * (1 - sA_f);
+        destData[i+1] = sG * sA_f + dG * (1 - sA_f);
+        destData[i+2] = sB * sA_f + dB * (1 - sA_f);
     }
 }
 
@@ -225,16 +212,16 @@ function destinationAtop(dest, src) {
     const destData = dest.data;
     const srcData = src.data;
     for (let i = 0; i < srcData.length; i += 4) {
-        const sA = srcData[i+3];
-        const dA = destData[i+3];
-        if (sA > 0 && dA > 0) {
-            destData[i+3] = sA;
-        } else if (sA > 0 && dA === 0) {
-            destData[i] = srcData[i];
-            destData[i+1] = srcData[i+1];
-            destData[i+2] = srcData[i+2];
-            destData[i+3] = srcData[i+3];
-        }
+        const sA = srcData[i+3], dA = destData[i+3];
+        if (sA === 0 && dA === 0) continue;
+        const sA_f = sA / 255, dA_f = dA / 255;
+        const sR = srcData[i], dR = destData[i];
+        const sG = srcData[i+1], dG = destData[i+1];
+        const sB = srcData[i+2], dB = destData[i+2];
+        destData[i+3] = sA;
+        destData[i]   = dR * dA_f + sR * (1 - dA_f);
+        destData[i+1] = dG * dA_f + sG * (1 - dA_f);
+        destData[i+2] = dB * dA_f + sB * (1 - dA_f);
     }
 }
 
