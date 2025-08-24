@@ -365,6 +365,10 @@ export function zlib_decode_malloc_guesssize_headerflag(buffer, initial_size, pa
     }
 }
 
+export function zlib_decode_buffer(buffer) {
+    return zlib_decode_malloc_guesssize_headerflag(buffer, buffer.length, true);
+}
+
 
 // SDEFL compression
 const SDEFL_WIN_SIZ = 1 << 15;
@@ -683,10 +687,11 @@ function sdefl_compr(s, in_buf) {
     const in_len = in_buf.length;
     let i = 0;
 
-    const tbl = new Int32Array(SDEFL_HASH_SIZ).fill(SDEFL_NIL);
+    const tbl = new Int32Array(SDEFL_HASH_SIZ);
     const prv = new Int32Array(SDEFL_WIN_SIZ);
 
     do {
+        tbl.fill(SDEFL_NIL);
         const blk_begin = i;
         const blk_end = ((i + SDEFL_BLK_MAX) < in_len) ? (i + SDEFL_BLK_MAX) : in_len;
         const is_last = blk_end === in_len;
@@ -747,4 +752,49 @@ export function stbi_zlib_compress(buffer) {
     sdefl_put(s, adler & 0xff, 8);
 
     return s.out.slice(0, s.out_pos);
+}
+
+export function stbi_zlib_compress_buffer(outputBuffer, inputBuffer) {
+    const s = {
+        out: outputBuffer,
+        out_pos: 0,
+        bits: 0,
+        bitcnt: 0,
+        seq: [],
+        freq: {
+            lit: new Uint32Array(ZNSYMS),
+            off: new Uint32Array(32),
+        },
+        cod: {
+            len: {
+                lit: new Uint8Array(ZNSYMS),
+                off: new Uint8Array(32),
+            },
+            word: {
+                lit: new Uint16Array(ZNSYMS),
+                off: new Uint16Array(32),
+            }
+        }
+    };
+
+    // zlib header
+    sdefl_put(s, 0x78, 8);
+    sdefl_put(s, 0x01, 8);
+
+    sdefl_compr(s, inputBuffer);
+
+    // adler32
+    let s1 = 1, s2 = 0;
+    for(let j=0; j<inputBuffer.length; ++j) {
+        s1 = (s1 + inputBuffer[j]) % 65521;
+        s2 = (s2 + s1) % 65521;
+    }
+    const adler = (s2 << 16) | s1;
+
+    sdefl_put(s, adler >>> 24, 8);
+    sdefl_put(s, (adler >>> 16) & 0xff, 8);
+    sdefl_put(s, (adler >>> 8) & 0xff, 8);
+    sdefl_put(s, adler & 0xff, 8);
+
+    return s.out_pos;
 }

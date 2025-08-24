@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { stbi_zlib_compress } from '../src/stb-image/zlib_write.js';
-import { zlib_decode_malloc_guesssize_headerflag } from '../src/stb-image/zlib/index.js';
+import { stbi_zlib_compress, zlib_decode_malloc_guesssize_headerflag } from '../src/stb-image/zlib/index.js';
 
 test('Zlib dynamic block decoder', () => {
     const original_data = new Uint8Array(256);
