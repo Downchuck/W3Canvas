@@ -1,7 +1,7 @@
 // Port of stb_image_write.h's PNG writer
 // Not all features are supported.
 
-import { stbi_zlib_compress } from './zlib_write.js'; // Assuming a separate file for the zlib port
+import { stbi_zlib_compress } from './zlib/index.js';
 
 const crc_table = new Uint32Array([
     0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
