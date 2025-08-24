@@ -1,5 +1,4 @@
 import { err } from '../context.js';
-import { sdefl_compr as sdefl_compr_new } from './lz77_new.js';
 
 const ZFAST_BITS = 9;
 const ZFAST_MASK = (1 << ZFAST_BITS) - 1;
@@ -368,19 +367,14 @@ export function zlib_decode_malloc_guesssize_headerflag(buffer, initial_size, pa
 
 
 // SDEFL compression
-const SDEFL_MAX_OFF = 1 << 15;
-const SDEFL_WIN_SIZ = SDEFL_MAX_OFF;
+const SDEFL_WIN_SIZ = 1 << 15;
 const SDEFL_HASH_BITS = 15;
 const SDEFL_HASH_SIZ = 1 << SDEFL_HASH_BITS;
-const SDEFL_MIN_MATCH = 4;
 const SDEFL_NIL = -1;
-const SDEFL_MAX_MATCH = 258;
+const SDEFL_BLK_MAX = 65536;
+const SDEFL_EOB = 256;
 const SDEFL_LIT_LEN_CODES = 15;
 const SDEFL_OFF_CODES = 15;
-const SDEFL_PRE_CODES = 7;
-const SDEFL_EOB = 256;
-const SDEFL_BLK_MAX = 65536;
-const SDEFL_RAW_BLK_SIZE = 65535;
 
 function sdefl_put(s, code, bitcnt) {
     s.bits |= (code << s.bitcnt);
@@ -635,6 +629,56 @@ function sdefl_flush(s, in_buf, is_last) {
     s.freq.off.fill(0);
 }
 
+const SDEFL_MIN_MATCH = 4;
+
+function hash32(data, pos) {
+    const n = data[pos] | (data[pos+1] << 8) | (data[pos+2] << 16) | (data[pos+3] << 24);
+    return ((n * 0x9E377989) >>> (32 - SDEFL_HASH_BITS)) & (SDEFL_HASH_SIZ - 1);
+}
+
+function sdefl_compr_block(s, in_buf, blk_begin, blk_end, tbl, prv) {
+    s.seq = [];
+
+    let i = blk_begin;
+    while (i < blk_end) {
+        let m_len = 0;
+        let m_off = 0;
+
+        if (i + SDEFL_MIN_MATCH < blk_end) {
+            const h = hash32(in_buf, i);
+            let p = tbl[h];
+            const limit = i > SDEFL_WIN_SIZ ? i - SDEFL_WIN_SIZ : 0;
+
+            while (p >= limit) {
+                if (in_buf[p+m_len] === in_buf[i+m_len] &&
+                    (in_buf[p] | (in_buf[p+1] << 8) | (in_buf[p+2] << 16)) ===
+                    (in_buf[i] | (in_buf[i+1] << 8) | (in_buf[i+2] << 16))) {
+
+                    let n = SDEFL_MIN_MATCH;
+                    while(n < 258 && i + n < blk_end && in_buf[p+n] === in_buf[i+n]) {
+                        n++;
+                    }
+                    if (n > m_len) {
+                        m_len = n;
+                        m_off = i - p;
+                    }
+                }
+                p = prv[p & (SDEFL_WIN_SIZ - 1)];
+            }
+            prv[i & (SDEFL_WIN_SIZ - 1)] = tbl[h];
+            tbl[h] = i;
+        }
+
+        if (m_len >= SDEFL_MIN_MATCH) {
+            s.seq.push({ off: -m_off, len: m_len });
+            i += m_len;
+        } else {
+            s.seq.push({ off: i - blk_begin, len: 1 });
+            i++;
+        }
+    }
+}
+
 function sdefl_compr(s, in_buf) {
     const in_len = in_buf.length;
     let i = 0;
@@ -647,7 +691,7 @@ function sdefl_compr(s, in_buf) {
         const blk_end = ((i + SDEFL_BLK_MAX) < in_len) ? (i + SDEFL_BLK_MAX) : in_len;
         const is_last = blk_end === in_len;
 
-        sdefl_compr_new(s, in_buf, blk_begin, blk_end, tbl, prv);
+        sdefl_compr_block(s, in_buf, blk_begin, blk_end, tbl, prv);
         sdefl_flush(s, in_buf.subarray(blk_begin, blk_end), is_last);
         i = blk_end;
     } while (i < in_len);
@@ -655,7 +699,10 @@ function sdefl_compr(s, in_buf) {
     return s.out_pos;
 }
 
-export { zlib_decode_buffer, sdefl_bound };
+export function sdefl_bound(len) {
+  const max_blocks = 1 + Math.ceil(len / 65535);
+  return 5 * max_blocks + len + 1 + 4 + 8;
+}
 
 export function stbi_zlib_compress(buffer) {
     const s = {
@@ -700,54 +747,4 @@ export function stbi_zlib_compress(buffer) {
     sdefl_put(s, adler & 0xff, 8);
 
     return s.out.slice(0, s.out_pos);
-}
-
-export function sdefl_bound(len) {
-  const max_blocks = 1 + Math.ceil(len / SDEFL_RAW_BLK_SIZE);
-  return 5 * max_blocks + len + 1 + 4 + 8;
-}
-
-export function stbi_zlib_compress_buffer(outputBuffer, inputBuffer) {
-    const s = {
-        out: outputBuffer,
-        out_pos: 0,
-        bits: 0,
-        bitcnt: 0,
-        seq: [],
-        freq: {
-            lit: new Uint32Array(ZNSYMS),
-            off: new Uint32Array(32),
-        },
-        cod: {
-            len: {
-                lit: new Uint8Array(ZNSYMS),
-                off: new Uint8Array(32),
-            },
-            word: {
-                lit: new Uint16Array(ZNSYMS),
-                off: new Uint16Array(32),
-            }
-        }
-    };
-
-    // zlib header
-    sdefl_put(s, 0x78, 8);
-    sdefl_put(s, 0x01, 8);
-
-    sdefl_compr(s, inputBuffer);
-
-    // adler32
-    let s1 = 1, s2 = 0;
-    for(let j=0; j<inputBuffer.length; ++j) {
-        s1 = (s1 + inputBuffer[j]) % 65521;
-        s2 = (s2 + s1) % 65521;
-    }
-    const adler = (s2 << 16) | s1;
-
-    sdefl_put(s, adler >>> 24, 8);
-    sdefl_put(s, (adler >>> 16) & 0xff, 8);
-    sdefl_put(s, (adler >>> 8) & 0xff, 8);
-    sdefl_put(s, adler & 0xff, 8);
-
-    return s.out_pos;
 }
