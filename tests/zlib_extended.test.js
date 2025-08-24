@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { stbi_zlib_compress, zlib_decode_malloc_guesssize_headerflag } from '../src/stb-image/zlib.js';
+import { stbi_zlib_compress } from '../src/stb-image/zlib_write.js';
+import { zlib_decode_malloc_guesssize_headerflag } from '../src/stb-image/zlib/index.js';
 
 describe('Zlib Extended Tests', () => {
     it('should handle empty data', () => {
